@@ -1,0 +1,26 @@
+{
+  "id": "TASK-0001",
+  "title": "Bootstrap ACP v0.3 control plane",
+  "objective": "Establish resilient multi-agent execution with task graphs, budgets, checkpoints, provider-agnostic routing, swarm concurrency, evidence-first review, artifacts, memory and recursive learning.",
+  "type": "infrastructure",
+  "priority": "high",
+  "scope": {"allowed": ["src/**", "schemas/**", "docs/**", "design-library/**", "tests/**", "tasks/**"]},
+  "acceptance": [
+    "TypeScript typecheck passes",
+    "Tests pass",
+    "Task graph supports sequential and parallel execution",
+    "Low/medium/high/maximum effort budgets are configurable",
+    "Context remains task-scoped and checkpoints are compact",
+    "Model routing and failover are configuration-driven",
+    "Concurrency is bounded globally and per model",
+    "Review findings feed a non-autonomous recursive learning loop",
+    "Artifacts and SQLite state are persisted locally",
+    "Design library has candidate/canonical governance and anti-slop rules",
+    "A local UI can expose task status and learning state",
+    "No secrets are persisted in task/checkpoint/artifact state"
+  ],
+  "review": {"required": ["typecheck", "fallow", "reviewer"]},
+  "design": {"required": ["component-governance", "progressive-disclosure", "visual-system"]},
+  "effort": "high",
+  "execution": {"strategy": "swarm", "maxConcurrency": 4}
+}

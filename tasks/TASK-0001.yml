@@ -1,0 +1,27 @@
+id: TASK-0001
+title: Bootstrap ACP control plane
+objective: Establish the local-first control-plane foundation.
+type: infrastructure
+priority: high
+scope:
+  allowed:
+    - src/**
+    - schemas/**
+    - docs/**
+    - design-library/**
+    - tests/**
+acceptance:
+  - TypeScript typecheck passes
+  - task schema exists and validates
+  - compact checkpoint schema exists and validates
+  - model routing is configuration-driven
+  - NVIDIA adapter uses OpenAI-compatible chat completions
+  - no secrets are persisted in task/checkpoint state
+  - design library has canonical and candidate boundaries
+review:
+  required:
+    - typecheck
+    - fallow
+    - reviewer
+design:
+  required: []

@@ -1,0 +1,18 @@
+{
+  "id": "TASK-0002",
+  "title": "Enforce configuration-driven runtime budgets",
+  "objective": "Use the configured effort budgets during agent execution and enforce request and duration limits with compact checkpoint evidence.",
+  "type": "infrastructure",
+  "priority": "high",
+  "scope": {"allowed": ["src/**", "tests/**", "tasks/**", "docs/**"]},
+  "acceptance": [
+    "Runtime effort budgets come from the loaded configuration",
+    "Per-task and per-node budget overrides remain supported",
+    "Request and duration limits prevent unbounded execution",
+    "Checkpoint usage records request counts",
+    "Typecheck and tests pass"
+  ],
+  "review": {"required": ["typecheck", "reviewer"]},
+  "effort": "medium",
+  "execution": {"strategy": "sequential", "maxConcurrency": 1}
+}
