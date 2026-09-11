@@ -14,6 +14,7 @@ export interface Config {
   maxConcurrency: number;
   requestTimeoutMs: number;
   reviewerTimeoutMs: number;
+  researcherTimeoutMs: number;
   fallowCommand: string;
   coderabbitEnabled: boolean;
   coderabbitCommand: string;
@@ -76,6 +77,7 @@ export function loadConfig(root = process.cwd()): Config {
     maxConcurrency: Number(process.env.ACP_MAX_CONCURRENCY ?? 4),
     requestTimeoutMs: Number(process.env.ACP_REQUEST_TIMEOUT_MS ?? 45000),
     reviewerTimeoutMs: Number(process.env.ACP_REVIEWER_TIMEOUT_MS ?? 90000),
+    researcherTimeoutMs: Number(process.env.ACP_RESEARCHER_TIMEOUT_MS ?? 90000),
     fallowCommand: process.env.FALLOW_COMMAND ?? 'npx fallow',
     coderabbitEnabled: process.env.CODERABBIT_ENABLED === 'true',
     coderabbitCommand: process.env.CODERABBIT_COMMAND ?? 'cr'

@@ -35,12 +35,12 @@ Commands:
 const command=process.argv[2];const args=process.argv.slice(3);const acp=new Orchestrator();
 try{
  if(!command||command==='help'){usage();process.exit(0)}
- if(command==='doctor'){console.log(JSON.stringify({version:'0.3.1',node:process.version,dataDir:acp.config.dataDir,artifactsDir:acp.config.artifactsDir,nvidiaConfigured:Boolean(acp.config.nvidia.apiKey),nvidiaBaseUrl:acp.config.nvidia.baseUrl,maxConcurrency:acp.config.maxConcurrency,requestTimeoutMs:acp.config.requestTimeoutMs,reviewerTimeoutMs:acp.config.reviewerTimeoutMs,models:acp.router.all(),budgets:acp.config.budgets,fallow:acp.config.fallowCommand,coderabbitEnabled:acp.config.coderabbitEnabled},null,2));process.exit(0)}
+ if(command==='doctor'){console.log(JSON.stringify({version:'0.3.1',node:process.version,dataDir:acp.config.dataDir,artifactsDir:acp.config.artifactsDir,nvidiaConfigured:Boolean(acp.config.nvidia.apiKey),nvidiaBaseUrl:acp.config.nvidia.baseUrl,maxConcurrency:acp.config.maxConcurrency,requestTimeoutMs:acp.config.requestTimeoutMs,reviewerTimeoutMs:acp.config.reviewerTimeoutMs,researcherTimeoutMs:acp.config.researcherTimeoutMs,models:acp.router.all(),budgets:acp.config.budgets,fallow:acp.config.fallowCommand,coderabbitEnabled:acp.config.coderabbitEnabled},null,2));process.exit(0)}
  if(command==='ui'){startUi(acp,acp.config.uiPort);}
  else if(command==='task:create'){const file=path.resolve(args[0]);const task=JSON.parse(fs.readFileSync(file,'utf8')) as Task;console.log(acp.createTask(task));}
  else if(command==='task:show'){console.log(JSON.stringify(acp.showTask(args[0]),null,2));}
  else if(command==='task:plan'){console.log(JSON.stringify(acp.buildPlan(args[0]),null,2));}
- else if(command==='task:run'){console.error(`ACP: running ${args[0]} (each model request times out after ${acp.config.requestTimeoutMs}ms).`);console.log(JSON.stringify(await acp.run(args[0]),null,2));}
+ else if(command==='task:run'){console.error(`ACP: running ${args[0]} (workers ${acp.config.requestTimeoutMs}ms; research/review ${acp.config.researcherTimeoutMs}ms).`);console.log(JSON.stringify(await acp.run(args[0]),null,2));}
  else if(command==='checkpoint:create'){const cp=JSON.parse(fs.readFileSync(path.resolve(args[1]),'utf8')) as Checkpoint;await acp.checkpoint(args[0],cp);console.log('checkpoint saved');}
  else if(command==='context:build'){const record=acp.showTask(args[0]);if(!record)throw new Error('Task not found');console.log(JSON.stringify(acp.context.build(record.task,acp.store.latestCheckpoint(args[0])),null,2));}
  else if(command==='model:list'){console.log(JSON.stringify(acp.router.all(),null,2));}

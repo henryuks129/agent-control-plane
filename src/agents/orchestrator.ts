@@ -15,7 +15,7 @@ import { AgentRuntime } from './runtime.js';
 
 export class Orchestrator {
   readonly config=loadConfig(); readonly store=new Store(this.config.dataDir); readonly context=new ContextRouter(process.cwd()); readonly git=new GitManager(process.cwd(),this.config.worktreeDir); readonly nvidia=new NvidiaClient(this.config.nvidia.baseUrl,this.config.nvidia.apiKey,this.config.requestTimeoutMs); readonly router=new ModelRouter(this.config.profiles); readonly reviewEngine=new ReviewEngine(this.config.fallowCommand); readonly planner=new TaskPlanner(); readonly learningLoop=new LearningLoop(this.store);
-  private runtimeFor(root:string){return new AgentRuntime(root,this.store,new ContextRouter(root),this.router,this.nvidia,this.learningLoop,this.config.maxConcurrency,this.config.artifactsDir,this.config.budgets);}
+  private runtimeFor(root:string){return new AgentRuntime(root,this.store,new ContextRouter(root),this.router,this.nvidia,this.learningLoop,this.config.maxConcurrency,this.config.artifactsDir,this.config.budgets,this.config.researcherTimeoutMs);}
   createTask(task:Task){this.store.upsertTask(task);return task.id;} showTask(id:string){return this.store.getTask(id);} listTasks(){return this.store.listTasks();}
   async checkpoint(taskId:string,cp:Checkpoint){this.store.addCheckpoint(cp);this.store.setStatus(taskId,'checkpointed');}
   async smoke(role:AgentRole='builder'){
