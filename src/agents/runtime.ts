@@ -66,7 +66,10 @@ export class AgentRuntime {
   }
 
   async execute(task:Task,node:TaskNode):Promise<{ok:boolean;summary:string;usage:{inputTokens:number;outputTokens:number;requests:number}}> {
-    if(node.role==='test') return this.executeTestNode(task,node);
+    // The orchestrator performs the authoritative LLM review after the graph
+    // completes. Keep graph-level test/review nodes deterministic so a task
+    // does not spend two model calls reviewing the same checkout.
+    if(node.role==='test'||node.role==='reviewer') return this.executeTestNode(task,node);
     const candidates=this.router.route({role:node.role,effort:node.effort??task.effort??'medium',preferred:task.model_preferences?.primary,fallback:task.model_preferences?.fallback,allowDegraded:true}); if(!candidates.length) throw new Error(`No model available for role ${node.role}`);
     const runId=crypto.randomUUID(); const startedAt=new Date().toISOString(); const startedAtMs=Date.now(); const budget=this.budget(task,node); let lastError=''; let inputTokens=0,outputTokens=0,requests=0;
     const attempts=candidates.slice(0,Math.min(candidates.length,Math.max(1,budget.maxRequests),2));
