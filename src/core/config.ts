@@ -15,6 +15,7 @@ export interface Config {
   requestTimeoutMs: number;
   reviewerTimeoutMs: number;
   researcherTimeoutMs: number;
+  builderTimeoutMs: number;
   fallowCommand: string;
   coderabbitEnabled: boolean;
   coderabbitCommand: string;
@@ -78,6 +79,7 @@ export function loadConfig(root = process.cwd()): Config {
     requestTimeoutMs: Number(process.env.ACP_REQUEST_TIMEOUT_MS ?? 45000),
     reviewerTimeoutMs: Number(process.env.ACP_REVIEWER_TIMEOUT_MS ?? 90000),
     researcherTimeoutMs: Number(process.env.ACP_RESEARCHER_TIMEOUT_MS ?? 90000),
+    builderTimeoutMs: Number(process.env.ACP_BUILDER_TIMEOUT_MS ?? 90000),
     fallowCommand: process.env.FALLOW_COMMAND ?? 'npx fallow',
     coderabbitEnabled: process.env.CODERABBIT_ENABLED === 'true',
     coderabbitCommand: process.env.CODERABBIT_COMMAND ?? 'cr'
