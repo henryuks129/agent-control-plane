@@ -7,6 +7,7 @@ export class ReviewEngine {
   async deterministic(root:string):Promise<ReviewReport>{
     const evidence:EvidenceResult[]=[]; const findings:ReviewFinding[]=[];
     const typecheck=await runCommand('npm run typecheck',root); evidence.push(typecheck); if(!typecheck.ok) findings.push({id:'TYPECHECK',category:'testing',severity:'high',source:'tests',evidence:typecheck.stdout||typecheck.stderr,rationale:'Typecheck failed.',recommendation:'Fix TypeScript errors before merge.'});
+    const build=await runCommand('npm run build',root); evidence.push(build); if(!build.ok) findings.push({id:'BUILD',category:'testing',severity:'high',source:'tests',evidence:build.stdout||build.stderr,rationale:'Build failed.',recommendation:'Fix build errors before merge.'});
     const tests=await runCommand('npm test',root); evidence.push(tests); if(!tests.ok) findings.push({id:'TESTS',category:'testing',severity:'high',source:'tests',evidence:tests.stdout||tests.stderr,rationale:'Automated tests failed.',recommendation:'Fix failing tests and rerun deterministic checks.'});
     if(this.fallowCommand){
       const baseline=await runCommand('git rev-parse --verify HEAD',root);

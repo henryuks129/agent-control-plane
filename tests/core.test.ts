@@ -10,6 +10,7 @@ import { NvidiaClient } from '../src/models/nvidia.js';
 import { parseReviewFindings } from '../src/reviews/llm.js';
 import { resolveBudget } from '../src/agents/runtime.js';
 import { deferredReviewFinding } from '../src/agents/orchestrator.js';
+import { GitManager } from '../src/git/worktrees.js';
 
 const profiles=[
   {id:'fast',provider:'nvidia',model:'fast',capabilities:['coding','reasoning'],maxConcurrent:2,enabled:true,priority:20},
@@ -33,6 +34,18 @@ test('model routing prefers the profile dedicated to the requested role', () => 
   ]);
   assert.equal(router.route({ role: 'researcher' })[0].id, 'researcher');
   assert.equal(router.route({ role: 'reviewer' })[0].id, 'reviewer');
+});
+
+test('worktree preparation skips npm ci when dependencies are already present', async () => {
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'acp-worktree-'));
+  const worktree=path.join(root,'worktree');
+  fs.mkdirSync(path.join(worktree,'node_modules','typescript'),{recursive:true});
+  try {
+    const manager=new GitManager(root,path.join(root,'worktrees'));
+    assert.equal(await manager.ensureDependencies(worktree),false);
+  } finally {
+    fs.rmSync(root,{recursive:true,force:true});
+  }
 });
 
 test('NVIDIA transport failures are retryable so the runtime can fail over', async () => {

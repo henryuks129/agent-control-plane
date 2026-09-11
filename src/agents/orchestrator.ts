@@ -63,7 +63,8 @@ export class Orchestrator {
     const record=this.showTask(taskId);
     if(!record) throw new Error('Task not found');
     const task=record.task;
-    const worktree=await this.ensureWorktree(taskId);
+    const prepared=await this.git.prepareWorktree(taskId);
+    const worktree=prepared.path;
     const executionContext=new ContextRouter(worktree);
     const runtime=this.runtimeFor(worktree);
     const nodes=this.planner.plan(task);
@@ -101,7 +102,7 @@ export class Orchestrator {
       progress=true;
       if(results.some(x=>!x.result.ok)){
         this.store.setStatus(taskId,'checkpointed');
-        return {status:'checkpointed',worktree,nodes:results};
+        return {status:'checkpointed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,nodes:results};
       }
     }
     this.store.setStatus(taskId,'review');
@@ -110,7 +111,7 @@ export class Orchestrator {
     if(!report.passed){
       this.learningLoop.ingest(taskId,'deterministic-review',report.findings);
       this.store.setStatus(taskId,'failed');
-      return {status:'failed',worktree,report};
+      return {status:'failed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,report};
     }
     if(task.review.required.includes('reviewer')){
       try{
@@ -121,7 +122,7 @@ export class Orchestrator {
         this.learningLoop.ingest(taskId,'reviewer',findings);
         if(findings.some(f=>['critical','high'].includes(f.severity))){
           this.store.setStatus(taskId,'failed');
-          return {status:'failed',worktree,report,findings};
+          return {status:'failed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,report,findings};
         }
       }catch(error){
         if((error as {retryable?:boolean}).retryable) {
@@ -129,14 +130,14 @@ export class Orchestrator {
           this.store.addFinding(taskId,finding);
           this.learningLoop.ingest(taskId,'reviewer',[finding]);
           this.store.setStatus(taskId,'passed');
-          return {status:'passed',worktree,report,findings:this.store.findings(taskId),reviewDeferred:true};
+          return {status:'passed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,report,findings:this.store.findings(taskId),reviewDeferred:true};
         }
         this.store.setStatus(taskId,'checkpointed');
-        return {status:'checkpointed',worktree,reason:error instanceof Error?error.message:String(error)};
+        return {status:'checkpointed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,reason:error instanceof Error?error.message:String(error)};
       }
     }
     this.store.setStatus(taskId,'passed');
-    return {status:'passed',worktree,report,findings:this.store.findings(taskId)};
+    return {status:'passed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,report,findings:this.store.findings(taskId)};
   }
   learning(taskId:string){return this.store.learning(taskId);}
   proposeUpgrade(taskId:string,maxIterations=1){return this.learningLoop.proposeUpgrade(taskId,maxIterations);}
@@ -152,5 +153,6 @@ export class Orchestrator {
   async deterministicReview(taskId:string){const task=this.showTask(taskId);if(!task)throw new Error(`Unknown task ${taskId}`);this.store.setStatus(taskId,'review');const report=await this.reviewEngine.deterministic(process.cwd());for(const f of report.findings)this.store.addFinding(taskId,f);if(report.passed)this.store.setStatus(taskId,'passed');else{this.learningLoop.ingest(taskId,'deterministic-review',report.findings);this.store.setStatus(taskId,'failed');}return report;}
   async llmReview(taskId:string){const record=this.showTask(taskId);if(!record)throw new Error(`Unknown task ${taskId}`);const context=this.context.build(record.task,this.store.latestCheckpoint(taskId));const evidence=await this.reviewEngine.deterministic(process.cwd());const findings=await this.reviewWithFallback(record.task,context,evidence.evidence);for(const f of findings)this.store.addFinding(taskId,f);this.learningLoop.ingest(taskId,'reviewer',findings);return findings;}
   async ensureWorktree(taskId:string){return this.git.ensureWorktree(taskId);}
+  async prepareWorktree(taskId:string){return this.git.prepareWorktree(taskId);}
   writeDesignCandidate(name:string,content:string){const file=path.join(process.cwd(),'design-library','candidates',`${name}.md`);fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,content);return file;}
 }

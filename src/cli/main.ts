@@ -18,6 +18,7 @@ Commands:
   model:list
   model:smoke [role]
   worktree:create <TASK-ID>
+  worktree:prepare <TASK-ID>
   review:deterministic <TASK-ID>
   review:llm <TASK-ID>
   learning:show <TASK-ID>
@@ -46,6 +47,7 @@ try{
  else if(command==='model:list'){console.log(JSON.stringify(acp.router.all(),null,2));}
  else if(command==='model:smoke'){console.log(JSON.stringify(await acp.smoke((args[0]??'builder') as any),null,2));}
  else if(command==='worktree:create'){console.log(await acp.ensureWorktree(args[0]));}
+ else if(command==='worktree:prepare'){console.log(JSON.stringify(await acp.prepareWorktree(args[0]),null,2));}
  else if(command==='review:deterministic'){console.log(JSON.stringify(await acp.deterministicReview(args[0]),null,2));}
  else if(command==='review:llm'){console.log(JSON.stringify(await acp.llmReview(args[0]),null,2));}
  else if(command==='learning:show'){console.log(JSON.stringify(acp.learning(args[0]),null,2));}
