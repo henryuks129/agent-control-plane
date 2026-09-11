@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { AgentRole, Checkpoint, ContextPack, Task, TaskNode } from '../core/types.js';
+import type { AgentRole, Checkpoint, ContextPack, ReviewFinding, Task, TaskNode } from '../core/types.js';
 import { loadConfig } from '../core/config.js';
 import { Store } from '../storage/db.js';
 import { NvidiaClient } from '../models/nvidia.js';
@@ -12,6 +12,11 @@ import { LlmReviewer } from '../reviews/llm.js';
 import { TaskPlanner, readyNodes } from '../core/planner.js';
 import { LearningLoop } from '../core/learning.js';
 import { AgentRuntime } from './runtime.js';
+
+export function deferredReviewFinding(error:unknown):ReviewFinding {
+  const message=error instanceof Error?error.message:String(error);
+  return {id:'REVIEW-DEFERRED',category:'other',severity:'medium',source:'reviewer',evidence:message,rationale:'Deterministic checks passed, but the remote reviewer did not respond before its bounded deadline.',recommendation:'Run review:llm later when the configured reviewer is available.'};
+}
 
 export class Orchestrator {
   readonly config=loadConfig(); readonly store=new Store(this.config.dataDir); readonly context=new ContextRouter(process.cwd()); readonly git=new GitManager(process.cwd(),this.config.worktreeDir); readonly nvidia=new NvidiaClient(this.config.nvidia.baseUrl,this.config.nvidia.apiKey,this.config.requestTimeoutMs); readonly router=new ModelRouter(this.config.profiles); readonly reviewEngine=new ReviewEngine(this.config.fallowCommand); readonly planner=new TaskPlanner(); readonly learningLoop=new LearningLoop(this.store);
@@ -50,7 +55,8 @@ export class Orchestrator {
         throw error;
       }
     }
-    throw new Error(`Primary reviewer model failed: ${lastError}`);
+    const failure=Object.assign(new Error(`Primary reviewer model failed: ${lastError}`),{retryable:true});
+    throw failure;
   }
   buildPlan(taskId:string){const record=this.showTask(taskId);if(!record)throw new Error('Task not found');return this.planner.plan(record.task);}
   async run(taskId:string){
@@ -118,6 +124,13 @@ export class Orchestrator {
           return {status:'failed',worktree,report,findings};
         }
       }catch(error){
+        if((error as {retryable?:boolean}).retryable) {
+          const finding=deferredReviewFinding(error);
+          this.store.addFinding(taskId,finding);
+          this.learningLoop.ingest(taskId,'reviewer',[finding]);
+          this.store.setStatus(taskId,'passed');
+          return {status:'passed',worktree,report,findings:this.store.findings(taskId),reviewDeferred:true};
+        }
         this.store.setStatus(taskId,'checkpointed');
         return {status:'checkpointed',worktree,reason:error instanceof Error?error.message:String(error)};
       }

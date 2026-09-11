@@ -9,6 +9,7 @@ import { TaskPlanner, readyNodes } from '../src/core/planner.js';
 import { NvidiaClient } from '../src/models/nvidia.js';
 import { parseReviewFindings } from '../src/reviews/llm.js';
 import { resolveBudget } from '../src/agents/runtime.js';
+import { deferredReviewFinding } from '../src/agents/orchestrator.js';
 
 const profiles=[
   {id:'fast',provider:'nvidia',model:'fast',capabilities:['coding','reasoning'],maxConcurrent:2,enabled:true,priority:20},
@@ -94,6 +95,13 @@ test('runtime stops before a model call when request or duration budget is exhau
   assert.match(durationResult.summary,/Duration budget exhausted/);
   assert.equal(calls,0);
   fs.rmSync(root,{recursive:true,force:true});
+});
+
+test('deferred reviews remain visible without being reported as a deterministic failure', () => {
+  const finding=deferredReviewFinding(Object.assign(new Error('review timed out'),{retryable:true}));
+  assert.equal(finding.id,'REVIEW-DEFERRED');
+  assert.equal(finding.severity,'medium');
+  assert.match(finding.recommendation,/review:llm/);
 });
 
 test('context router returns task-scoped context instead of whole repository',()=>{const router=new ContextRouter(process.cwd());const pack=router.build({id:'TASK-9999',title:'test',objective:'test',type:'test',scope:{allowed:['src/core/**']},acceptance:['works'],review:{required:[]}});assert.equal(pack.task.id,'TASK-9999');assert.ok(pack.docs.some(x=>x.path==='AGENTS.md'));assert.ok(pack.files.length<=20);assert.ok(pack.tokenEstimate>0)});
