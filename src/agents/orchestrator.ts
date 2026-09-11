@@ -14,7 +14,8 @@ import { LearningLoop } from '../core/learning.js';
 import { AgentRuntime } from './runtime.js';
 
 export class Orchestrator {
-  readonly config=loadConfig(); readonly store=new Store(this.config.dataDir); readonly context=new ContextRouter(process.cwd()); readonly git=new GitManager(process.cwd(),this.config.worktreeDir); readonly nvidia=new NvidiaClient(this.config.nvidia.baseUrl,this.config.nvidia.apiKey,this.config.requestTimeoutMs); readonly router=new ModelRouter(this.config.profiles); readonly reviewEngine=new ReviewEngine(this.config.fallowCommand); readonly planner=new TaskPlanner(); readonly learningLoop=new LearningLoop(this.store); readonly runtime=new AgentRuntime(process.cwd(),this.store,this.context,this.router,this.nvidia,this.learningLoop,this.config.maxConcurrency,this.config.artifactsDir,this.config.budgets);
+  readonly config=loadConfig(); readonly store=new Store(this.config.dataDir); readonly context=new ContextRouter(process.cwd()); readonly git=new GitManager(process.cwd(),this.config.worktreeDir); readonly nvidia=new NvidiaClient(this.config.nvidia.baseUrl,this.config.nvidia.apiKey,this.config.requestTimeoutMs); readonly router=new ModelRouter(this.config.profiles); readonly reviewEngine=new ReviewEngine(this.config.fallowCommand); readonly planner=new TaskPlanner(); readonly learningLoop=new LearningLoop(this.store);
+  private runtimeFor(root:string){return new AgentRuntime(root,this.store,new ContextRouter(root),this.router,this.nvidia,this.learningLoop,this.config.maxConcurrency,this.config.artifactsDir,this.config.budgets);}
   createTask(task:Task){this.store.upsertTask(task);return task.id;} showTask(id:string){return this.store.getTask(id);} listTasks(){return this.store.listTasks();}
   async checkpoint(taskId:string,cp:Checkpoint){this.store.addCheckpoint(cp);this.store.setStatus(taskId,'checkpointed');}
   async smoke(role:AgentRole='builder'){
@@ -56,6 +57,9 @@ export class Orchestrator {
     const record=this.showTask(taskId);
     if(!record) throw new Error('Task not found');
     const task=record.task;
+    const worktree=await this.ensureWorktree(taskId);
+    const executionContext=new ContextRouter(worktree);
+    const runtime=this.runtimeFor(worktree);
     const nodes=this.planner.plan(task);
     this.store.setStatus(taskId,'running');
     const status=new Map<string,string>();
@@ -76,7 +80,7 @@ export class Orchestrator {
           current:node.objective,changed:[],tests:{status:'pending'},blockers:[],next_action:'Execute node'
         };
         this.store.addCheckpoint(cp);
-        const result=await this.runtime.execute(task,node);
+        const result=await runtime.execute(task,node);
         status.set(node.id,result.ok?'passed':'failed');
         this.store.addCheckpoint({
           ...cp,
@@ -91,35 +95,35 @@ export class Orchestrator {
       progress=true;
       if(results.some(x=>!x.result.ok)){
         this.store.setStatus(taskId,'checkpointed');
-        return {status:'checkpointed',nodes:results};
+        return {status:'checkpointed',worktree,nodes:results};
       }
     }
     this.store.setStatus(taskId,'review');
-    const report=await this.reviewEngine.deterministic(process.cwd());
+    const report=await this.reviewEngine.deterministic(worktree);
     for(const f of report.findings) this.store.addFinding(taskId,f);
     if(!report.passed){
       this.learningLoop.ingest(taskId,'deterministic-review',report.findings);
       this.store.setStatus(taskId,'failed');
-      return {status:'failed',report};
+      return {status:'failed',worktree,report};
     }
     if(task.review.required.includes('reviewer')){
       try{
         const cp=this.store.latestCheckpoint(taskId);
-        const context=this.context.build(task,cp);
+        const context=executionContext.build(task,cp);
         const findings=await this.reviewWithFallback(record.task,context,report.evidence);
         for(const f of findings) this.store.addFinding(taskId,f);
         this.learningLoop.ingest(taskId,'reviewer',findings);
         if(findings.some(f=>['critical','high'].includes(f.severity))){
           this.store.setStatus(taskId,'failed');
-          return {status:'failed',report,findings};
+          return {status:'failed',worktree,report,findings};
         }
       }catch(error){
         this.store.setStatus(taskId,'checkpointed');
-        return {status:'checkpointed',reason:error instanceof Error?error.message:String(error)};
+        return {status:'checkpointed',worktree,reason:error instanceof Error?error.message:String(error)};
       }
     }
     this.store.setStatus(taskId,'passed');
-    return {status:'passed',report,findings:this.store.findings(taskId)};
+    return {status:'passed',worktree,report,findings:this.store.findings(taskId)};
   }
   learning(taskId:string){return this.store.learning(taskId);}
   proposeUpgrade(taskId:string,maxIterations=1){return this.learningLoop.proposeUpgrade(taskId,maxIterations);}
