@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { ModelRouter } from '../src/models/router.js';
 import { ContextRouter } from '../src/context/router.js';
 import { TaskPlanner, readyNodes } from '../src/core/planner.js';
@@ -11,6 +13,8 @@ import { parseReviewFindings } from '../src/reviews/llm.js';
 import { resolveBudget } from '../src/agents/runtime.js';
 import { deferredReviewFinding } from '../src/agents/orchestrator.js';
 import { GitManager } from '../src/git/worktrees.js';
+
+const exec=promisify(execFile);
 
 const profiles=[
   {id:'fast',provider:'nvidia',model:'fast',capabilities:['coding','reasoning'],maxConcurrent:2,enabled:true,priority:20},
@@ -43,6 +47,32 @@ test('worktree preparation skips npm ci when dependencies are already present', 
   try {
     const manager=new GitManager(root,path.join(root,'worktrees'));
     assert.equal(await manager.ensureDependencies(worktree),false);
+  } finally {
+    fs.rmSync(root,{recursive:true,force:true});
+  }
+});
+
+test('worktree synchronization fast-forwards only a clean worktree behind main', async () => {
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'acp-git-'));
+  const worktree=path.join(root,'task');
+  const git=(args:string[],cwd=root)=>exec('git',args,{cwd});
+  try {
+    await git(['init','-b','main']);
+    await git(['config','user.email','tests@example.test']);
+    await git(['config','user.name','ACP tests']);
+    fs.writeFileSync(path.join(root,'state.txt'),'one');
+    await git(['add','state.txt']); await git(['commit','-m','initial']);
+    await git(['worktree','add','-b','task',worktree,'main']);
+    fs.writeFileSync(path.join(root,'state.txt'),'two');
+    await git(['add','state.txt']); await git(['commit','-m','advance main']);
+    const manager=new GitManager(root,path.join(root,'worktrees'));
+    assert.equal(await manager.synchronize(worktree),true);
+    assert.equal(fs.readFileSync(path.join(worktree,'state.txt'),'utf8'),'two');
+    fs.writeFileSync(path.join(root,'state.txt'),'three');
+    await git(['add','state.txt']); await git(['commit','-m','advance again']);
+    fs.writeFileSync(path.join(worktree,'local.txt'),'preserve me');
+    assert.equal(await manager.synchronize(worktree),false);
+    assert.equal(fs.readFileSync(path.join(worktree,'state.txt'),'utf8'),'two');
   } finally {
     fs.rmSync(root,{recursive:true,force:true});
   }

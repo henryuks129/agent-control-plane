@@ -102,7 +102,7 @@ export class Orchestrator {
       progress=true;
       if(results.some(x=>!x.result.ok)){
         this.store.setStatus(taskId,'checkpointed');
-        return {status:'checkpointed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,nodes:results};
+        return {status:'checkpointed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,worktreeSynchronized:prepared.synchronized,nodes:results};
       }
     }
     this.store.setStatus(taskId,'review');
@@ -111,7 +111,7 @@ export class Orchestrator {
     if(!report.passed){
       this.learningLoop.ingest(taskId,'deterministic-review',report.findings);
       this.store.setStatus(taskId,'failed');
-      return {status:'failed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,report};
+      return {status:'failed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,worktreeSynchronized:prepared.synchronized,report};
     }
     if(task.review.required.includes('reviewer')){
       try{
@@ -122,7 +122,7 @@ export class Orchestrator {
         this.learningLoop.ingest(taskId,'reviewer',findings);
         if(findings.some(f=>['critical','high'].includes(f.severity))){
           this.store.setStatus(taskId,'failed');
-          return {status:'failed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,report,findings};
+          return {status:'failed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,worktreeSynchronized:prepared.synchronized,report,findings};
         }
       }catch(error){
         if((error as {retryable?:boolean}).retryable) {
@@ -130,14 +130,14 @@ export class Orchestrator {
           this.store.addFinding(taskId,finding);
           this.learningLoop.ingest(taskId,'reviewer',[finding]);
           this.store.setStatus(taskId,'passed');
-          return {status:'passed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,report,findings:this.store.findings(taskId),reviewDeferred:true};
+          return {status:'passed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,worktreeSynchronized:prepared.synchronized,report,findings:this.store.findings(taskId),reviewDeferred:true};
         }
         this.store.setStatus(taskId,'checkpointed');
-        return {status:'checkpointed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,reason:error instanceof Error?error.message:String(error)};
+        return {status:'checkpointed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,worktreeSynchronized:prepared.synchronized,reason:error instanceof Error?error.message:String(error)};
       }
     }
     this.store.setStatus(taskId,'passed');
-    return {status:'passed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,report,findings:this.store.findings(taskId)};
+    return {status:'passed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,worktreeSynchronized:prepared.synchronized,report,findings:this.store.findings(taskId)};
   }
   learning(taskId:string){return this.store.learning(taskId);}
   proposeUpgrade(taskId:string,maxIterations=1){return this.learningLoop.proposeUpgrade(taskId,maxIterations);}

@@ -1,0 +1,18 @@
+{
+  "id": "TASK-0003",
+  "title": "Synchronize clean task worktrees safely",
+  "objective": "Keep a clean task worktree aligned with the local main branch before task execution, while preserving changed or divergent task worktrees.",
+  "type": "infrastructure",
+  "priority": "high",
+  "scope": {"allowed": ["src/**", "tests/**", "tasks/**", "docs/**"]},
+  "acceptance": [
+    "A clean worktree behind main is fast-forwarded before task execution",
+    "A dirty or divergent worktree is never changed automatically",
+    "Task output reports whether synchronization occurred",
+    "Dependency bootstrap still runs after synchronization",
+    "Typecheck and tests pass"
+  ],
+  "review": {"required": ["typecheck", "reviewer"]},
+  "effort": "medium",
+  "execution": {"strategy": "sequential", "maxConcurrency": 1}
+}
