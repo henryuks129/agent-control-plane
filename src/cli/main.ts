@@ -17,6 +17,9 @@ Commands:
   context:build <TASK-ID>
   model:list
   model:smoke [role]
+  media:models
+  media:image <prompt> [profile-id]
+  media:show <JOB-ID>
   worktree:create <TASK-ID>
   worktree:prepare <TASK-ID>
   review:deterministic <TASK-ID>
@@ -46,6 +49,9 @@ try{
  else if(command==='context:build'){const record=acp.showTask(args[0]);if(!record)throw new Error('Task not found');console.log(JSON.stringify(acp.context.build(record.task,acp.store.latestCheckpoint(args[0])),null,2));}
  else if(command==='model:list'){console.log(JSON.stringify(acp.router.all(),null,2));}
  else if(command==='model:smoke'){console.log(JSON.stringify(await acp.smoke((args[0]??'builder') as any),null,2));}
+ else if(command==='media:models'){console.log(JSON.stringify(acp.mediaModels(),null,2));}
+ else if(command==='media:image'){if(!args[0])throw new Error('Provide an image prompt');console.log(JSON.stringify(await acp.generateImage(args[0],args[1]),null,2));}
+ else if(command==='media:show'){console.log(JSON.stringify(acp.artifacts(args[0]),null,2));}
  else if(command==='worktree:create'){console.log(await acp.ensureWorktree(args[0]));}
  else if(command==='worktree:prepare'){console.log(JSON.stringify(await acp.prepareWorktree(args[0]),null,2));}
  else if(command==='review:deterministic'){console.log(JSON.stringify(await acp.deterministicReview(args[0]),null,2));}

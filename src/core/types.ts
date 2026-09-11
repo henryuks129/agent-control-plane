@@ -80,6 +80,7 @@ export interface ModelProfile {
   priority?: number;
   lastCheckedAt?: string;
   unavailableReason?: string;
+  media?: { kind: 'image'; endpoint: string; mimeType?: string };
 }
 
 export interface ReviewFinding {
@@ -96,7 +97,7 @@ export interface ReviewFinding {
 export interface Artifact {
   id: string;
   taskId: string;
-  type: 'checkpoint' | 'research' | 'review' | 'patch' | 'report' | 'design-candidate' | 'other';
+  type: 'checkpoint' | 'research' | 'review' | 'patch' | 'report' | 'design-candidate' | 'media' | 'other';
   path: string;
   metadata?: Record<string, unknown>;
 }

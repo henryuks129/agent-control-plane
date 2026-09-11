@@ -55,6 +55,29 @@ export class ModelRouter {
 
   get(id: string) { return this.profiles.find(p => p.id === id || p.model === id); }
   all() { return [...this.profiles]; }
+  private supportsMedia(profile:ModelProfile,capability:string) {
+    return profile.enabled&&Boolean(profile.media)&&profile.capabilities.includes(capability);
+  }
+  private acceptsHealth(profile:ModelProfile,allowDegraded:boolean) {
+    if(profile.health==='unavailable') return false;
+    if(profile.health==='degraded') return allowDegraded;
+    return true;
+  }
+  private mediaEligible(profile:ModelProfile,capability:string,allowDegraded:boolean) {
+    return this.supportsMedia(profile,capability)&&this.acceptsHealth(profile,allowDegraded);
+  }
+  private uniqueMedia(profile:ModelProfile,seen:Set<string>) {
+    const key=`${profile.provider}:${profile.model}`;
+    if(seen.has(key)) return false;
+    seen.add(key); return true;
+  }
+  mediaCandidates(capability: string, allowDegraded=false) {
+    const seen=new Set<string>();
+    return this.profiles
+      .filter(p=>this.mediaEligible(p,capability,allowDegraded))
+      .sort((a,b)=>(a.priority??100)-(b.priority??100))
+      .filter(p=>this.uniqueMedia(p,seen));
+  }
 
   markHealth(id: string, health: ModelHealth, reason?: string) {
     const profile = this.get(id);

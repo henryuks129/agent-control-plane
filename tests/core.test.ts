@@ -13,6 +13,7 @@ import { parseReviewFindings } from '../src/reviews/llm.js';
 import { resolveBudget } from '../src/agents/runtime.js';
 import { deferredReviewFinding } from '../src/agents/orchestrator.js';
 import { GitManager } from '../src/git/worktrees.js';
+import { MediaService } from '../src/media/service.js';
 
 const exec=promisify(execFile);
 
@@ -38,6 +39,22 @@ test('model routing prefers the profile dedicated to the requested role', () => 
   ]);
   assert.equal(router.route({ role: 'researcher' })[0].id, 'researcher');
   assert.equal(router.route({ role: 'reviewer' })[0].id, 'reviewer');
+});
+
+test('media routing selects only the requested image capability', () => {
+  const router=new ModelRouter([
+    {id:'chat',provider:'nvidia',model:'chat-model',capabilities:['coding'],maxConcurrent:1,enabled:true},
+    {id:'image',provider:'nvidia',model:'image-model',capabilities:['text-to-image'],maxConcurrent:1,enabled:true,priority:10,media:{kind:'image',endpoint:'https://example.test/image'}}
+  ]);
+  assert.deepEqual(router.mediaCandidates('text-to-image').map(p=>p.id),['image']);
+});
+
+test('media routing can target a named image profile', () => {
+  const router=new ModelRouter([
+    {id:'fast-image',provider:'nvidia',model:'fast-image',capabilities:['text-to-image'],maxConcurrent:1,enabled:true,priority:10,media:{kind:'image',endpoint:'https://example.test/fast'}},
+    {id:'quality-image',provider:'nvidia',model:'quality-image',capabilities:['text-to-image'],maxConcurrent:1,enabled:true,priority:20,media:{kind:'image',endpoint:'https://example.test/quality'}}
+  ]);
+  assert.equal(router.get('quality-image')?.media?.endpoint,'https://example.test/quality');
 });
 
 test('worktree preparation skips npm ci when dependencies are already present', async () => {
@@ -102,6 +119,28 @@ test('NVIDIA requests time out instead of waiting indefinitely', async () => {
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test('NVIDIA image requests decode base64 output', async () => {
+  const originalFetch=globalThis.fetch;
+  globalThis.fetch=async()=>new Response(JSON.stringify({artifacts:[{base64:Buffer.from('image-bytes').toString('base64'),mime_type:'image/png',seed:7}]}),{status:200});
+  try {
+    const result=await new NvidiaClient('https://example.test/v1','test-key').image('https://example.test/image','a small test image');
+    assert.equal(result.bytes.toString(),'image-bytes'); assert.equal(result.mimeType,'image/png'); assert.equal(result.seed,7);
+  } finally { globalThis.fetch=originalFetch; }
+});
+
+test('media service stores generated images as local artifacts', async () => {
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'acp-media-'));
+  const store=new (await import('../src/storage/db.js')).Store(path.join(root,'data'));
+  const router=new ModelRouter([{id:'image',provider:'nvidia',model:'image-model',capabilities:['text-to-image'],maxConcurrent:1,enabled:true,media:{kind:'image',endpoint:'https://example.test/image'}}]);
+  const client={image:async()=>({bytes:Buffer.from('image-bytes'),mimeType:'image/png',seed:42})};
+  try {
+    const media=new MediaService(router,client as any,store,path.join(root,'artifacts'),100);
+    const result=await media.image('a test image');
+    assert.equal(fs.readFileSync(result.path,'utf8'),'image-bytes');
+    assert.equal(store.artifacts(result.jobId)[0].type,'media');
+  } finally { fs.rmSync(root,{recursive:true,force:true}); }
 });
 
 test('reviewer parsing accepts JSON wrapped in model prose or a code fence', () => {

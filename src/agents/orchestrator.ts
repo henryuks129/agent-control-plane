@@ -12,6 +12,7 @@ import { LlmReviewer } from '../reviews/llm.js';
 import { TaskPlanner, readyNodes } from '../core/planner.js';
 import { LearningLoop } from '../core/learning.js';
 import { AgentRuntime } from './runtime.js';
+import { MediaService } from '../media/service.js';
 
 export function deferredReviewFinding(error:unknown):ReviewFinding {
   const message=error instanceof Error?error.message:String(error);
@@ -19,7 +20,7 @@ export function deferredReviewFinding(error:unknown):ReviewFinding {
 }
 
 export class Orchestrator {
-  readonly config=loadConfig(); readonly store=new Store(this.config.dataDir); readonly context=new ContextRouter(process.cwd()); readonly git=new GitManager(process.cwd(),this.config.worktreeDir); readonly nvidia=new NvidiaClient(this.config.nvidia.baseUrl,this.config.nvidia.apiKey,this.config.requestTimeoutMs); readonly router=new ModelRouter(this.config.profiles); readonly reviewEngine=new ReviewEngine(this.config.fallowCommand); readonly planner=new TaskPlanner(); readonly learningLoop=new LearningLoop(this.store);
+  readonly config=loadConfig(); readonly store=new Store(this.config.dataDir); readonly context=new ContextRouter(process.cwd()); readonly git=new GitManager(process.cwd(),this.config.worktreeDir); readonly nvidia=new NvidiaClient(this.config.nvidia.baseUrl,this.config.nvidia.apiKey,this.config.requestTimeoutMs); readonly router=new ModelRouter(this.config.profiles); readonly reviewEngine=new ReviewEngine(this.config.fallowCommand); readonly planner=new TaskPlanner(); readonly learningLoop=new LearningLoop(this.store); readonly media=new MediaService(this.router,this.nvidia,this.store,this.config.artifactsDir,this.config.requestTimeoutMs);
   private runtimeFor(root:string){return new AgentRuntime(root,this.store,new ContextRouter(root),this.router,this.nvidia,this.learningLoop,this.config.maxConcurrency,this.config.artifactsDir,this.config.budgets,this.config.researcherTimeoutMs,this.config.builderTimeoutMs);}
   createTask(task:Task){this.store.upsertTask(task);return task.id;} showTask(id:string){return this.store.getTask(id);} listTasks(){return this.store.listTasks();}
   async checkpoint(taskId:string,cp:Checkpoint){this.store.addCheckpoint(cp);this.store.setStatus(taskId,'checkpointed');}
@@ -149,6 +150,8 @@ export class Orchestrator {
   upgrades(status?:any){return this.learningLoop.upgrades(status);}
   approveLearning(taskId:string,iterationId:number){this.learningLoop.humanApprove(taskId,iterationId);}
   artifacts(taskId:string){return this.store.artifacts(taskId);}
+  mediaModels(){return this.media.models();}
+  generateImage(prompt:string,profileId?:string):Promise<{jobId:string;profile:string;model:string;path:string;mimeType:string;seed?:number}>{return this.media.image(prompt,profileId);}
   findings(taskId:string){return this.store.findings(taskId);}
   async deterministicReview(taskId:string){const task=this.showTask(taskId);if(!task)throw new Error(`Unknown task ${taskId}`);this.store.setStatus(taskId,'review');const report=await this.reviewEngine.deterministic(process.cwd());for(const f of report.findings)this.store.addFinding(taskId,f);if(report.passed)this.store.setStatus(taskId,'passed');else{this.learningLoop.ingest(taskId,'deterministic-review',report.findings);this.store.setStatus(taskId,'failed');}return report;}
   async llmReview(taskId:string){const record=this.showTask(taskId);if(!record)throw new Error(`Unknown task ${taskId}`);const context=this.context.build(record.task,this.store.latestCheckpoint(taskId));const evidence=await this.reviewEngine.deterministic(process.cwd());const findings=await this.reviewWithFallback(record.task,context,evidence.evidence);for(const f of findings)this.store.addFinding(taskId,f);this.learningLoop.ingest(taskId,'reviewer',findings);return findings;}
