@@ -1,16 +1,13 @@
 import crypto from 'node:crypto';
-import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { promisify } from 'node:util';
 import type { AgentRole, Budget, Task, TaskNode } from '../core/types.js';
 import { ContextRouter } from '../context/router.js';
 import { ConcurrencyManager, ModelRouter } from '../models/router.js';
 import { NvidiaClient } from '../models/nvidia.js';
 import { Store } from '../storage/db.js';
 import { LearningLoop } from '../core/learning.js';
-
-const exec=promisify(execFile);
+import { DeterministicTestAgent } from './test-agent.js';
 
 function jsonBlock(raw:string):string { const match=raw.match(/```(?:json)?\s*([\s\S]*?)```/i); return (match?.[1]??raw).trim(); }
 function extractPatch(raw:string):string|undefined { const match=raw.match(/```diff\s*([\s\S]*?)```/i); return match?.[1]?.trim(); }
@@ -38,38 +35,17 @@ export function resolveBudget(budgets:Record<string,Budget>,task:Task,node:TaskN
 
 export class AgentRuntime {
   private readonly concurrency:ConcurrencyManager;
-  constructor(private readonly root:string, private readonly store:Store, private readonly context:ContextRouter, private readonly router:ModelRouter, private readonly client:NvidiaClient, private readonly learning:LearningLoop, maxConcurrency:number, private readonly artifactsDir:string, private readonly budgets:Record<string,Budget>, private readonly researcherTimeoutMs=90000, private readonly builderTimeoutMs=90000) { this.concurrency=new ConcurrencyManager(maxConcurrency); fs.mkdirSync(artifactsDir,{recursive:true}); }
+  private readonly testAgent:DeterministicTestAgent;
+  constructor(private readonly root:string, private readonly store:Store, private readonly context:ContextRouter, private readonly router:ModelRouter, private readonly client:NvidiaClient, private readonly learning:LearningLoop, maxConcurrency:number, private readonly artifactsDir:string, private readonly budgets:Record<string,Budget>, private readonly researcherTimeoutMs=90000, private readonly builderTimeoutMs=90000) { this.concurrency=new ConcurrencyManager(maxConcurrency); this.testAgent=new DeterministicTestAgent(root,store,artifactsDir); fs.mkdirSync(artifactsDir,{recursive:true}); }
 
   private budget(task:Task, node:TaskNode):Budget { return resolveBudget(this.budgets,task,node); }
-
-  private async executeTestNode(task:Task,node:TaskNode):Promise<{ok:boolean;summary:string;usage:{inputTokens:number;outputTokens:number;requests:number}}> {
-    const runId=crypto.randomUUID(); const startedAt=new Date().toISOString();
-    const run={id:runId,taskId:task.id,nodeId:node.id,role:node.role,modelId:'deterministic',status:'running' as const,startedAt};
-    this.store.addAgentRun(run);
-    const steps=['typecheck','build','test']; const evidence:string[]=[];
-    try {
-      for(const step of steps) {
-        const result=await exec('npm',['run',step],{cwd:this.root,maxBuffer:8*1024*1024});
-        evidence.push(`## npm run ${step}\n\n${result.stdout}${result.stderr}`);
-      }
-      const artifactBase=path.join(this.artifactsDir,task.id); fs.mkdirSync(artifactBase,{recursive:true});
-      const outPath=path.join(artifactBase,`${node.id}.md`); fs.writeFileSync(outPath,evidence.join('\n'));
-      this.store.addArtifact({id:`${task.id}:${node.id}:response`,taskId:task.id,type:'report',path:outPath,metadata:{runner:'deterministic'}});
-      this.store.updateAgentRun({...run,status:'passed',finishedAt:new Date().toISOString()});
-      return {ok:true,summary:'Deterministic typecheck, build, and tests passed.',usage:{inputTokens:0,outputTokens:0,requests:0}};
-    } catch(error) {
-      const failed=error as {stdout?:string;stderr?:string;message?:string};
-      const summary=`Deterministic checks failed: ${failed.stderr||failed.stdout||failed.message||String(error)}`;
-      this.store.updateAgentRun({...run,status:'failed',finishedAt:new Date().toISOString(),error:summary});
-      return {ok:false,summary,usage:{inputTokens:0,outputTokens:0,requests:0}};
-    }
-  }
 
   async execute(task:Task,node:TaskNode):Promise<{ok:boolean;summary:string;usage:{inputTokens:number;outputTokens:number;requests:number}}> {
     // The orchestrator performs the authoritative LLM review after the graph
     // completes. Keep graph-level test/review nodes deterministic so a task
     // does not spend two model calls reviewing the same checkout.
-    if(node.role==='test'||node.role==='reviewer') return this.executeTestNode(task,node);
+    if(node.role==='test') return this.testAgent.execute(task,node);
+    if(node.role==='reviewer') return {ok:true,summary:'Review gate reached; authoritative review runs after deterministic evidence is collected.',usage:{inputTokens:0,outputTokens:0,requests:0}};
     const candidates=this.router.route({role:node.role,effort:node.effort??task.effort??'medium',preferred:task.model_preferences?.primary,fallback:task.model_preferences?.fallback,allowDegraded:true}); if(!candidates.length) throw new Error(`No model available for role ${node.role}`);
     const runId=crypto.randomUUID(); const startedAt=new Date().toISOString(); const startedAtMs=Date.now(); const budget=this.budget(task,node); let lastError=''; let inputTokens=0,outputTokens=0,requests=0;
     const attempts=candidates.slice(0,Math.min(candidates.length,Math.max(1,budget.maxRequests),2));

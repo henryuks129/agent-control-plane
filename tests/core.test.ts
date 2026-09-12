@@ -7,7 +7,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { ModelRouter } from '../src/models/router.js';
 import { ContextRouter } from '../src/context/router.js';
-import { TaskPlanner, readyNodes, resumeStatus } from '../src/core/planner.js';
+import { TaskPlanner, readyNodes, resumeStatus, validateGraph } from '../src/core/planner.js';
 import { NvidiaClient } from '../src/models/nvidia.js';
 import { parseReviewFindings } from '../src/reviews/llm.js';
 import { resolveBudget } from '../src/agents/runtime.js';
@@ -261,6 +261,13 @@ test('resume status skips completed graph nodes and exposes the next node',()=>{
   const status=resumeStatus(nodes,nodeId=>nodeId==='TASK-RESUME-research'?{task_id:'TASK-RESUME',node_id:nodeId,phase:'researcher',completed:[],current:'done',changed:[],tests:{status:'passed'},blockers:[],next_action:'Build'}:undefined);
   assert.equal(status.get('TASK-RESUME-research'),'passed');
   assert.deepEqual(readyNodes(nodes,status).map(node=>node.id),['TASK-RESUME-build']);
+});
+
+test('custom task graphs reject unknown dependencies and cycles',()=>{
+  const node=(id:string,dependsOn?:string[])=>({id,title:id,objective:id,role:'test' as const,dependsOn});
+  assert.throws(()=>validateGraph([node('build',['missing'])]),/unknown node/);
+  assert.throws(()=>validateGraph([node('a',['b']),node('b',['a'])]),/dependency cycle/);
+  assert.doesNotThrow(()=>validateGraph([node('research'),node('build',['research']),node('test',['build'])]));
 });
 
 test('learning and upgrade lifecycle rejects invalid transitions', async () => {

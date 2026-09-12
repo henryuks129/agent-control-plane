@@ -74,6 +74,10 @@ node dist/src/cli/main.js patch:approve <TASK-ID> <PATCH-ARTIFACT-ID>
 node dist/src/cli/main.js patch:apply <TASK-ID> <PATCH-ARTIFACT-ID>
 ```
 
+## v0.4 graph and test gate
+
+Custom task graphs are checked for duplicate IDs, missing dependencies, self-dependencies and cycles before execution. The `test` node is a dedicated deterministic worker: it runs typecheck, build and tests, then saves command evidence as an artifact. The reviewer graph node only opens the review gate; ACP performs its authoritative deterministic and optional LLM review once after the graph completes.
+
 
 ## v0.3.1 recursive learning release
 
