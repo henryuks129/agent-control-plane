@@ -1,6 +1,6 @@
 # Media generation
 
-ACP treats media generation as a separate capability from chat. A media profile declares its capability, endpoint and expected output type; text-to-image currently uses the NVIDIA FLUX.1-schnell endpoint.
+ACP treats media generation as a separate capability from chat. A media profile declares its capability, endpoint and expected output type; text-to-image currently prefers NVIDIA FLUX.1-schnell and falls back to FLUX.2-klein-4b after a retryable failure.
 
 `media:image` selects an enabled, healthy `text-to-image` profile, submits a bounded request, saves the returned image under the local artifacts directory, and records the model, profile, prompt, seed and MIME type in SQLite. API keys and response headers are never persisted.
 

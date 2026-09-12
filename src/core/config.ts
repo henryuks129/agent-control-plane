@@ -42,7 +42,8 @@ const defaults: ModelProfile[] = [
   { id: 'recovery', provider: 'nvidia', model: 'nvidia/nemotron-3.5-lightning-30b-a3b', capabilities: ['coding', 'reasoning', 'recovery', 'agentic'], maxConcurrent: 2, enabled: true, health: 'unknown', contextWindow: 1000000, supportsReasoning: true, supportsTools: true, priority: 20 },
   { id: 'planner', provider: 'nvidia', model: 'deepseek-ai/deepseek-v4-pro-0813', capabilities: ['planning', 'reasoning', 'coding', 'research', 'agentic'], maxConcurrent: 1, enabled: true, health: 'unknown', contextWindow: 1000000, supportsReasoning: true, supportsTools: true, priority: 10 },
   { id: 'coding-specialist', provider: 'nvidia', model: 'poolside/laguna-xs-2.1', capabilities: ['coding', 'reasoning', 'agentic', 'recovery'], maxConcurrent: 1, enabled: true, health: 'unknown', contextWindow: 1000000, supportsReasoning: true, supportsTools: true, priority: 30 },
-  { id: 'image-fast', provider: 'nvidia', model: 'black-forest-labs/flux.1-schnell', capabilities: ['text-to-image', 'image-generation'], maxConcurrent: 1, enabled: true, health: 'unknown', priority: 10, media: { kind: 'image', endpoint: 'https://ai.api.nvidia.com/v1/genai/black-forest-labs/flux.1-schnell', mimeType: 'image/png' } }
+  { id: 'image-fast', provider: 'nvidia', model: 'black-forest-labs/flux.1-schnell', capabilities: ['text-to-image', 'image-generation'], maxConcurrent: 1, enabled: true, health: 'unknown', priority: 10, media: { kind: 'image', endpoint: 'https://ai.api.nvidia.com/v1/genai/black-forest-labs/flux.1-schnell', mimeType: 'image/png' } },
+  { id: 'image-fallback', provider: 'nvidia', model: 'black-forest-labs/flux.2-klein-4b', capabilities: ['text-to-image', 'image-generation'], maxConcurrent: 1, enabled: true, health: 'unknown', priority: 20, media: { kind: 'image', endpoint: 'https://ai.api.nvidia.com/v1/genai/black-forest-labs/flux.2-klein-4b', mimeType: 'image/png' } }
 ];
 
 function parseProfiles(): ModelProfile[] {

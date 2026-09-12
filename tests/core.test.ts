@@ -143,6 +143,22 @@ test('media service stores generated images as local artifacts', async () => {
   } finally { fs.rmSync(root,{recursive:true,force:true}); }
 });
 
+test('media service falls back to the next compatible image profile', async () => {
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'acp-media-fallback-'));
+  const store=new (await import('../src/storage/db.js')).Store(path.join(root,'data'));
+  const router=new ModelRouter([
+    {id:'primary',provider:'nvidia',model:'primary-model',capabilities:['text-to-image'],maxConcurrent:1,enabled:true,priority:10,media:{kind:'image',endpoint:'https://example.test/primary'}},
+    {id:'fallback',provider:'nvidia',model:'fallback-model',capabilities:['text-to-image'],maxConcurrent:1,enabled:true,priority:20,media:{kind:'image',endpoint:'https://example.test/fallback'}}
+  ]);
+  const client={image:async(endpoint:string)=>{if(endpoint.endsWith('primary'))throw new Error('primary unavailable');return {bytes:Buffer.from('fallback-image'),mimeType:'image/png'};}};
+  try {
+    const media=new MediaService(router,client as any,store,path.join(root,'artifacts'),100);
+    const result=await media.image('a test image');
+    assert.equal(result.profile,'fallback');
+    assert.equal(router.get('primary')?.health,'degraded');
+  } finally { fs.rmSync(root,{recursive:true,force:true}); }
+});
+
 test('reviewer parsing accepts JSON wrapped in model prose or a code fence', () => {
   const raw='Reasoning omitted.\n```json\n{"findings":[{"id":"R-1","category":"testing","severity":"low","source":"reviewer","evidence":"test","rationale":"coverage","recommendation":"add test"}]}\n```';
   assert.equal(parseReviewFindings(raw)?.[0].id, 'R-1');
