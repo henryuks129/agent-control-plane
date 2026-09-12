@@ -313,6 +313,8 @@ test('local dashboard exposes patch approval endpoints when local binding is per
   const acp={
     listTasks:()=>[{id:'TASK-UI',status:'checkpointed',updated_at:'now'}],store:{learning:()=>[]},
     taskProgress:()=>({taskId:'TASK-UI',completed:[],ready:['TASK-UI-build'],nodes:[]}),patches:()=>[{id:'PATCH-1'}],
+    taskGraph:()=>({taskId:'TASK-UI',nodes:[{id:'TASK-UI-build',title:'Build',role:'builder',dependsOn:[],status:'ready'}]}),
+    taskHistory:()=>({artifacts:[],findings:[],learning:[],upgrades:[]}),artifactPreview:()=>({previewType:'text',text:'safe preview'}),
     validatePatch:async()=>{calls.push('validate');return {valid:true};},approvePatch:()=>{calls.push('approve');return {status:'approved'};},applyPatch:async()=>{calls.push('apply');return {status:'applied'};}
   };
   const server=startUi(acp as any,0);
@@ -320,8 +322,12 @@ test('local dashboard exposes patch approval endpoints when local binding is per
   if(!started) return;
   const address=server.address() as {port:number}; const base=`http://127.0.0.1:${address.port}`;
   try {
-    assert.match(await (await fetch(`${base}/`)).text(),/Local patch review/);
+    const root=await fetch(`${base}/`);
+    assert.match(root.headers.get('content-type')??'',/charset=utf-8/);
+    assert.match(await root.text(),/Task summary/);
     assert.equal((await (await fetch(`${base}/api/tasks/TASK-UI/patches`)).json() as any[])[0].id,'PATCH-1');
+    assert.equal((await (await fetch(`${base}/api/tasks/TASK-UI/graph`)).json() as any).nodes[0].status,'ready');
+    assert.equal((await (await fetch(`${base}/api/tasks/TASK-UI/history`)).json() as any).artifacts.length,0);
     assert.equal((await (await fetch(`${base}/api/tasks/TASK-UI/patches/PATCH-1/validate`,{method:'POST'})).json() as any).valid,true);
     assert.deepEqual(calls,['validate']);
   } finally { await new Promise<void>(resolve=>server.close(()=>resolve())); }
