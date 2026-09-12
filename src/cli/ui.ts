@@ -86,7 +86,7 @@ export function startUi(acp: Orchestrator, port: number) {
         if (action === 'apply') return json(response, 200, acp.applyPatch(taskId, patchId));
       }
       if (url.pathname === '/') {
-        response.writeHead(200, { 'content-type': 'text/html' });
+        response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
         return response.end(page());
       }
       return json(response, 404, { error: 'Not found' });
