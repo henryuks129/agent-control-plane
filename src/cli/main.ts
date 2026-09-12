@@ -12,6 +12,8 @@ Commands:
   project:onboard <local-repository-path>
   project:list
   project:show <PROJECT-ID>
+  project:settings <PROJECT-ID>
+  project:settings:set <PROJECT-ID> <settings.json>
   task:create <file.json>
   task:show <TASK-ID>
   task:plan <TASK-ID>
@@ -55,6 +57,8 @@ try{
  else if(command==='project:onboard'){console.log(JSON.stringify(await acp.onboardProject(args[0]),null,2));}
  else if(command==='project:list'){console.log(JSON.stringify(acp.projects(),null,2));}
  else if(command==='project:show'){console.log(JSON.stringify(acp.project(args[0]),null,2));}
+ else if(command==='project:settings'){console.log(JSON.stringify(acp.projectSettings(args[0]),null,2));}
+ else if(command==='project:settings:set'){console.log(JSON.stringify(acp.saveProjectSettings(args[0],JSON.parse(fs.readFileSync(path.resolve(args[1]),'utf8'))),null,2));}
  else if(command==='task:create'){const file=path.resolve(args[0]);const task=JSON.parse(fs.readFileSync(file,'utf8')) as Task;console.log(acp.createTask(task));}
  else if(command==='task:show'){console.log(JSON.stringify(acp.showTask(args[0]),null,2));}
  else if(command==='task:plan'){console.log(JSON.stringify(acp.buildPlan(args[0]),null,2));}

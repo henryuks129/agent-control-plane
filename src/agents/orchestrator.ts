@@ -14,6 +14,8 @@ import { LearningLoop } from '../core/learning.js';
 import { AgentRuntime } from './runtime.js';
 import { MediaService } from '../media/service.js';
 import { ProjectRegistry } from '../projects/profiles.js';
+import { validateProjectSettings } from '../projects/settings.js';
+import type { ProjectSettings } from '../core/types.js';
 
 export function deferredReviewFinding(error:unknown):ReviewFinding {
   const message=error instanceof Error?error.message:String(error);
@@ -27,6 +29,8 @@ export class Orchestrator {
   async onboardProject(root:string){return this.projectsRegistry.onboard(root);}
   projects(){return this.projectsRegistry.list();}
   project(id:string){return this.projectsRegistry.show(id);}
+  projectSettings(projectId:string){if(!this.project(projectId))throw new Error(`Unknown project ${projectId}`);return this.store.projectSettings(projectId);}
+  saveProjectSettings(projectId:string,settings:unknown):ProjectSettings { if(!this.project(projectId))throw new Error(`Unknown project ${projectId}`);const valid=validateProjectSettings(settings,this.config.profiles.map(profile=>profile.id));this.store.saveProjectSettings(projectId,valid);return valid; }
   async checkpoint(taskId:string,cp:Checkpoint){this.store.addCheckpoint(cp);this.store.setStatus(taskId,'checkpointed');}
   async smoke(role:AgentRole='builder'){
     const candidates=this.router.route({role,effort:'low',allowDegraded:true});

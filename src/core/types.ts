@@ -15,6 +15,14 @@ export interface ProjectProfile {
   updatedAt: string;
 }
 
+export interface ProjectSettings {
+  version: 1;
+  profiles?: Record<string,{enabled?:boolean;priority?:number;maxConcurrent?:number}>;
+  rolePreferences?: Partial<Record<AgentRole,{primary?:string[];fallback?:string[]}>>;
+  budgets?: Partial<Record<Effort,Partial<Budget>>>;
+  timeouts?: { requestTimeoutMs?:number; reviewerTimeoutMs?:number; researcherTimeoutMs?:number; builderTimeoutMs?:number };
+}
+
 export interface Budget {
   maxTokens: number;
   maxRequests: number;

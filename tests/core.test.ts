@@ -17,6 +17,7 @@ import { MediaService } from '../src/media/service.js';
 import { ReviewEngine } from '../src/reviews/engine.js';
 import { startUi } from '../src/cli/ui.js';
 import { ProjectRegistry } from '../src/projects/profiles.js';
+import { validateProjectSettings } from '../src/projects/settings.js';
 
 const exec=promisify(execFile);
 
@@ -161,6 +162,17 @@ test('project onboarding registers an existing Git checkout without changing rem
     assert.equal(first.root,fs.realpathSync(root)); assert.equal(first.defaultBranch,'main'); assert.equal(first.id,second.id); assert.equal(registry.list().length,1);
     assert.equal((await git(['remote'])).stdout,before); assert.equal(JSON.stringify(first).includes('API_KEY'),false);
     await assert.rejects(registry.onboard(path.join(root,'missing')),/does not exist/);
+  } finally { fs.rmSync(root,{recursive:true,force:true}); }
+});
+
+test('project settings persist non-secret model preferences and reject credentials', async () => {
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'acp-settings-'));
+  const { Store }=await import('../src/storage/db.js');
+  try {
+    const store=new Store(root); const settings=validateProjectSettings({version:1,profiles:{builder:{priority:5}},timeouts:{requestTimeoutMs:60000}},['builder']);
+    store.saveProjectSettings('PROJECT-1',settings); assert.deepEqual(store.projectSettings('PROJECT-1'),settings);
+    assert.throws(()=>validateProjectSettings({version:1,apiKey:'never-store-this'},['builder']),/must not contain secrets/);
+    assert.throws(()=>validateProjectSettings({version:1,profiles:{unknown:{enabled:true}}},['builder']),/Unknown model profile/);
   } finally { fs.rmSync(root,{recursive:true,force:true}); }
 });
 
