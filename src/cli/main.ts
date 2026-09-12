@@ -9,6 +9,9 @@ function usage(){console.log(`ACP v0.3.1
 Commands:
   doctor
   ui
+  project:onboard <local-repository-path>
+  project:list
+  project:show <PROJECT-ID>
   task:create <file.json>
   task:show <TASK-ID>
   task:plan <TASK-ID>
@@ -49,6 +52,9 @@ try{
  if(!command||command==='help'){usage();process.exit(0)}
  if(command==='doctor'){console.log(JSON.stringify({version:'0.3.1',node:process.version,dataDir:acp.config.dataDir,artifactsDir:acp.config.artifactsDir,nvidiaConfigured:Boolean(acp.config.nvidia.apiKey),nvidiaBaseUrl:acp.config.nvidia.baseUrl,maxConcurrency:acp.config.maxConcurrency,requestTimeoutMs:acp.config.requestTimeoutMs,modelCooldownMs:acp.config.modelCooldownMs,reviewerTimeoutMs:acp.config.reviewerTimeoutMs,researcherTimeoutMs:acp.config.researcherTimeoutMs,builderTimeoutMs:acp.config.builderTimeoutMs,models:acp.router.all(),budgets:acp.config.budgets,fallow:acp.config.fallowCommand,coderabbitEnabled:acp.config.coderabbitEnabled},null,2));process.exit(0)}
  if(command==='ui'){startUi(acp,acp.config.uiPort);}
+ else if(command==='project:onboard'){console.log(JSON.stringify(await acp.onboardProject(args[0]),null,2));}
+ else if(command==='project:list'){console.log(JSON.stringify(acp.projects(),null,2));}
+ else if(command==='project:show'){console.log(JSON.stringify(acp.project(args[0]),null,2));}
  else if(command==='task:create'){const file=path.resolve(args[0]);const task=JSON.parse(fs.readFileSync(file,'utf8')) as Task;console.log(acp.createTask(task));}
  else if(command==='task:show'){console.log(JSON.stringify(acp.showTask(args[0]),null,2));}
  else if(command==='task:plan'){console.log(JSON.stringify(acp.buildPlan(args[0]),null,2));}

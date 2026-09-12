@@ -13,6 +13,7 @@ import { TaskPlanner, readyNodes, resumeStatus } from '../core/planner.js';
 import { LearningLoop } from '../core/learning.js';
 import { AgentRuntime } from './runtime.js';
 import { MediaService } from '../media/service.js';
+import { ProjectRegistry } from '../projects/profiles.js';
 
 export function deferredReviewFinding(error:unknown):ReviewFinding {
   const message=error instanceof Error?error.message:String(error);
@@ -20,9 +21,12 @@ export function deferredReviewFinding(error:unknown):ReviewFinding {
 }
 
 export class Orchestrator {
-  readonly config=loadConfig(); readonly store=new Store(this.config.dataDir); readonly context=new ContextRouter(process.cwd()); readonly git=new GitManager(process.cwd(),this.config.worktreeDir); readonly nvidia=new NvidiaClient(this.config.nvidia.baseUrl,this.config.nvidia.apiKey,this.config.requestTimeoutMs); readonly router=new ModelRouter(this.config.profiles,this.store.modelHealth(),this.config.modelCooldownMs,state=>this.store.saveModelHealth(state)); readonly reviewEngine=new ReviewEngine(this.config.fallowCommand,this.config.coderabbitEnabled,this.config.coderabbitCommand); readonly planner=new TaskPlanner(); readonly learningLoop=new LearningLoop(this.store); readonly media=new MediaService(this.router,this.nvidia,this.store,this.config.artifactsDir,this.config.requestTimeoutMs);
+  readonly config=loadConfig(); readonly store=new Store(this.config.dataDir); readonly projectsRegistry=new ProjectRegistry(this.store); readonly context=new ContextRouter(process.cwd()); readonly git=new GitManager(process.cwd(),this.config.worktreeDir); readonly nvidia=new NvidiaClient(this.config.nvidia.baseUrl,this.config.nvidia.apiKey,this.config.requestTimeoutMs); readonly router=new ModelRouter(this.config.profiles,this.store.modelHealth(),this.config.modelCooldownMs,state=>this.store.saveModelHealth(state)); readonly reviewEngine=new ReviewEngine(this.config.fallowCommand,this.config.coderabbitEnabled,this.config.coderabbitCommand); readonly planner=new TaskPlanner(); readonly learningLoop=new LearningLoop(this.store); readonly media=new MediaService(this.router,this.nvidia,this.store,this.config.artifactsDir,this.config.requestTimeoutMs);
   private runtimeFor(root:string){return new AgentRuntime(root,this.store,new ContextRouter(root),this.router,this.nvidia,this.learningLoop,this.config.maxConcurrency,this.config.artifactsDir,this.config.budgets,this.config.researcherTimeoutMs,this.config.builderTimeoutMs);}
   createTask(task:Task){this.store.upsertTask(task);return task.id;} showTask(id:string){return this.store.getTask(id);} listTasks(){return this.store.listTasks();}
+  async onboardProject(root:string){return this.projectsRegistry.onboard(root);}
+  projects(){return this.projectsRegistry.list();}
+  project(id:string){return this.projectsRegistry.show(id);}
   async checkpoint(taskId:string,cp:Checkpoint){this.store.addCheckpoint(cp);this.store.setStatus(taskId,'checkpointed');}
   async smoke(role:AgentRole='builder'){
     const candidates=this.router.route({role,effort:'low',allowDegraded:true});

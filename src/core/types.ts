@@ -4,6 +4,17 @@ export type Effort = 'low' | 'medium' | 'high' | 'maximum';
 export type NodeStatus = 'pending' | 'running' | 'checkpointed' | 'passed' | 'failed' | 'blocked';
 export type ModelHealth = 'unknown' | 'healthy' | 'degraded' | 'unavailable';
 
+export interface ProjectProfile {
+  id: string;
+  name: string;
+  root: string;
+  defaultBranch: string;
+  dataDir: string;
+  artifactsDir: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Budget {
   maxTokens: number;
   maxRequests: number;

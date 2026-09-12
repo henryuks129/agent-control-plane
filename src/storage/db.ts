@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import type { AgentRun, Artifact, Checkpoint, LearningIteration, ModelHealth, ReviewFinding, Task, UpgradeIteration, UpgradeStatus } from '../core/types.js';
+import type { AgentRun, Artifact, Checkpoint, LearningIteration, ModelHealth, ProjectProfile, ReviewFinding, Task, UpgradeIteration, UpgradeStatus } from '../core/types.js';
 
 export interface StoredModelHealth { id:string; health:ModelHealth; reason?:string; checkedAt:string; cooldownUntil?:string }
 export type PatchStatus='validated'|'approved'|'applied'|'rejected';
@@ -25,11 +25,17 @@ export class Store {
       CREATE INDEX IF NOT EXISTS idx_upgrade_status ON upgrade_iterations(status,id DESC);
       CREATE TABLE IF NOT EXISTS model_health (id TEXT PRIMARY KEY,health TEXT NOT NULL,reason TEXT,checked_at TEXT NOT NULL,cooldown_until TEXT);
       CREATE TABLE IF NOT EXISTS patch_lifecycle (artifact_id TEXT PRIMARY KEY,task_id TEXT NOT NULL,worktree TEXT NOT NULL,status TEXT NOT NULL,validation TEXT,approved_at TEXT,applied_at TEXT);
+      CREATE TABLE IF NOT EXISTS projects (id TEXT PRIMARY KEY,name TEXT NOT NULL,root TEXT NOT NULL UNIQUE,default_branch TEXT NOT NULL,data_dir TEXT NOT NULL,artifacts_dir TEXT NOT NULL,created_at TEXT NOT NULL,updated_at TEXT NOT NULL);
     `);
   }
   upsertTask(task: Task, status = 'queued') { const now = new Date().toISOString(); this.db.prepare(`INSERT INTO tasks(id,status,payload,created_at,updated_at) VALUES(?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET status=excluded.status,payload=excluded.payload,updated_at=excluded.updated_at`).run(task.id,status,JSON.stringify(task),now,now); }
   getTask(id: string): { task: Task; status: string } | undefined { const row = this.db.prepare('SELECT status,payload FROM tasks WHERE id=?').get(id) as {status:string;payload:string}|undefined; return row ? {task:JSON.parse(row.payload),status:row.status}:undefined; }
   listTasks() { return this.db.prepare('SELECT id,status,payload,updated_at FROM tasks ORDER BY updated_at DESC').all() as Array<{id:string;status:string;payload:string;updated_at:string}>; }
+  project(id:string):ProjectProfile|undefined { const row=this.db.prepare('SELECT * FROM projects WHERE id=?').get(id) as any; return row?this.projectRow(row):undefined; }
+  projectByRoot(root:string):ProjectProfile|undefined { const row=this.db.prepare('SELECT * FROM projects WHERE root=?').get(root) as any; return row?this.projectRow(row):undefined; }
+  projects():ProjectProfile[] { return (this.db.prepare('SELECT * FROM projects ORDER BY updated_at DESC').all() as any[]).map(row=>this.projectRow(row)); }
+  saveProject(profile:ProjectProfile) { this.db.prepare('INSERT INTO projects(id,name,root,default_branch,data_dir,artifacts_dir,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(root) DO UPDATE SET name=excluded.name,default_branch=excluded.default_branch,data_dir=excluded.data_dir,artifacts_dir=excluded.artifacts_dir,updated_at=excluded.updated_at').run(profile.id,profile.name,profile.root,profile.defaultBranch,profile.dataDir,profile.artifactsDir,profile.createdAt,profile.updatedAt); }
+  private projectRow(row:any):ProjectProfile { return {id:row.id,name:row.name,root:row.root,defaultBranch:row.default_branch,dataDir:row.data_dir,artifactsDir:row.artifacts_dir,createdAt:row.created_at,updatedAt:row.updated_at}; }
   setStatus(id: string,status: string) { this.db.prepare('UPDATE tasks SET status=?,updated_at=? WHERE id=?').run(status,new Date().toISOString(),id); }
   addCheckpoint(cp: Checkpoint) { this.db.prepare('INSERT INTO checkpoints(task_id,node_id,payload,created_at) VALUES(?,?,?,?)').run(cp.task_id,cp.node_id??null,JSON.stringify(cp),new Date().toISOString()); }
   latestCheckpoint(taskId: string,nodeId?: string): Checkpoint|undefined { const row = nodeId ? this.db.prepare('SELECT payload FROM checkpoints WHERE task_id=? AND node_id=? ORDER BY id DESC LIMIT 1').get(taskId,nodeId) : this.db.prepare('SELECT payload FROM checkpoints WHERE task_id=? ORDER BY id DESC LIMIT 1').get(taskId); return row ? JSON.parse((row as {payload:string}).payload):undefined; }

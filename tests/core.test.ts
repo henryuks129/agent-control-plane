@@ -16,6 +16,7 @@ import { GitManager } from '../src/git/worktrees.js';
 import { MediaService } from '../src/media/service.js';
 import { ReviewEngine } from '../src/reviews/engine.js';
 import { startUi } from '../src/cli/ui.js';
+import { ProjectRegistry } from '../src/projects/profiles.js';
 
 const exec=promisify(execFile);
 
@@ -144,6 +145,22 @@ test('patch lifecycle persists validation and approval records', async () => {
     assert.equal(validated?.status,'validated');
     store.savePatchLifecycle({...validated!,status:'approved',approvedAt:'2026-09-12T00:00:00.000Z'});
     assert.equal(store.patchLifecycle('TASK:patch')?.status,'approved');
+  } finally { fs.rmSync(root,{recursive:true,force:true}); }
+});
+
+test('project onboarding registers an existing Git checkout without changing remotes', async () => {
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'acp-project-'));
+  const git=(args:string[])=>exec('git',args,{cwd:root});
+  const { Store }=await import('../src/storage/db.js');
+  try {
+    await git(['init','-b','main']); await git(['config','user.email','tests@example.test']); await git(['config','user.name','ACP tests']);
+    fs.writeFileSync(path.join(root,'README.md'),'project'); await git(['add','.']); await git(['commit','-m','initial']);
+    const before=(await git(['remote'])).stdout;
+    const registry=new ProjectRegistry(new Store(path.join(root,'acp-state')));
+    const first=await registry.onboard(root); const second=await registry.onboard(path.join(root,'.'));
+    assert.equal(first.root,fs.realpathSync(root)); assert.equal(first.defaultBranch,'main'); assert.equal(first.id,second.id); assert.equal(registry.list().length,1);
+    assert.equal((await git(['remote'])).stdout,before); assert.equal(JSON.stringify(first).includes('API_KEY'),false);
+    await assert.rejects(registry.onboard(path.join(root,'missing')),/does not exist/);
   } finally { fs.rmSync(root,{recursive:true,force:true}); }
 });
 
