@@ -14,6 +14,8 @@ import { resolveBudget } from '../src/agents/runtime.js';
 import { deferredReviewFinding } from '../src/agents/orchestrator.js';
 import { GitManager } from '../src/git/worktrees.js';
 import { MediaService } from '../src/media/service.js';
+import { ReviewEngine } from '../src/reviews/engine.js';
+import { startUi } from '../src/cli/ui.js';
 
 const exec=promisify(execFile);
 
@@ -268,6 +270,32 @@ test('custom task graphs reject unknown dependencies and cycles',()=>{
   assert.throws(()=>validateGraph([node('build',['missing'])]),/unknown node/);
   assert.throws(()=>validateGraph([node('a',['b']),node('b',['a'])]),/dependency cycle/);
   assert.doesNotThrow(()=>validateGraph([node('research'),node('build',['research']),node('test',['build'])]));
+});
+
+test('external review adapter is opt-in and records command evidence', async () => {
+  const disabled=await new ReviewEngine('').external(process.cwd());
+  assert.equal(disabled.passed,true); assert.equal(disabled.evidence[0].tool,'coderabbit (disabled)');
+  const enabled=await new ReviewEngine('',true,`${process.execPath} -e "process.exit(0)"`).external(process.cwd());
+  assert.equal(enabled.passed,true); assert.equal(enabled.evidence[0].ok,true);
+});
+
+test('local dashboard exposes patch approval endpoints when local binding is permitted', async () => {
+  const calls:string[]=[];
+  const acp={
+    listTasks:()=>[{id:'TASK-UI',status:'checkpointed',updated_at:'now'}],store:{learning:()=>[]},
+    taskProgress:()=>({taskId:'TASK-UI',completed:[],ready:['TASK-UI-build'],nodes:[]}),patches:()=>[{id:'PATCH-1'}],
+    validatePatch:async()=>{calls.push('validate');return {valid:true};},approvePatch:()=>{calls.push('approve');return {status:'approved'};},applyPatch:async()=>{calls.push('apply');return {status:'applied'};}
+  };
+  const server=startUi(acp as any,0);
+  const started=await new Promise<boolean>(resolve=>{server.once('listening',()=>resolve(true));server.once('error',()=>resolve(false));});
+  if(!started) return;
+  const address=server.address() as {port:number}; const base=`http://127.0.0.1:${address.port}`;
+  try {
+    assert.match(await (await fetch(`${base}/`)).text(),/Local patch review/);
+    assert.equal((await (await fetch(`${base}/api/tasks/TASK-UI/patches`)).json() as any[])[0].id,'PATCH-1');
+    assert.equal((await (await fetch(`${base}/api/tasks/TASK-UI/patches/PATCH-1/validate`,{method:'POST'})).json() as any).valid,true);
+    assert.deepEqual(calls,['validate']);
+  } finally { await new Promise<void>(resolve=>server.close(()=>resolve())); }
 });
 
 test('learning and upgrade lifecycle rejects invalid transitions', async () => {

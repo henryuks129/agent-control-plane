@@ -94,6 +94,6 @@ export function loadConfig(root = process.cwd()): Config {
     modelCooldownMs: Number(process.env.ACP_MODEL_COOLDOWN_MS ?? 300000),
     fallowCommand: process.env.FALLOW_COMMAND ?? 'npx fallow',
     coderabbitEnabled: process.env.CODERABBIT_ENABLED === 'true',
-    coderabbitCommand: process.env.CODERABBIT_COMMAND ?? 'cr'
+    coderabbitCommand: process.env.CODERABBIT_COMMAND ?? 'cr review'
   };
 }

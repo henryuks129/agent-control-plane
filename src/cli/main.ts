@@ -31,6 +31,7 @@ Commands:
   worktree:prepare <TASK-ID>
   review:deterministic <TASK-ID>
   review:llm <TASK-ID>
+  review:external <TASK-ID>
   learning:show <TASK-ID>
   learning:approve <TASK-ID> <iteration>
   learning:propose-upgrade <TASK-ID> <max-iterations>
@@ -70,6 +71,7 @@ try{
  else if(command==='worktree:prepare'){console.log(JSON.stringify(await acp.prepareWorktree(args[0]),null,2));}
  else if(command==='review:deterministic'){console.log(JSON.stringify(await acp.deterministicReview(args[0]),null,2));}
  else if(command==='review:llm'){console.log(JSON.stringify(await acp.llmReview(args[0]),null,2));}
+ else if(command==='review:external'){console.log(JSON.stringify(await acp.externalReview(args[0]),null,2));}
  else if(command==='learning:show'){console.log(JSON.stringify(acp.learning(args[0]),null,2));}
  else if(command==='learning:approve'){acp.approveLearning(args[0],Number(args[1]));console.log('learning iteration approved');}
  else if(command==='learning:propose-upgrade'){console.log(JSON.stringify(acp.proposeUpgrade(args[0],Number(args[1]??1)),null,2));}

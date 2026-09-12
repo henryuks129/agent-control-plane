@@ -78,6 +78,10 @@ node dist/src/cli/main.js patch:apply <TASK-ID> <PATCH-ARTIFACT-ID>
 
 Custom task graphs are checked for duplicate IDs, missing dependencies, self-dependencies and cycles before execution. The `test` node is a dedicated deterministic worker: it runs typecheck, build and tests, then saves command evidence as an artifact. The reviewer graph node only opens the review gate; ACP performs its authoritative deterministic and optional LLM review once after the graph completes.
 
+The local dashboard exposes the same human patch gate. Start it with `node dist/src/cli/main.js ui`, choose a task, validate a patch, inspect the result, approve it, and only then use Apply. Apply always revalidates the patch against the worktree.
+
+External review is optional. Set `CODERABBIT_ENABLED=true` and set `CODERABBIT_COMMAND` to the complete command you want ACP to run; then use `review:external <TASK-ID>`. ACP stores its evidence and does not enable or contact an external review service by default.
+
 
 ## v0.3.1 recursive learning release
 
