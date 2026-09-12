@@ -1,18 +1,99 @@
 import http from 'node:http';
 import { Orchestrator } from '../agents/orchestrator.js';
 
-function json(res:http.ServerResponse,status:number,payload:unknown){res.writeHead(status,{'content-type':'application/json'});res.end(JSON.stringify(payload));}
-function page(){return `<!doctype html><html><head><meta charset="utf-8"><title>ACP Control Plane</title><style>body{font:15px system-ui;margin:0;background:#0b0d10;color:#eee}main{max-width:1100px;margin:40px auto;padding:0 24px}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card{border:1px solid #292e35;border-radius:14px;padding:16px;background:#11151a;margin:12px 0}.muted{color:#8d96a3}pre{white-space:pre-wrap;overflow:auto;max-height:360px}button{margin:3px;padding:7px 10px;border-radius:7px;border:1px solid #536071;background:#17202a;color:#fff;cursor:pointer}</style></head><body><main><h1>Agent Control Plane</h1><p class="muted">Local patch review and human approval.</p><div id="stats" class="grid"></div><div class="card"><h2>Tasks</h2><div id="tasks">Loading…</div></div><div class="card"><h2>Selected task</h2><pre id="detail">Select a task.</pre><div id="actions"></div></div></main><script>let selected='';const get=u=>fetch(u).then(r=>r.json());const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));async function choose(id){selected=id;const [progress,patches]=await Promise.all([get('/api/tasks/'+encodeURIComponent(id)+'/progress'),get('/api/tasks/'+encodeURIComponent(id)+'/patches')]);document.getElementById('detail').textContent=JSON.stringify({progress,patches},null,2);document.getElementById('actions').innerHTML=patches.map(p=>'<button data-id="'+esc(p.id)+'" data-action="validate">Validate '+esc(p.id)+'</button><button data-id="'+esc(p.id)+'" data-action="approve">Approve</button><button data-id="'+esc(p.id)+'" data-action="apply">Apply</button>').join('')||'No patch artifacts.';document.querySelectorAll('#actions button').forEach(b=>b.onclick=()=>act(b.dataset.action,b.dataset.id))}async function act(action,id){if(action==='apply'&&!confirm('Apply this approved patch to its task worktree?'))return;const r=await fetch('/api/tasks/'+encodeURIComponent(selected)+'/patches/'+encodeURIComponent(id)+'/'+action,{method:'POST'});document.getElementById('detail').textContent=JSON.stringify(await r.json(),null,2);choose(selected)}async function load(){const d=await get('/api/dashboard');document.getElementById('stats').innerHTML=['Tasks','Running','Passed','Learning'].map((x,i)=>'<div class="card"><div class="muted">'+x+'</div><h2>'+[d.tasks.length,d.tasks.filter(t=>['running','review'].includes(t.status)).length,d.tasks.filter(t=>t.status==='passed').length,d.learningIterations][i]+'</h2></div>').join('');const area=document.getElementById('tasks');area.innerHTML='';d.tasks.forEach(t=>{const b=document.createElement('button');b.textContent=t.id+' — '+t.status;b.onclick=()=>choose(t.id);area.appendChild(b)})}load()</script></body></html>`;}
+function json(response: http.ServerResponse, status: number, body: unknown) {
+  response.writeHead(status, { 'content-type': 'application/json' });
+  response.end(JSON.stringify(body));
+}
 
-export function startUi(acp:Orchestrator,port:number){
-  const server=http.createServer(async(req,res)=>{try{const url=new URL(req.url??'/',`http://${req.headers.host??'127.0.0.1'}`);const parts=url.pathname.split('/').filter(Boolean).map(decodeURIComponent);
-    if(req.method==='GET'&&url.pathname==='/api/dashboard'){const tasks=acp.listTasks().map(x=>({id:x.id,status:x.status,updatedAt:x.updated_at}));const learning=tasks.reduce((n,t)=>n+Number((acp.store.learning(t.id) as unknown[]).length),0);return json(res,200,{tasks,learningIterations:learning});}
-    if(parts[0]==='api'&&parts[1]==='tasks'&&parts[3]==='progress'&&req.method==='GET') return json(res,200,acp.taskProgress(parts[2]));
-    if(parts[0]==='api'&&parts[1]==='tasks'&&parts[3]==='graph'&&req.method==='GET') return json(res,200,acp.taskGraph(parts[2]));
-    if(parts[0]==='api'&&parts[1]==='tasks'&&parts[3]==='patches'&&parts.length===4&&req.method==='GET') return json(res,200,acp.patches(parts[2]));
-    if(parts[0]==='api'&&parts[1]==='tasks'&&parts[3]==='history'&&req.method==='GET') return json(res,200,acp.taskHistory(parts[2]));
-    if(parts[0]==='api'&&parts[1]==='tasks'&&parts[3]==='artifacts'&&parts.length===5&&req.method==='GET') return json(res,200,acp.artifactPreview(parts[2],parts[4]));
-    if(parts[0]==='api'&&parts[1]==='tasks'&&parts[3]==='patches'&&parts.length===6&&req.method==='POST'){const [taskId,artifactId,action]=[parts[2],parts[4],parts[5]];if(action==='validate')return json(res,200,await acp.validatePatch(taskId,artifactId));if(action==='approve')return json(res,200,acp.approvePatch(taskId,artifactId));if(action==='apply')return json(res,200,await acp.applyPatch(taskId,artifactId));}
-    if(req.method==='GET'&&url.pathname==='/'){res.writeHead(200,{'content-type':'text/html'});return res.end(page());} return json(res,404,{error:'Not found'});
-  }catch(error){return json(res,400,{error:error instanceof Error?error.message:String(error)});}});server.listen(port,'127.0.0.1',()=>console.log(`ACP UI: http://127.0.0.1:${port}`));return server;
+function page() {
+  return `<!doctype html>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  body{font:15px system-ui;background:#0b0d10;color:#eee;max-width:1000px;margin:36px auto;padding:0 18px}
+  .card{border:1px solid #27313d;border-radius:14px;background:#10151b;padding:20px;margin:16px 0}
+  button{border:1px solid #52647b;border-radius:9px;background:#141d27;color:#eee;padding:9px 12px;margin:4px;cursor:pointer}
+  button:hover{background:#1d2a38}.muted{color:#a9b5c4}.flow{display:grid;gap:8px;max-width:620px}
+  .node{border:1px solid #435166;border-radius:10px;background:#111820;padding:12px}.completed{border-color:#3c9b6f}
+  .ready,.running{border-color:#5d91d6}.pending{border-color:#b58b38}.failed{border-color:#bc5960}
+  .arrow{text-align:center;color:#8fa5c0;font-size:20px}pre{white-space:pre-wrap;max-height:240px;overflow:auto}
+</style>
+<h1>Agent Control Plane</h1><p class="muted">Local patch review and human approval.</p>
+<div class="card"><h2>Tasks</h2><div id="tasks">Loading…</div></div>
+<div class="card"><h2>Task graph</h2><div id="graph" class="muted">Select a task.</div></div>
+<div class="card"><h2>Selected task</h2><pre id="detail">Select a task.</pre><div id="actions"></div></div>
+<div class="card"><h2>History</h2><pre id="history">Select a task.</pre></div>
+<script>
+  const get=(url)=>fetch(url).then(async response=>{const body=await response.json();if(!response.ok)throw new Error(body.error||response.statusText);return body});
+  const escape=(text)=>String(text).replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+  async function act(taskId,patchId,action){
+    if(action==='apply'&&!confirm('Apply this approved patch to the task worktree?'))return;
+    try{await fetch('/api/tasks/'+encodeURIComponent(taskId)+'/patches/'+encodeURIComponent(patchId)+'/'+action,{method:'POST'}).then(async response=>{const body=await response.json();if(!response.ok)throw new Error(body.error||response.statusText)});await choose(taskId)}catch(error){alert(error.message)}
+  }
+  function renderGraph(graph){
+    const target=document.querySelector('#graph');
+    if(!graph.nodes.length){target.textContent='No graph nodes are available.';return}
+    target.innerHTML='<div class="flow">'+graph.nodes.map((node,index)=>
+      '<div class="node '+escape(node.status)+'"><b>'+escape(node.role)+'</b> · '+escape(node.title)+
+      '<br><small class="muted">'+escape(node.status)+(node.dependsOn.length?' · depends on '+escape(node.dependsOn.join(', ')): '')+'</small></div>'+
+      (index<graph.nodes.length-1?'<div class="arrow" aria-hidden="true">↓</div>':'')
+    ).join('')+'</div>';
+  }
+  async function choose(taskId){
+    try{
+      const [progress,patches,graph,history]=await Promise.all([
+        get('/api/tasks/'+encodeURIComponent(taskId)+'/progress'), get('/api/tasks/'+encodeURIComponent(taskId)+'/patches'),
+        get('/api/tasks/'+encodeURIComponent(taskId)+'/graph'), get('/api/tasks/'+encodeURIComponent(taskId)+'/history')
+      ]);
+      renderGraph(graph);
+      document.querySelector('#detail').textContent=JSON.stringify(progress,null,2);
+      document.querySelector('#history').textContent=JSON.stringify(history,null,2);
+      const actions=document.querySelector('#actions');actions.textContent='';
+      patches.forEach(patch=>{
+        const label=document.createElement('p');label.textContent='Patch: '+patch.id;actions.append(label);
+        ['validate','approve','apply'].forEach(action=>{const button=document.createElement('button');button.textContent=action[0].toUpperCase()+action.slice(1);button.onclick=()=>act(taskId,patch.id,action);actions.append(button)});
+      });
+      if(!patches.length)actions.textContent='No patch artifacts for this task.';
+    }catch(error){document.querySelector('#detail').textContent=error.message}
+  }
+  get('/api/dashboard').then(data=>{const tasks=document.querySelector('#tasks');tasks.textContent='';data.tasks.forEach(task=>{const button=document.createElement('button');button.textContent=task.id+' — '+task.status;button.onclick=()=>choose(task.id);tasks.append(button)})}).catch(error=>document.querySelector('#tasks').textContent=error.message);
+</script>`;
+}
+
+export function startUi(acp: Orchestrator, port: number) {
+  const server = http.createServer(async (request, response) => {
+    try {
+      const url = new URL(request.url ?? '/', `http://${request.headers.host}`);
+      const parts = url.pathname.split('/').filter(Boolean).map(decodeURIComponent);
+      const taskId = parts[2];
+      const patchId = parts[4];
+      const action = parts[5];
+
+      if (url.pathname === '/api/dashboard') {
+        const tasks = acp.listTasks().map(task => ({ id: task.id, status: task.status, updatedAt: task.updated_at }));
+        return json(response, 200, { tasks });
+      }
+      if (parts[0] === 'api' && parts[1] === 'tasks' && request.method === 'GET') {
+        if (parts[3] === 'progress') return json(response, 200, acp.taskProgress(taskId));
+        if (parts[3] === 'graph') return json(response, 200, acp.taskGraph(taskId));
+        if (parts[3] === 'patches') return json(response, 200, acp.patches(taskId));
+        if (parts[3] === 'history') return json(response, 200, acp.taskHistory(taskId));
+        if (parts[3] === 'artifacts' && parts[4]) return json(response, 200, acp.artifactPreview(taskId, parts[4]));
+      }
+      if (parts[0] === 'api' && parts[1] === 'tasks' && parts[3] === 'patches' && request.method === 'POST') {
+        if (action === 'validate') return json(response, 200, acp.validatePatch(taskId, patchId));
+        if (action === 'approve') return json(response, 200, acp.approvePatch(taskId, patchId));
+        if (action === 'apply') return json(response, 200, acp.applyPatch(taskId, patchId));
+      }
+      if (url.pathname === '/') {
+        response.writeHead(200, { 'content-type': 'text/html' });
+        return response.end(page());
+      }
+      return json(response, 404, { error: 'Not found' });
+    } catch (error) {
+      return json(response, 400, { error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+  server.listen(port, '127.0.0.1', () => console.log(`ACP UI: http://127.0.0.1:${port}`));
+  return server;
 }
