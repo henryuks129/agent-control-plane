@@ -7,7 +7,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { ModelRouter } from '../src/models/router.js';
 import { ContextRouter } from '../src/context/router.js';
-import { TaskPlanner, readyNodes } from '../src/core/planner.js';
+import { TaskPlanner, readyNodes, resumeStatus } from '../src/core/planner.js';
 import { NvidiaClient } from '../src/models/nvidia.js';
 import { parseReviewFindings } from '../src/reviews/llm.js';
 import { resolveBudget } from '../src/agents/runtime.js';
@@ -255,6 +255,13 @@ test('deferred reviews remain visible without being reported as a deterministic 
 test('context router returns task-scoped context instead of whole repository',()=>{const router=new ContextRouter(process.cwd());const pack=router.build({id:'TASK-9999',title:'test',objective:'test',type:'test',scope:{allowed:['src/core/**']},acceptance:['works'],review:{required:[]}});assert.equal(pack.task.id,'TASK-9999');assert.ok(pack.docs.some(x=>x.path==='AGENTS.md'));assert.ok(pack.files.length<=20);assert.ok(pack.tokenEstimate>0)});
 
 test('planner creates resumable dependency graph',()=>{const nodes=new TaskPlanner().plan({id:'TASK-0001',title:'x',objective:'x',type:'test',scope:{allowed:['src/**']},acceptance:['x'],review:{required:['reviewer']},effort:'high'});assert.equal(nodes.length,4);assert.deepEqual(readyNodes(nodes,new Map(nodes.map(n=>[n.id,'pending']))).map(n=>n.role),['researcher']);});
+
+test('resume status skips completed graph nodes and exposes the next node',()=>{
+  const nodes=new TaskPlanner().plan({id:'TASK-RESUME',title:'resume',objective:'resume',type:'test',scope:{allowed:['src/**']},acceptance:['x'],review:{required:[]},effort:'medium'});
+  const status=resumeStatus(nodes,nodeId=>nodeId==='TASK-RESUME-research'?{task_id:'TASK-RESUME',node_id:nodeId,phase:'researcher',completed:[],current:'done',changed:[],tests:{status:'passed'},blockers:[],next_action:'Build'}:undefined);
+  assert.equal(status.get('TASK-RESUME-research'),'passed');
+  assert.deepEqual(readyNodes(nodes,status).map(node=>node.id),['TASK-RESUME-build']);
+});
 
 test('learning and upgrade lifecycle rejects invalid transitions', async () => {
   const { Store } = await import('../src/storage/db.js');

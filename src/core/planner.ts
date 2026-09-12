@@ -1,4 +1,4 @@
-import type { AgentRole, Effort, Task, TaskNode } from './types.js';
+import type { AgentRole, Checkpoint, Effort, Task, TaskNode } from './types.js';
 
 export class TaskPlanner {
   plan(task: Task): TaskNode[] {
@@ -16,4 +16,9 @@ export class TaskPlanner {
 }
 
 export function readyNodes(nodes:TaskNode[], status:Map<string,string>):TaskNode[] { return nodes.filter(n => (status.get(n.id)??'pending')==='pending' && (n.dependsOn??[]).every(d => status.get(d)==='passed')); }
+export function resumeStatus(nodes:TaskNode[],checkpointFor:(nodeId:string)=>Checkpoint|undefined) {
+  const status=new Map<string,string>();
+  for(const node of nodes) status.set(node.id,checkpointFor(node.id)?.tests.status==='passed'?'passed':'pending');
+  return status;
+}
 export function roleForNode(node:TaskNode):AgentRole { return node.role; }

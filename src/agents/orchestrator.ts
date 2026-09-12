@@ -9,7 +9,7 @@ import { ContextRouter } from '../context/router.js';
 import { GitManager } from '../git/worktrees.js';
 import { ReviewEngine } from '../reviews/engine.js';
 import { LlmReviewer } from '../reviews/llm.js';
-import { TaskPlanner, readyNodes } from '../core/planner.js';
+import { TaskPlanner, readyNodes, resumeStatus } from '../core/planner.js';
 import { LearningLoop } from '../core/learning.js';
 import { AgentRuntime } from './runtime.js';
 import { MediaService } from '../media/service.js';
@@ -60,6 +60,21 @@ export class Orchestrator {
     throw failure;
   }
   buildPlan(taskId:string){const record=this.showTask(taskId);if(!record)throw new Error('Task not found');return this.planner.plan(record.task);}
+  taskProgress(taskId:string) {
+    const record=this.showTask(taskId); if(!record) throw new Error('Task not found');
+    const nodes=this.planner.plan(record.task); const status=resumeStatus(nodes,nodeId=>this.store.latestCheckpoint(taskId,nodeId));
+    const completed=nodes.filter(node=>status.get(node.id)==='passed').map(node=>node.id);
+    const ready=readyNodes(nodes,status).map(node=>node.id);
+    return {taskId,status:record.status,completed,ready,nodes:nodes.map(node=>{
+      const checkpoint=this.store.latestCheckpoint(taskId,node.id);
+      return {id:node.id,title:node.title,role:node.role,status:status.get(node.id)==='passed'?'completed':'pending',checkpoint:checkpoint?{phase:checkpoint.phase,tests:{status:checkpoint.tests.status},nextAction:checkpoint.next_action}:undefined};
+    })};
+  }
+  async resume(taskId:string) {
+    const progress=this.taskProgress(taskId);
+    if(progress.status==='passed') return {status:'passed',resumed:false,message:'Task is already complete.',progress};
+    return this.run(taskId);
+  }
   async run(taskId:string){
     const record=this.showTask(taskId);
     if(!record) throw new Error('Task not found');
@@ -70,9 +85,8 @@ export class Orchestrator {
     const runtime=this.runtimeFor(worktree);
     const nodes=this.planner.plan(task);
     this.store.setStatus(taskId,'running');
-    const status=new Map<string,string>();
-    for(const n of nodes) status.set(n.id,'pending');
-    for(const n of nodes) { if(this.store.latestCheckpoint(taskId,n.id)?.tests.status==='passed') status.set(n.id,'passed'); }
+    const status=resumeStatus(nodes,nodeId=>this.store.latestCheckpoint(taskId,nodeId));
+    const resumedFrom=nodes.filter(node=>status.get(node.id)==='passed').map(node=>node.id); const executed:string[]=[];
     let progress=true;
     while(progress){
       progress=false;
@@ -81,6 +95,7 @@ export class Orchestrator {
       const maxAgents=Math.min(task.execution?.maxConcurrency ?? this.config.maxConcurrency, task.budget?.maxAgents ?? this.config.budgets[task.effort ?? 'medium'].maxAgents);
       const batch=(task.execution?.strategy==='parallel'||task.execution?.strategy==='swarm') ? ready.slice(0,maxAgents) : ready.slice(0,1);
       const results=await Promise.all(batch.map(async node=>{
+        executed.push(node.id);
         status.set(node.id,'running');
         const cp:Checkpoint={
           task_id:task.id,node_id:node.id,phase:node.role,
@@ -103,7 +118,7 @@ export class Orchestrator {
       progress=true;
       if(results.some(x=>!x.result.ok)){
         this.store.setStatus(taskId,'checkpointed');
-        return {status:'checkpointed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,worktreeSynchronized:prepared.synchronized,nodes:results};
+        return {status:'checkpointed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,worktreeSynchronized:prepared.synchronized,resume:{skipped:resumedFrom,executed},nodes:results};
       }
     }
     this.store.setStatus(taskId,'review');
@@ -112,7 +127,7 @@ export class Orchestrator {
     if(!report.passed){
       this.learningLoop.ingest(taskId,'deterministic-review',report.findings);
       this.store.setStatus(taskId,'failed');
-      return {status:'failed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,worktreeSynchronized:prepared.synchronized,report};
+      return {status:'failed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,worktreeSynchronized:prepared.synchronized,resume:{skipped:resumedFrom,executed},report};
     }
     if(task.review.required.includes('reviewer')){
       try{
@@ -123,7 +138,7 @@ export class Orchestrator {
         this.learningLoop.ingest(taskId,'reviewer',findings);
         if(findings.some(f=>['critical','high'].includes(f.severity))){
           this.store.setStatus(taskId,'failed');
-          return {status:'failed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,worktreeSynchronized:prepared.synchronized,report,findings};
+          return {status:'failed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,worktreeSynchronized:prepared.synchronized,resume:{skipped:resumedFrom,executed},report,findings};
         }
       }catch(error){
         if((error as {retryable?:boolean}).retryable) {
@@ -131,14 +146,14 @@ export class Orchestrator {
           this.store.addFinding(taskId,finding);
           this.learningLoop.ingest(taskId,'reviewer',[finding]);
           this.store.setStatus(taskId,'passed');
-          return {status:'passed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,worktreeSynchronized:prepared.synchronized,report,findings:this.store.findings(taskId),reviewDeferred:true};
+          return {status:'passed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,worktreeSynchronized:prepared.synchronized,resume:{skipped:resumedFrom,executed},report,findings:this.store.findings(taskId),reviewDeferred:true};
         }
         this.store.setStatus(taskId,'checkpointed');
-        return {status:'checkpointed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,worktreeSynchronized:prepared.synchronized,reason:error instanceof Error?error.message:String(error)};
+        return {status:'checkpointed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,worktreeSynchronized:prepared.synchronized,resume:{skipped:resumedFrom,executed},reason:error instanceof Error?error.message:String(error)};
       }
     }
     this.store.setStatus(taskId,'passed');
-    return {status:'passed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,worktreeSynchronized:prepared.synchronized,report,findings:this.store.findings(taskId)};
+    return {status:'passed',worktree,dependenciesInstalled:prepared.dependenciesInstalled,worktreeSynchronized:prepared.synchronized,resume:{skipped:resumedFrom,executed},report,findings:this.store.findings(taskId)};
   }
   learning(taskId:string){return this.store.learning(taskId);}
   proposeUpgrade(taskId:string,maxIterations=1){return this.learningLoop.proposeUpgrade(taskId,maxIterations);}
