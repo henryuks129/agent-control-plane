@@ -27,7 +27,8 @@ export class MediaService {
     try { return await this.generate(profile,prompt); }
     catch(error) {
       const message=error instanceof Error?error.message:String(error);
-      this.router.markHealth(profile.id,'degraded',message);
+      const health=(error as {retryable?:boolean}).retryable?'degraded':'unavailable';
+      this.router.markHealth(profile.id,health,message);
       return this.tryCandidates(remaining,prompt,[...failures,`${profile.id}: ${message}`]);
     }
   }

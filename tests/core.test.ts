@@ -49,6 +49,28 @@ test('media routing selects only the requested image capability', () => {
   assert.deepEqual(router.mediaCandidates('text-to-image').map(p=>p.id),['image']);
 });
 
+test('model cooldown survives a new router and expires safely', () => {
+  const profile={id:'image',provider:'nvidia',model:'image-model',capabilities:['text-to-image'],maxConcurrent:1,enabled:true,media:{kind:'image' as const,endpoint:'https://example.test/image'}};
+  let saved: {id:string;health:'unknown'|'healthy'|'degraded'|'unavailable';reason?:string;checkedAt:string;cooldownUntil?:string}|undefined;
+  const router=new ModelRouter([profile],[],60000,state=>{saved=state;});
+  router.markHealth('image','degraded','request timed out');
+  assert.deepEqual(router.mediaCandidates('text-to-image'),[]);
+  assert.ok(saved?.cooldownUntil);
+  assert.deepEqual(new ModelRouter([profile],[saved!]).mediaCandidates('text-to-image'),[]);
+  const expired={...saved!,cooldownUntil:new Date(Date.now()-1).toISOString()};
+  assert.deepEqual(new ModelRouter([profile],[expired]).mediaCandidates('text-to-image').map(item=>item.id),['image']);
+});
+
+test('model health cooldown is stored locally for the next CLI run', async () => {
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'acp-model-health-'));
+  const { Store }=await import('../src/storage/db.js');
+  try {
+    const store=new Store(root);
+    store.saveModelHealth({id:'image',health:'degraded',reason:'request timed out',checkedAt:'2026-09-12T00:00:00.000Z',cooldownUntil:'2026-09-12T00:05:00.000Z'});
+    assert.deepEqual(store.modelHealth(),[{id:'image',health:'degraded',reason:'request timed out',checkedAt:'2026-09-12T00:00:00.000Z',cooldownUntil:'2026-09-12T00:05:00.000Z'}]);
+  } finally { fs.rmSync(root,{recursive:true,force:true}); }
+});
+
 test('media routing can target a named image profile', () => {
   const router=new ModelRouter([
     {id:'fast-image',provider:'nvidia',model:'fast-image',capabilities:['text-to-image'],maxConcurrent:1,enabled:true,priority:10,media:{kind:'image',endpoint:'https://example.test/fast'}},
@@ -150,7 +172,7 @@ test('media service falls back to the next compatible image profile', async () =
     {id:'primary',provider:'nvidia',model:'primary-model',capabilities:['text-to-image'],maxConcurrent:1,enabled:true,priority:10,media:{kind:'image',endpoint:'https://example.test/primary'}},
     {id:'fallback',provider:'nvidia',model:'fallback-model',capabilities:['text-to-image'],maxConcurrent:1,enabled:true,priority:20,media:{kind:'image',endpoint:'https://example.test/fallback'}}
   ]);
-  const client={image:async(endpoint:string)=>{if(endpoint.endsWith('primary'))throw new Error('primary unavailable');return {bytes:Buffer.from('fallback-image'),mimeType:'image/png'};}};
+  const client={image:async(endpoint:string)=>{if(endpoint.endsWith('primary'))throw Object.assign(new Error('primary unavailable'),{retryable:true});return {bytes:Buffer.from('fallback-image'),mimeType:'image/png'};}};
   try {
     const media=new MediaService(router,client as any,store,path.join(root,'artifacts'),100);
     const result=await media.image('a test image');

@@ -1,5 +1,7 @@
 import type { AgentRole, Effort, ModelHealth, ModelProfile } from '../core/types.js';
 
+export interface StoredModelHealth { id:string; health:ModelHealth; reason?:string; checkedAt:string; cooldownUntil?:string }
+
 const ROLE_CAPABILITIES: Record<AgentRole, string[]> = {
   planner: ['planning', 'reasoning'],
   builder: ['coding', 'reasoning'],
@@ -20,9 +22,17 @@ export interface RouteRequirements {
 
 export class ModelRouter {
   private profiles: ModelProfile[];
+  private readonly saved=new Map<string,StoredModelHealth>();
 
-  constructor(profiles: ModelProfile[]) {
-    this.profiles = profiles.map(p => ({ health: 'unknown', ...p }));
+  constructor(profiles: ModelProfile[],health:StoredModelHealth[]=[],private readonly cooldownMs=300000,private readonly persist?:(state:StoredModelHealth)=>void) {
+    for(const state of health) this.saved.set(state.id,state);
+    this.profiles = profiles.map(p => this.restore(p));
+  }
+  private restore(profile:ModelProfile):ModelProfile {
+    const state=this.saved.get(profile.id);
+    if(!state) return {health:'unknown',...profile};
+    if(state.health==='degraded'&&(!state.cooldownUntil||Date.parse(state.cooldownUntil)<=Date.now())) return {health:'unknown',...profile};
+    return {...profile,health:state.health,lastCheckedAt:state.checkedAt,unavailableReason:state.reason};
   }
 
   candidates(role: AgentRole, preferred: string[] = [], fallback: string[] = [], effort: Effort = 'medium'): ModelProfile[] {
@@ -82,9 +92,14 @@ export class ModelRouter {
   markHealth(id: string, health: ModelHealth, reason?: string) {
     const profile = this.get(id);
     if (!profile) throw new Error(`Unknown model profile: ${id}`);
+    const checkedAt=new Date().toISOString();
+    const cooldownUntil=health==='degraded'?new Date(Date.now()+this.cooldownMs).toISOString():undefined;
     profile.health = health;
-    profile.lastCheckedAt = new Date().toISOString();
+    profile.lastCheckedAt = checkedAt;
     profile.unavailableReason = reason;
+    const state={id,health,reason,checkedAt,cooldownUntil};
+    this.saved.set(id,state);
+    this.persist?.(state);
   }
 }
 

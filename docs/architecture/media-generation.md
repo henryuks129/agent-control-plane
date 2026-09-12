@@ -4,6 +4,8 @@ ACP treats media generation as a separate capability from chat. A media profile 
 
 `media:image` selects an enabled, healthy `text-to-image` profile, submits a bounded request, saves the returned image under the local artifacts directory, and records the model, profile, prompt, seed and MIME type in SQLite. API keys and response headers are never persisted.
 
+When a model has a retryable failure, ACP records it in local SQLite as degraded for five minutes by default. New CLI invocations skip it during that cooldown and use the next capable profile. Set `ACP_MODEL_COOLDOWN_MS` to adjust this duration.
+
 Video generation is intentionally not included in this first path. It needs a separate contract for image inputs, long-running jobs and potentially asynchronous result polling.
 
 ## Switching image models
