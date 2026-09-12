@@ -4,6 +4,8 @@ import { DatabaseSync } from 'node:sqlite';
 import type { AgentRun, Artifact, Checkpoint, LearningIteration, ModelHealth, ReviewFinding, Task, UpgradeIteration, UpgradeStatus } from '../core/types.js';
 
 export interface StoredModelHealth { id:string; health:ModelHealth; reason?:string; checkedAt:string; cooldownUntil?:string }
+export type PatchStatus='validated'|'approved'|'applied'|'rejected';
+export interface PatchLifecycle { artifactId:string; taskId:string; worktree:string; status:PatchStatus; validation?:unknown; approvedAt?:string; appliedAt?:string; }
 
 export class Store {
   private db: DatabaseSync;
@@ -22,6 +24,7 @@ export class Store {
       CREATE TABLE IF NOT EXISTS upgrade_iterations (id INTEGER PRIMARY KEY AUTOINCREMENT,parent_id INTEGER,source TEXT NOT NULL,target TEXT NOT NULL,hypothesis TEXT NOT NULL,change_text TEXT NOT NULL,evidence TEXT NOT NULL,status TEXT NOT NULL,created_at TEXT NOT NULL,validated_at TEXT);
       CREATE INDEX IF NOT EXISTS idx_upgrade_status ON upgrade_iterations(status,id DESC);
       CREATE TABLE IF NOT EXISTS model_health (id TEXT PRIMARY KEY,health TEXT NOT NULL,reason TEXT,checked_at TEXT NOT NULL,cooldown_until TEXT);
+      CREATE TABLE IF NOT EXISTS patch_lifecycle (artifact_id TEXT PRIMARY KEY,task_id TEXT NOT NULL,worktree TEXT NOT NULL,status TEXT NOT NULL,validation TEXT,approved_at TEXT,applied_at TEXT);
     `);
   }
   upsertTask(task: Task, status = 'queued') { const now = new Date().toISOString(); this.db.prepare(`INSERT INTO tasks(id,status,payload,created_at,updated_at) VALUES(?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET status=excluded.status,payload=excluded.payload,updated_at=excluded.updated_at`).run(task.id,status,JSON.stringify(task),now,now); }
@@ -33,6 +36,8 @@ export class Store {
   addLesson(source:string,payload:unknown) { this.db.prepare('INSERT INTO lessons(source,payload,created_at) VALUES(?,?,?)').run(source,JSON.stringify(payload),new Date().toISOString()); }
   addArtifact(a:Artifact) { this.db.prepare('INSERT OR REPLACE INTO artifacts(id,task_id,type,path,metadata,created_at) VALUES(?,?,?,?,?,?)').run(a.id,a.taskId,a.type,a.path,JSON.stringify(a.metadata??{}),new Date().toISOString()); }
   artifacts(taskId:string) { return this.db.prepare('SELECT * FROM artifacts WHERE task_id=? ORDER BY created_at DESC').all(taskId); }
+  patchLifecycle(artifactId:string):PatchLifecycle|undefined { const row=this.db.prepare('SELECT artifact_id,task_id,worktree,status,validation,approved_at,applied_at FROM patch_lifecycle WHERE artifact_id=?').get(artifactId) as any; return row?{artifactId:row.artifact_id,taskId:row.task_id,worktree:row.worktree,status:row.status,validation:row.validation?JSON.parse(row.validation):undefined,approvedAt:row.approved_at??undefined,appliedAt:row.applied_at??undefined}:undefined; }
+  savePatchLifecycle(record:PatchLifecycle) { this.db.prepare('INSERT INTO patch_lifecycle(artifact_id,task_id,worktree,status,validation,approved_at,applied_at) VALUES(?,?,?,?,?,?,?) ON CONFLICT(artifact_id) DO UPDATE SET worktree=excluded.worktree,status=excluded.status,validation=excluded.validation,approved_at=excluded.approved_at,applied_at=excluded.applied_at').run(record.artifactId,record.taskId,record.worktree,record.status,record.validation===undefined?null:JSON.stringify(record.validation),record.approvedAt??null,record.appliedAt??null); }
   modelHealth():StoredModelHealth[] { return this.db.prepare('SELECT id,health,reason,checked_at,cooldown_until FROM model_health').all().map((row:any)=>({id:row.id,health:row.health,reason:row.reason??undefined,checkedAt:row.checked_at,cooldownUntil:row.cooldown_until??undefined})) as StoredModelHealth[]; }
   saveModelHealth(state:StoredModelHealth) { this.db.prepare('INSERT INTO model_health(id,health,reason,checked_at,cooldown_until) VALUES(?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET health=excluded.health,reason=excluded.reason,checked_at=excluded.checked_at,cooldown_until=excluded.cooldown_until').run(state.id,state.health,state.reason??null,state.checkedAt,state.cooldownUntil??null); }
   addAgentRun(run:AgentRun) { this.db.prepare('INSERT OR REPLACE INTO agent_runs(id,task_id,node_id,payload) VALUES(?,?,?,?)').run(run.id,run.taskId,run.nodeId,JSON.stringify(run)); }

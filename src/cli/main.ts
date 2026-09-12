@@ -20,6 +20,11 @@ Commands:
   media:models
   media:image <prompt> [profile-id]
   media:show <JOB-ID>
+  patch:list <TASK-ID>
+  patch:show <TASK-ID> [artifact-id]
+  patch:validate <TASK-ID> [artifact-id]
+  patch:approve <TASK-ID> <artifact-id>
+  patch:apply <TASK-ID> <artifact-id>
   worktree:create <TASK-ID>
   worktree:prepare <TASK-ID>
   review:deterministic <TASK-ID>
@@ -52,6 +57,11 @@ try{
  else if(command==='media:models'){console.log(JSON.stringify(acp.mediaModels(),null,2));}
  else if(command==='media:image'){if(!args[0])throw new Error('Provide an image prompt');console.log(JSON.stringify(await acp.generateImage(args[0],args[1]),null,2));}
  else if(command==='media:show'){console.log(JSON.stringify(acp.artifacts(args[0]),null,2));}
+ else if(command==='patch:list'){console.log(JSON.stringify(acp.patches(args[0]),null,2));}
+ else if(command==='patch:show'){console.log(JSON.stringify(acp.showPatch(args[0],args[1]),null,2));}
+ else if(command==='patch:validate'){console.log(JSON.stringify(await acp.validatePatch(args[0],args[1]),null,2));}
+ else if(command==='patch:approve'){console.log(JSON.stringify(acp.approvePatch(args[0],args[1]),null,2));}
+ else if(command==='patch:apply'){console.log(JSON.stringify(await acp.applyPatch(args[0],args[1]),null,2));}
  else if(command==='worktree:create'){console.log(await acp.ensureWorktree(args[0]));}
  else if(command==='worktree:prepare'){console.log(JSON.stringify(await acp.prepareWorktree(args[0]),null,2));}
  else if(command==='review:deterministic'){console.log(JSON.stringify(await acp.deterministicReview(args[0]),null,2));}

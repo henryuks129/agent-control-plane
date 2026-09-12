@@ -62,6 +62,18 @@ node dist/src/cli/main.js upgrade:validate <UPGRADE-ID>
 
 This is intentionally recursive but not unrestricted self-modification. ACP may generate the next improvement candidate from evidence, while safety boundaries, secret handling, and approval policy remain human-controlled.
 
+## v0.4 patch gate
+
+Builder output is stored as a patch artifact. ACP will not apply it automatically: validate it against the task scope and current worktree, inspect it, then approve and apply it explicitly.
+
+```bash
+node dist/src/cli/main.js patch:list <TASK-ID>
+node dist/src/cli/main.js patch:validate <TASK-ID> <PATCH-ARTIFACT-ID>
+node dist/src/cli/main.js patch:show <TASK-ID> <PATCH-ARTIFACT-ID>
+node dist/src/cli/main.js patch:approve <TASK-ID> <PATCH-ARTIFACT-ID>
+node dist/src/cli/main.js patch:apply <TASK-ID> <PATCH-ARTIFACT-ID>
+```
+
 
 ## v0.3.1 recursive learning release
 

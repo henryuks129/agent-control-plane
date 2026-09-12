@@ -117,6 +117,34 @@ test('worktree synchronization fast-forwards only a clean worktree behind main',
   }
 });
 
+test('patch validation requires a cleanly applicable patch within task scope', async () => {
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'acp-patch-'));
+  const git=(args:string[])=>exec('git',args,{cwd:root});
+  try {
+    await git(['init','-b','main']); await git(['config','user.email','tests@example.test']); await git(['config','user.name','ACP tests']);
+    fs.mkdirSync(path.join(root,'src')); fs.writeFileSync(path.join(root,'src','example.ts'),'old\n');
+    await git(['add','.']); await git(['commit','-m','initial']);
+    const patchPath=path.join(root,'change.patch');
+    fs.writeFileSync(patchPath,'diff --git a/src/example.ts b/src/example.ts\n--- a/src/example.ts\n+++ b/src/example.ts\n@@ -1 +1 @@\n-old\n+new\n');
+    const manager=new GitManager(root,path.join(root,'worktrees'));
+    assert.deepEqual(await manager.validatePatch(root,patchPath,['src/**']),{valid:true,files:['src/example.ts']});
+    assert.equal((await manager.validatePatch(root,patchPath,['tests/**'])).valid,false);
+  } finally { fs.rmSync(root,{recursive:true,force:true}); }
+});
+
+test('patch lifecycle persists validation and approval records', async () => {
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'acp-patch-state-'));
+  const { Store }=await import('../src/storage/db.js');
+  try {
+    const store=new Store(root);
+    store.savePatchLifecycle({artifactId:'TASK:patch',taskId:'TASK',worktree:'/tmp/task',status:'validated',validation:{valid:true,files:['src/example.ts']}});
+    const validated=store.patchLifecycle('TASK:patch');
+    assert.equal(validated?.status,'validated');
+    store.savePatchLifecycle({...validated!,status:'approved',approvedAt:'2026-09-12T00:00:00.000Z'});
+    assert.equal(store.patchLifecycle('TASK:patch')?.status,'approved');
+  } finally { fs.rmSync(root,{recursive:true,force:true}); }
+});
+
 test('NVIDIA transport failures are retryable so the runtime can fail over', async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => { throw new TypeError('socket closed'); };

@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { AgentRole, Checkpoint, ContextPack, ReviewFinding, Task, TaskNode } from '../core/types.js';
 import { loadConfig } from '../core/config.js';
-import { Store } from '../storage/db.js';
+import { Store, type PatchLifecycle } from '../storage/db.js';
 import { NvidiaClient } from '../models/nvidia.js';
 import { ModelRouter } from '../models/router.js';
 import { ContextRouter } from '../context/router.js';
@@ -150,6 +150,36 @@ export class Orchestrator {
   upgrades(status?:any){return this.learningLoop.upgrades(status);}
   approveLearning(taskId:string,iterationId:number){this.learningLoop.humanApprove(taskId,iterationId);}
   artifacts(taskId:string){return this.store.artifacts(taskId);}
+  private patchArtifact(taskId:string,artifactId?:string) {
+    const patches=this.artifacts(taskId).filter((artifact:any)=>artifact.type==='patch') as Array<{id:string;task_id:string;path:string;metadata?:string}>;
+    const artifact=artifactId?patches.find(item=>item.id===artifactId):patches[0];
+    if(!artifact) throw new Error(`No patch artifact found for ${taskId}`);
+    if(!fs.existsSync(artifact.path)) throw new Error(`Patch artifact is missing: ${artifact.path}`);
+    return artifact;
+  }
+  patches(taskId:string){return this.artifacts(taskId).filter((artifact:any)=>artifact.type==='patch').map((artifact:any)=>({...artifact,lifecycle:this.store.patchLifecycle(artifact.id)}));}
+  showPatch(taskId:string,artifactId?:string){const artifact=this.patchArtifact(taskId,artifactId);return {...artifact,text:fs.readFileSync(artifact.path,'utf8'),lifecycle:this.store.patchLifecycle(artifact.id)};}
+  async validatePatch(taskId:string,artifactId?:string) {
+    const record=this.showTask(taskId); if(!record) throw new Error(`Unknown task ${taskId}`);
+    const artifact=this.patchArtifact(taskId,artifactId); const worktree=await this.git.ensureWorktree(taskId);
+    const validation=await this.git.validatePatch(worktree,artifact.path,record.task.scope.allowed);
+    this.store.savePatchLifecycle({artifactId:artifact.id,taskId,worktree,status:validation.valid?'validated':'rejected',validation});
+    return {artifactId:artifact.id,worktree,...validation};
+  }
+  approvePatch(taskId:string,artifactId:string) {
+    const lifecycle=this.store.patchLifecycle(artifactId);
+    if(!lifecycle||lifecycle.taskId!==taskId||lifecycle.status!=='validated') throw new Error('Patch must pass validation before approval');
+    const approved={...lifecycle,status:'approved' as const,approvedAt:new Date().toISOString()}; this.store.savePatchLifecycle(approved); return approved;
+  }
+  async applyPatch(taskId:string,artifactId:string) {
+    const lifecycle=this.store.patchLifecycle(artifactId);
+    if(!lifecycle||lifecycle.taskId!==taskId||lifecycle.status!=='approved') throw new Error('Patch requires explicit approval before apply');
+    const artifact=this.patchArtifact(taskId,artifactId); const record=this.showTask(taskId); if(!record) throw new Error(`Unknown task ${taskId}`);
+    const validation=await this.git.validatePatch(lifecycle.worktree,artifact.path,record.task.scope.allowed);
+    if(!validation.valid) { this.store.savePatchLifecycle({...lifecycle,status:'rejected',validation}); throw new Error(`Patch validation failed before apply: ${validation.reason}`); }
+    await this.git.applyPatch(lifecycle.worktree,artifact.path);
+    const applied={...lifecycle,status:'applied' as const,validation,appliedAt:new Date().toISOString()}; this.store.savePatchLifecycle(applied); return applied;
+  }
   mediaModels(){return this.media.models();}
   generateImage(prompt:string,profileId?:string):Promise<{jobId:string;profile:string;model:string;path:string;mimeType:string;seed?:number}>{return this.media.image(prompt,profileId);}
   findings(taskId:string){return this.store.findings(taskId);}
