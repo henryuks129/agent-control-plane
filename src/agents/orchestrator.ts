@@ -78,6 +78,7 @@ export class Orchestrator {
       return {id:node.id,title:node.title,role:node.role,status:status.get(node.id)==='passed'?'completed':'pending',checkpoint:checkpoint?{phase:checkpoint.phase,tests:{status:checkpoint.tests.status},nextAction:checkpoint.next_action}:undefined};
     })};
   }
+  taskGraph(taskId:string){const progress=this.taskProgress(taskId);const nodes=this.buildPlan(taskId);return {taskId,nodes:nodes.map(node=>({id:node.id,title:node.title,role:node.role,dependsOn:node.dependsOn??[],status:progress.nodes.find(item=>item.id===node.id)?.status??'pending'}))};}
   async resume(taskId:string) {
     const progress=this.taskProgress(taskId);
     if(progress.status==='passed') return {status:'passed',resumed:false,message:'Task is already complete.',progress};

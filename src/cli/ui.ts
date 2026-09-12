@@ -8,6 +8,7 @@ export function startUi(acp:Orchestrator,port:number){
   const server=http.createServer(async(req,res)=>{try{const url=new URL(req.url??'/',`http://${req.headers.host??'127.0.0.1'}`);const parts=url.pathname.split('/').filter(Boolean).map(decodeURIComponent);
     if(req.method==='GET'&&url.pathname==='/api/dashboard'){const tasks=acp.listTasks().map(x=>({id:x.id,status:x.status,updatedAt:x.updated_at}));const learning=tasks.reduce((n,t)=>n+Number((acp.store.learning(t.id) as unknown[]).length),0);return json(res,200,{tasks,learningIterations:learning});}
     if(parts[0]==='api'&&parts[1]==='tasks'&&parts[3]==='progress'&&req.method==='GET') return json(res,200,acp.taskProgress(parts[2]));
+    if(parts[0]==='api'&&parts[1]==='tasks'&&parts[3]==='graph'&&req.method==='GET') return json(res,200,acp.taskGraph(parts[2]));
     if(parts[0]==='api'&&parts[1]==='tasks'&&parts[3]==='patches'&&parts.length===4&&req.method==='GET') return json(res,200,acp.patches(parts[2]));
     if(parts[0]==='api'&&parts[1]==='tasks'&&parts[3]==='history'&&req.method==='GET') return json(res,200,acp.taskHistory(parts[2]));
     if(parts[0]==='api'&&parts[1]==='tasks'&&parts[3]==='artifacts'&&parts.length===5&&req.method==='GET') return json(res,200,acp.artifactPreview(parts[2],parts[4]));

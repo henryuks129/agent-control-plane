@@ -19,6 +19,7 @@ Commands:
   task:plan <TASK-ID>
   task:run <TASK-ID>
   task:progress <TASK-ID>
+  task:graph <TASK-ID>
   task:resume <TASK-ID>
   checkpoint:create <TASK-ID> <checkpoint.json>
   context:build <TASK-ID>
@@ -66,6 +67,7 @@ try{
  else if(command==='task:plan'){console.log(JSON.stringify(acp.buildPlan(args[0]),null,2));}
  else if(command==='task:run'){console.error(`ACP: running ${args[0]} (workers ${acp.config.requestTimeoutMs}ms; research ${acp.config.researcherTimeoutMs}ms; build ${acp.config.builderTimeoutMs}ms; review ${acp.config.reviewerTimeoutMs}ms).`);console.log(JSON.stringify(await acp.run(args[0]),null,2));}
  else if(command==='task:progress'){console.log(JSON.stringify(acp.taskProgress(args[0]),null,2));}
+ else if(command==='task:graph'){console.log(JSON.stringify(acp.taskGraph(args[0]),null,2));}
  else if(command==='task:resume'){console.error(`ACP: resuming ${args[0]} (workers ${acp.config.requestTimeoutMs}ms; research ${acp.config.researcherTimeoutMs}ms; build ${acp.config.builderTimeoutMs}ms; review ${acp.config.reviewerTimeoutMs}ms).`);console.log(JSON.stringify(await acp.resume(args[0]),null,2));}
  else if(command==='checkpoint:create'){const cp=JSON.parse(fs.readFileSync(path.resolve(args[1]),'utf8')) as Checkpoint;await acp.checkpoint(args[0],cp);console.log('checkpoint saved');}
  else if(command==='context:build'){const record=acp.showTask(args[0]);if(!record)throw new Error('Task not found');console.log(JSON.stringify(acp.context.build(record.task,acp.store.latestCheckpoint(args[0])),null,2));}
