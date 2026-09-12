@@ -9,6 +9,8 @@ export function startUi(acp:Orchestrator,port:number){
     if(req.method==='GET'&&url.pathname==='/api/dashboard'){const tasks=acp.listTasks().map(x=>({id:x.id,status:x.status,updatedAt:x.updated_at}));const learning=tasks.reduce((n,t)=>n+Number((acp.store.learning(t.id) as unknown[]).length),0);return json(res,200,{tasks,learningIterations:learning});}
     if(parts[0]==='api'&&parts[1]==='tasks'&&parts[3]==='progress'&&req.method==='GET') return json(res,200,acp.taskProgress(parts[2]));
     if(parts[0]==='api'&&parts[1]==='tasks'&&parts[3]==='patches'&&parts.length===4&&req.method==='GET') return json(res,200,acp.patches(parts[2]));
+    if(parts[0]==='api'&&parts[1]==='tasks'&&parts[3]==='history'&&req.method==='GET') return json(res,200,acp.taskHistory(parts[2]));
+    if(parts[0]==='api'&&parts[1]==='tasks'&&parts[3]==='artifacts'&&parts.length===5&&req.method==='GET') return json(res,200,acp.artifactPreview(parts[2],parts[4]));
     if(parts[0]==='api'&&parts[1]==='tasks'&&parts[3]==='patches'&&parts.length===6&&req.method==='POST'){const [taskId,artifactId,action]=[parts[2],parts[4],parts[5]];if(action==='validate')return json(res,200,await acp.validatePatch(taskId,artifactId));if(action==='approve')return json(res,200,acp.approvePatch(taskId,artifactId));if(action==='apply')return json(res,200,await acp.applyPatch(taskId,artifactId));}
     if(req.method==='GET'&&url.pathname==='/'){res.writeHead(200,{'content-type':'text/html'});return res.end(page());} return json(res,404,{error:'Not found'});
   }catch(error){return json(res,400,{error:error instanceof Error?error.message:String(error)});}});server.listen(port,'127.0.0.1',()=>console.log(`ACP UI: http://127.0.0.1:${port}`));return server;

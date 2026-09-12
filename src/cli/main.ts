@@ -47,6 +47,8 @@ Commands:
   upgrade:reject <upgrade-id>
   upgrade:rollback <upgrade-id>
   artifacts:show <TASK-ID>
+  history:show <TASK-ID>
+  artifact:preview <TASK-ID> <ARTIFACT-ID>
   design:candidate <name> <file.md>
 `)}
 const command=process.argv[2];const args=process.argv.slice(3);const acp=new Orchestrator();
@@ -92,6 +94,8 @@ try{
  else if(command==='upgrade:reject'){acp.rejectUpgrade(Number(args[0]));console.log('upgrade rejected');}
  else if(command==='upgrade:rollback'){acp.rollbackUpgrade(Number(args[0]));console.log('upgrade rolled back');}
  else if(command==='artifacts:show'){console.log(JSON.stringify(acp.artifacts(args[0]),null,2));}
+ else if(command==='history:show'){console.log(JSON.stringify(acp.taskHistory(args[0]),null,2));}
+ else if(command==='artifact:preview'){console.log(JSON.stringify(acp.artifactPreview(args[0],args[1]),null,2));}
  else if(command==='design:candidate'){const file=path.resolve(args[1]);console.log(acp.writeDesignCandidate(args[0],fs.readFileSync(file,'utf8')));}
  else {usage();process.exit(1)}
 }catch(error){console.error(error instanceof Error?error.stack??error.message:error);process.exit(1)}

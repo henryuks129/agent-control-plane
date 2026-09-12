@@ -93,6 +93,8 @@ node dist/src/cli/main.js project:settings:set PROJECT-ID settings.json
 
 To use those settings for a task, add its registered `projectId` to the task JSON. Project-specific profiles, role preferences, budgets and timeouts are resolved for that run; API keys remain in `.env`.
 
+Read-only task history is available through `history:show TASK-0002`; use `artifact:preview TASK-0002 ARTIFACT-ID` to preview a stored text artifact safely.
+
 ## v0.4 graph and test gate
 
 Custom task graphs are checked for duplicate IDs, missing dependencies, self-dependencies and cycles before execution. The `test` node is a dedicated deterministic worker: it runs typecheck, build and tests, then saves command evidence as an artifact. The reviewer graph node only opens the review gate; ACP performs its authoritative deterministic and optional LLM review once after the graph completes.
