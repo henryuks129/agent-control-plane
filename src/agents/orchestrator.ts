@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { AgentRole, Checkpoint, ContextPack, ReviewFinding, Task, TaskNode } from '../core/types.js';
+import type { AgentRole, Budget, Checkpoint, ContextPack, ModelProfile, ProjectSettings, ReviewFinding, Task, TaskNode } from '../core/types.js';
 import { loadConfig } from '../core/config.js';
 import { Store, type PatchLifecycle } from '../storage/db.js';
 import { NvidiaClient } from '../models/nvidia.js';
@@ -15,7 +15,6 @@ import { AgentRuntime } from './runtime.js';
 import { MediaService } from '../media/service.js';
 import { ProjectRegistry } from '../projects/profiles.js';
 import { validateProjectSettings } from '../projects/settings.js';
-import type { ProjectSettings } from '../core/types.js';
 
 export function deferredReviewFinding(error:unknown):ReviewFinding {
   const message=error instanceof Error?error.message:String(error);
@@ -24,8 +23,9 @@ export function deferredReviewFinding(error:unknown):ReviewFinding {
 
 export class Orchestrator {
   readonly config=loadConfig(); readonly store=new Store(this.config.dataDir); readonly projectsRegistry=new ProjectRegistry(this.store); readonly context=new ContextRouter(process.cwd()); readonly git=new GitManager(process.cwd(),this.config.worktreeDir); readonly nvidia=new NvidiaClient(this.config.nvidia.baseUrl,this.config.nvidia.apiKey,this.config.requestTimeoutMs); readonly router=new ModelRouter(this.config.profiles,this.store.modelHealth(),this.config.modelCooldownMs,state=>this.store.saveModelHealth(state)); readonly reviewEngine=new ReviewEngine(this.config.fallowCommand,this.config.coderabbitEnabled,this.config.coderabbitCommand); readonly planner=new TaskPlanner(); readonly learningLoop=new LearningLoop(this.store); readonly media=new MediaService(this.router,this.nvidia,this.store,this.config.artifactsDir,this.config.requestTimeoutMs);
-  private runtimeFor(root:string){return new AgentRuntime(root,this.store,new ContextRouter(root),this.router,this.nvidia,this.learningLoop,this.config.maxConcurrency,this.config.artifactsDir,this.config.budgets,this.config.researcherTimeoutMs,this.config.builderTimeoutMs);}
-  createTask(task:Task){this.store.upsertTask(task);return task.id;} showTask(id:string){return this.store.getTask(id);} listTasks(){return this.store.listTasks();}
+  private runtimeSettings(task:Task){const settings=task.projectId?this.projectSettings(task.projectId):{version:1} as ProjectSettings;const profiles=this.config.profiles.map(profile=>({...profile,...(settings.profiles?.[profile.id]??{})})) as ModelProfile[];const budgets={...this.config.budgets} as Record<string,Budget>;for(const [effort,override] of Object.entries(settings.budgets??{})) budgets[effort]={...budgets[effort],...override};const timeouts={requestTimeoutMs:settings.timeouts?.requestTimeoutMs??this.config.requestTimeoutMs,reviewerTimeoutMs:settings.timeouts?.reviewerTimeoutMs??this.config.reviewerTimeoutMs,researcherTimeoutMs:settings.timeouts?.researcherTimeoutMs??this.config.researcherTimeoutMs,builderTimeoutMs:settings.timeouts?.builderTimeoutMs??this.config.builderTimeoutMs};const router=new ModelRouter(profiles,this.store.modelHealth(),this.config.modelCooldownMs,state=>this.store.saveModelHealth(state));const client=new NvidiaClient(this.config.nvidia.baseUrl,this.config.nvidia.apiKey,timeouts.requestTimeoutMs);return {settings,router,client,budgets,timeouts};}
+  private runtimeFor(root:string,task:Task){const resolved=this.runtimeSettings(task);return {resolved,runtime:new AgentRuntime(root,this.store,new ContextRouter(root),resolved.router,resolved.client,this.learningLoop,this.config.maxConcurrency,this.config.artifactsDir,resolved.budgets,resolved.timeouts.researcherTimeoutMs,resolved.timeouts.builderTimeoutMs,resolved.timeouts.requestTimeoutMs,resolved.settings.rolePreferences)};}
+  createTask(task:Task){if(task.projectId&&!this.project(task.projectId))throw new Error(`Unknown project ${task.projectId}`);this.store.upsertTask(task);return task.id;} showTask(id:string){return this.store.getTask(id);} listTasks(){return this.store.listTasks();}
   async onboardProject(root:string){return this.projectsRegistry.onboard(root);}
   projects(){return this.projectsRegistry.list();}
   project(id:string){return this.projectsRegistry.show(id);}
@@ -52,15 +52,15 @@ export class Orchestrator {
     }
     throw new Error(`All configured NVIDIA ${role} models failed smoke test\n${failures.join('\n')}`);
   }
-  private async reviewWithFallback(task:Task,context:ContextPack,evidence:unknown) {
-    const candidates=this.router.route({role:'reviewer',effort:task.effort??'medium',allowDegraded:true});
+  private async reviewWithFallback(task:Task,context:ContextPack,evidence:unknown,router=this.router,client=this.nvidia,timeoutMs=this.config.reviewerTimeoutMs) {
+    const candidates=router.route({role:'reviewer',effort:task.effort??'medium',allowDegraded:true});
     if(!candidates.length) throw new Error('No available reviewer model configured');
     let lastError='';
     for(const profile of candidates.slice(0,1)) {
-      try { return await new LlmReviewer(this.nvidia,profile.model,this.config.reviewerTimeoutMs).review(context,evidence); }
+      try { return await new LlmReviewer(client,profile.model,timeoutMs).review(context,evidence); }
       catch(error) {
         lastError=error instanceof Error?error.message:String(error);
-        if((error as {retryable?:boolean}).retryable) { this.router.markHealth(profile.id,'degraded',lastError); continue; }
+        if((error as {retryable?:boolean}).retryable) { router.markHealth(profile.id,'degraded',lastError); continue; }
         throw error;
       }
     }
@@ -90,7 +90,7 @@ export class Orchestrator {
     const prepared=await this.git.prepareWorktree(taskId);
     const worktree=prepared.path;
     const executionContext=new ContextRouter(worktree);
-    const runtime=this.runtimeFor(worktree);
+    const {runtime,resolved}=this.runtimeFor(worktree,task);
     const nodes=this.planner.plan(task);
     this.store.setStatus(taskId,'running');
     const status=resumeStatus(nodes,nodeId=>this.store.latestCheckpoint(taskId,nodeId));
@@ -141,7 +141,7 @@ export class Orchestrator {
       try{
         const cp=this.store.latestCheckpoint(taskId);
         const context=executionContext.build(task,cp);
-        const findings=await this.reviewWithFallback(record.task,context,report.evidence);
+        const findings=await this.reviewWithFallback(record.task,context,report.evidence,resolved.router,resolved.client,resolved.timeouts.reviewerTimeoutMs);
         for(const f of findings) this.store.addFinding(taskId,f);
         this.learningLoop.ingest(taskId,'reviewer',findings);
         if(findings.some(f=>['critical','high'].includes(f.severity))){

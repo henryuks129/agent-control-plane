@@ -45,6 +45,7 @@ export interface TaskNode {
 
 export interface Task {
   id: string;
+  projectId?: string;
   title: string;
   objective: string;
   type: string;

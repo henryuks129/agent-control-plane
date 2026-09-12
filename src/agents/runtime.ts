@@ -36,7 +36,7 @@ export function resolveBudget(budgets:Record<string,Budget>,task:Task,node:TaskN
 export class AgentRuntime {
   private readonly concurrency:ConcurrencyManager;
   private readonly testAgent:DeterministicTestAgent;
-  constructor(private readonly root:string, private readonly store:Store, private readonly context:ContextRouter, private readonly router:ModelRouter, private readonly client:NvidiaClient, private readonly learning:LearningLoop, maxConcurrency:number, private readonly artifactsDir:string, private readonly budgets:Record<string,Budget>, private readonly researcherTimeoutMs=90000, private readonly builderTimeoutMs=90000) { this.concurrency=new ConcurrencyManager(maxConcurrency); this.testAgent=new DeterministicTestAgent(root,store,artifactsDir); fs.mkdirSync(artifactsDir,{recursive:true}); }
+  constructor(private readonly root:string, private readonly store:Store, private readonly context:ContextRouter, private readonly router:ModelRouter, private readonly client:NvidiaClient, private readonly learning:LearningLoop, maxConcurrency:number, private readonly artifactsDir:string, private readonly budgets:Record<string,Budget>, private readonly researcherTimeoutMs=90000, private readonly builderTimeoutMs=90000,private readonly requestTimeoutMs=45000,private readonly rolePreferences:Partial<Record<AgentRole,{primary?:string[];fallback?:string[]}>>={}) { this.concurrency=new ConcurrencyManager(maxConcurrency); this.testAgent=new DeterministicTestAgent(root,store,artifactsDir); fs.mkdirSync(artifactsDir,{recursive:true}); }
 
   private budget(task:Task, node:TaskNode):Budget { return resolveBudget(this.budgets,task,node); }
 
@@ -46,7 +46,7 @@ export class AgentRuntime {
     // does not spend two model calls reviewing the same checkout.
     if(node.role==='test') return this.testAgent.execute(task,node);
     if(node.role==='reviewer') return {ok:true,summary:'Review gate reached; authoritative review runs after deterministic evidence is collected.',usage:{inputTokens:0,outputTokens:0,requests:0}};
-    const candidates=this.router.route({role:node.role,effort:node.effort??task.effort??'medium',preferred:task.model_preferences?.primary,fallback:task.model_preferences?.fallback,allowDegraded:true}); if(!candidates.length) throw new Error(`No model available for role ${node.role}`);
+    const preference=this.rolePreferences[node.role]; const candidates=this.router.route({role:node.role,effort:node.effort??task.effort??'medium',preferred:task.model_preferences?.primary??preference?.primary,fallback:task.model_preferences?.fallback??preference?.fallback,allowDegraded:true}); if(!candidates.length) throw new Error(`No model available for role ${node.role}`);
     const runId=crypto.randomUUID(); const startedAt=new Date().toISOString(); const startedAtMs=Date.now(); const budget=this.budget(task,node); let lastError=''; let inputTokens=0,outputTokens=0,requests=0;
     const attempts=candidates.slice(0,Math.min(candidates.length,Math.max(1,budget.maxRequests),2));
     for(const profile of attempts) {
@@ -59,7 +59,7 @@ export class AgentRuntime {
         if(context.tokenEstimate>budget.maxTokens) throw new Error(`Context estimate ${context.tokenEstimate} exceeds task budget ${budget.maxTokens}`);
         const system='You are an ACP worker. Work only within the task scope. Never invent repository facts. Return a concise structured result. For builder tasks, return a unified diff inside a ```diff block and a short summary. Do not include secrets.';
         const user=[`ROLE: ${node.role}`,`TASK: ${node.title}`,`OBJECTIVE: ${node.objective}`,`ACCEPTANCE: ${JSON.stringify(node.acceptance??task.acceptance)}`,`CHECKPOINT: ${JSON.stringify(cp??null)}`,`CONTEXT:\n${JSON.stringify(compactPromptContext(context))}`].join('\n\n');
-        const timeoutMs=node.role==='researcher'?this.researcherTimeoutMs:node.role==='builder'?this.builderTimeoutMs:undefined;
+        const timeoutMs=node.role==='researcher'?this.researcherTimeoutMs:node.role==='builder'?this.builderTimeoutMs:this.requestTimeoutMs;
         requests++; const result=await this.client.chat(profile.model,[{role:'system',content:system},{role:'user',content:user}],{maxTokens:responseTokenLimit(node.role,budget),temperature:0.1,signal:AbortSignal.timeout(remainingMs),timeoutMs,effort:node.effort??task.effort??'medium'}); inputTokens+=result.usage.prompt_tokens??0; outputTokens+=result.usage.completion_tokens??0;
         const artifactBase=path.join(this.artifactsDir,task.id); fs.mkdirSync(artifactBase,{recursive:true}); const outPath=path.join(artifactBase,`${node.id}.md`); fs.writeFileSync(outPath,result.text); this.store.addArtifact({id:`${task.id}:${node.id}:response`,taskId:task.id,type:'report',path:outPath,metadata:{model:profile.model}});
         const patch=extractPatch(result.text); if(node.role==='builder'&&patch){ const patchPath=path.join(artifactBase,`${node.id}.patch`); fs.writeFileSync(patchPath,patch+'\n'); this.store.addArtifact({id:`${task.id}:${node.id}:patch`,taskId:task.id,type:'patch',path:patchPath}); }
