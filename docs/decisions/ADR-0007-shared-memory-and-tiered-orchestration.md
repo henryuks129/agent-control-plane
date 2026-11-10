@@ -104,6 +104,15 @@ the vendor's terms and offers an API-key fallback for every agent.
   with checks re-run on the merged result. A failed or conflicting patch goes
   back to its agent or to an orchestrator; it never blocks the others.
 
+- **Plan limits drive routing.** ACP shows each connected plan's usage
+  windows (for example 5-hour and weekly) as the vendor reports them, and the
+  orchestrator routes away from a plan near its limit before it runs out,
+  instead of failing mid-task. Readings come from the vendor's own runtime or
+  usage endpoint for the user's sign-in; each vendor can meter different
+  account types in different places (T3 Code found Google meters personal and
+  business Antigravity accounts on different hosts), so each adapter needs
+  tests with real readings.
+
 ### 3. Agent Exchange and `handoff.md` (replaces compaction)
 
 When a model runs out of budget, fails, or is swapped, ACP writes or updates
@@ -255,6 +264,12 @@ Repository rules that catch AI slop (inspired by T3 Code's own lint plugin):
 - **Prompt evals:** any change to prompts, tool descriptions or `handoff.md`
   format runs a small eval suite (real model, real cases from past failures,
   plus control cases) before it is promoted.
+
+- **Patch report.** Every patch carries a short report in a fixed shape:
+  Problem, Change, Scope, Verification. Verification lists the commands that
+  ran and their results, including a run on the old code that fails where
+  the new code passes. This is the evidence half of review; the model's
+  explanation is the judgment half.
 
 Review views (inspired by T3 Code):
 
@@ -410,3 +425,5 @@ search only for recall — free to run and consistent with ADR-0001.
 19. [ ] Diff view, in-app pull-request review and model-written review guides (§8a).
 20. [ ] Vendor reviewers as a finding source; project lint rules for AI slop; context budget check; patch size labels; prompt evals (§8a).
 21. [ ] Depth, exchange, loop, run-budget, replanning and tool-call limits, plus a stop button (§8b).
+22. [ ] Plan usage windows per connected agent, used by routing (§2).
+23. [ ] Patch report in the Problem / Change / Scope / Verification shape (§8a).
