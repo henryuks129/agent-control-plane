@@ -3,9 +3,63 @@ export type TaskStatus = 'queued' | 'planning' | 'assigned' | 'running' | 'check
 export type Effort = 'low' | 'medium' | 'high' | 'maximum';
 export type NodeStatus = 'pending' | 'running' | 'checkpointed' | 'passed' | 'failed' | 'blocked';
 export type ModelHealth = 'unknown' | 'healthy' | 'degraded' | 'unavailable';
+export type OrganizationRole = 'viewer' | 'operator' | 'administrator';
+export type QueueJobStatus = 'queued' | 'leased' | 'completed' | 'failed' | 'cancelled' | 'dead_letter';
+
+export interface Organization {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
+export interface Membership {
+  organizationId: string;
+  actorId: string;
+  role: OrganizationRole;
+  createdAt: string;
+}
+
+export interface AuditEvent {
+  id: string;
+  organizationId: string;
+  projectId?: string;
+  actorId: string;
+  action: string;
+  targetType: string;
+  targetId: string;
+  occurredAt: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface UsageRecord {
+  id: string;
+  organizationId: string;
+  projectId?: string;
+  taskId?: string;
+  nodeId?: string;
+  kind: 'model_request' | 'worker_time' | 'queue_time' | 'artifact_storage' | 'external_review';
+  quantity: number;
+  unit: string;
+  occurredAt: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface QueueJob {
+  id: string;
+  organizationId: string;
+  projectId?: string;
+  taskId: string;
+  nodeId: string;
+  status: QueueJobStatus;
+  attempts: number;
+  maxAttempts: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface ProjectProfile {
   id: string;
+  organizationId: string;
   name: string;
   root: string;
   defaultBranch: string;
@@ -46,6 +100,7 @@ export interface TaskNode {
 export interface Task {
   id: string;
   projectId?: string;
+  organizationId?: string;
   title: string;
   objective: string;
   type: string;
@@ -117,6 +172,8 @@ export interface ReviewFinding {
 export interface Artifact {
   id: string;
   taskId: string;
+  organizationId?: string;
+  projectId?: string;
   type: 'checkpoint' | 'research' | 'review' | 'patch' | 'report' | 'design-candidate' | 'media' | 'other';
   path: string;
   metadata?: Record<string, unknown>;

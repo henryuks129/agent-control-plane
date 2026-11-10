@@ -18,8 +18,30 @@ import { ReviewEngine } from '../src/reviews/engine.js';
 import { startUi } from '../src/cli/ui.js';
 import { ProjectRegistry } from '../src/projects/profiles.js';
 import { validateProjectSettings } from '../src/projects/settings.js';
+import { checkOciDeployment } from '../src/deployment/oci.js';
+import { decryptSecret, encryptSecret } from '../src/security/secrets.js';
+import { GithubAuth, githubAuthConfig } from '../src/auth/github.js';
 
 const exec=promisify(execFile);
+
+test('GitHub auth is configuration-gated and encrypts credentials locally', async () => {
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'acp-github-auth-'));
+  const encryptionKey=Buffer.alloc(32,7).toString('base64');
+  try {
+    assert.equal(githubAuthConfig({}),undefined);
+    assert.equal(decryptSecret(encryptSecret('token-value',encryptionKey),encryptionKey),'token-value');
+    const { Store }=await import('../src/storage/db.js'); const store=new Store(root);
+    const auth=new GithubAuth(store,{clientId:'client-id',clientSecret:'client-secret',callbackUrl:'https://acp.example/auth/github/callback',encryptionKey});
+    const authorization=auth.begin('/app'); const target=new URL(authorization);
+    assert.equal(target.origin,'https://github.com'); assert.equal(target.searchParams.get('scope'),'read:user user:email');
+    assert.ok(target.searchParams.get('state'));
+    assert.throws(()=>auth.begin('https://untrusted.example'));
+    store.saveGithubProject({sessionId:'session-1',repositoryId:'123',fullName:'owner/project',htmlUrl:'https://github.com/owner/project',defaultBranch:'main'});
+    store.saveWorkspaceLibrary({id:'library-1',sessionId:'session-1',name:'Design system',kind:'design',sourceUrl:'https://www.figma.com/file/example'});
+    assert.equal(store.githubProjects('session-1')[0]?.full_name,'owner/project');
+    assert.equal(store.workspaceLibraries('session-1')[0]?.kind,'design');
+  } finally { fs.rmSync(root,{recursive:true,force:true}); }
+});
 
 const profiles=[
   {id:'fast',provider:'nvidia',model:'fast',capabilities:['coding','reasoning'],maxConcurrent:2,enabled:true,priority:20},
@@ -176,6 +198,34 @@ test('project settings persist non-secret model preferences and reject credentia
   } finally { fs.rmSync(root,{recursive:true,force:true}); }
 });
 
+test('tenancy contracts scope projects, artifacts, audit records, usage, and queue jobs', async () => {
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'acp-tenancy-'));
+  const { Store }=await import('../src/storage/db.js');
+  try {
+    const store=new Store(root);
+    store.saveOrganization({id:'ORG-1',name:'Example organization',createdAt:'2026-09-13T00:00:00.000Z'});
+    store.saveMembership({organizationId:'ORG-1',actorId:'ACTOR-1',role:'administrator',createdAt:'2026-09-13T00:00:00.000Z'});
+    store.saveProject({id:'PROJECT-1',organizationId:'ORG-1',name:'Example',root:'/example',defaultBranch:'main',dataDir:'/example/.data',artifactsDir:'/example/.data/artifacts',createdAt:'2026-09-13T00:00:00.000Z',updatedAt:'2026-09-13T00:00:00.000Z'});
+    store.upsertTask({id:'TASK-1',organizationId:'ORG-1',projectId:'PROJECT-1',title:'Scoped task',objective:'Test scope',type:'test',scope:{allowed:['src/**']},acceptance:[],review:{required:[]}});
+    store.addArtifact({id:'TASK-1:report',taskId:'TASK-1',type:'report',path:'/example/.data/artifacts/report.md'});
+    const artifact=store.artifacts('TASK-1')[0] as {organization_id:string;project_id:string};
+    assert.equal(artifact.organization_id,'ORG-1'); assert.equal(artifact.project_id,'PROJECT-1');
+    store.addAuditEvent({id:'AUDIT-1',organizationId:'ORG-1',projectId:'PROJECT-1',actorId:'ACTOR-1',action:'patch.approved',targetType:'patch',targetId:'TASK-1:patch',occurredAt:'2026-09-13T00:01:00.000Z'});
+    store.addUsage({id:'USAGE-1',organizationId:'ORG-1',projectId:'PROJECT-1',taskId:'TASK-1',kind:'model_request',quantity:1,unit:'request',occurredAt:'2026-09-13T00:01:00.000Z'});
+    store.saveQueueJob({id:'JOB-1',organizationId:'ORG-1',projectId:'PROJECT-1',taskId:'TASK-1',nodeId:'TASK-1-build',status:'queued',attempts:0,maxAttempts:3,createdAt:'2026-09-13T00:01:00.000Z',updatedAt:'2026-09-13T00:01:00.000Z'});
+    assert.equal(store.memberships('ORG-1')[0].role,'administrator'); assert.equal(store.auditEvents('ORG-1','PROJECT-1').length,1); assert.equal(store.usage('ORG-1','PROJECT-1')[0].quantity,1); assert.equal(store.queueJob('JOB-1')?.status,'queued');
+    assert.throws(()=>store.addUsage({id:'USAGE-2',organizationId:'ORG-1',projectId:'PROJECT-NOT-OWNED',kind:'worker_time',quantity:1,unit:'second',occurredAt:'2026-09-13T00:01:00.000Z'}),/Unknown project/);
+  } finally { fs.rmSync(root,{recursive:true,force:true}); }
+});
+
+test('OCI deployment profile accepts only complete non-secret references', () => {
+  const incomplete=checkOciDeployment({});
+  assert.equal(incomplete.ready,false); assert.ok(incomplete.missing.includes('OCI_REGION'));
+  const valid={OCI_REGION:'eu-frankfurt-1',OCI_COMPARTMENT_ID:'ocid1.compartment.oc1..test',ACP_PUBLIC_BASE_URL:'https://acp.example.test',OCI_OBJECT_STORAGE_NAMESPACE:'namespace',ACP_ARTIFACT_BUCKET:'artifacts',ACP_DATABASE_SECRET_REF:'oci-vault://ocid1.vaultsecret.oc1..test',ACP_API_IMAGE:'registry.example.test/acp:0.6.2',ACP_UI_HOST:'0.0.0.0'};
+  assert.equal(checkOciDeployment(valid).ready,true);
+  assert.deepEqual(checkOciDeployment({...valid,ACP_DATABASE_SECRET_REF:'postgres://secret'}).errors,['ACP_DATABASE_SECRET_REF must be an oci-vault:// reference, not a database URL or password.']);
+});
+
 test('NVIDIA transport failures are retryable so the runtime can fail over', async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => { throw new TypeError('socket closed'); };
@@ -324,7 +374,10 @@ test('local dashboard exposes patch approval endpoints when local binding is per
   try {
     const root=await fetch(`${base}/`);
     assert.match(root.headers.get('content-type')??'',/charset=utf-8/);
-    assert.match(await root.text(),/Task summary/);
+    assert.match(await root.text(),/Built for HNG product engineers/);
+    const app=await fetch(`${base}/app`);
+    assert.match(await app.text(),/Task summary/);
+    assert.deepEqual(await (await fetch(`${base}/healthz`)).json(),{status:'ok'});
     assert.equal((await (await fetch(`${base}/api/tasks/TASK-UI/patches`)).json() as any[])[0].id,'PATCH-1');
     assert.equal((await (await fetch(`${base}/api/tasks/TASK-UI/graph`)).json() as any).nodes[0].status,'ready');
     assert.equal((await (await fetch(`${base}/api/tasks/TASK-UI/history`)).json() as any).artifacts.length,0);

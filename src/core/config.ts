@@ -7,6 +7,7 @@ export interface Config {
   worktreeDir: string;
   artifactsDir: string;
   uiPort: number;
+  uiHost: string;
   nvidia: { apiKey?: string; baseUrl: string };
   models: Record<string, string>;
   profiles: ModelProfile[];
@@ -82,6 +83,7 @@ export function loadConfig(root = process.cwd()): Config {
     worktreeDir: path.resolve(root, process.env.ACP_WORKTREE_DIR ?? 'worktrees'),
     artifactsDir: path.resolve(root, process.env.ACP_ARTIFACTS_DIR ?? '.data/artifacts'),
     uiPort: Number(process.env.ACP_UI_PORT ?? 4317),
+    uiHost: process.env.ACP_UI_HOST ?? '127.0.0.1',
     nvidia: { apiKey: process.env.NVIDIA_API_KEY, baseUrl: process.env.NVIDIA_BASE_URL ?? 'https://integrate.api.nvidia.com/v1' },
     models,
     profiles,

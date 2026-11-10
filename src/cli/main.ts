@@ -3,12 +3,14 @@ import path from 'node:path';
 import { Orchestrator } from '../agents/orchestrator.js';
 import { startUi } from './ui.js';
 import type { Checkpoint, Task } from '../core/types.js';
+import { checkOciDeployment } from '../deployment/oci.js';
 
 function usage(){console.log(`ACP v0.3.1
 
 Commands:
   doctor
   ui
+  deployment:oci:check
   project:onboard <local-repository-path>
   project:list
   project:show <PROJECT-ID>
@@ -55,8 +57,9 @@ Commands:
 const command=process.argv[2];const args=process.argv.slice(3);const acp=new Orchestrator();
 try{
  if(!command||command==='help'){usage();process.exit(0)}
- if(command==='doctor'){console.log(JSON.stringify({version:'0.3.1',node:process.version,dataDir:acp.config.dataDir,artifactsDir:acp.config.artifactsDir,nvidiaConfigured:Boolean(acp.config.nvidia.apiKey),nvidiaBaseUrl:acp.config.nvidia.baseUrl,maxConcurrency:acp.config.maxConcurrency,requestTimeoutMs:acp.config.requestTimeoutMs,modelCooldownMs:acp.config.modelCooldownMs,reviewerTimeoutMs:acp.config.reviewerTimeoutMs,researcherTimeoutMs:acp.config.researcherTimeoutMs,builderTimeoutMs:acp.config.builderTimeoutMs,models:acp.router.all(),budgets:acp.config.budgets,fallow:acp.config.fallowCommand,coderabbitEnabled:acp.config.coderabbitEnabled},null,2));process.exit(0)}
- if(command==='ui'){startUi(acp,acp.config.uiPort);}
+ if(command==='doctor'){console.log(JSON.stringify({version:'0.3.1',node:process.version,dataDir:acp.config.dataDir,artifactsDir:acp.config.artifactsDir,uiHost:acp.config.uiHost,nvidiaConfigured:Boolean(acp.config.nvidia.apiKey),nvidiaBaseUrl:acp.config.nvidia.baseUrl,maxConcurrency:acp.config.maxConcurrency,requestTimeoutMs:acp.config.requestTimeoutMs,modelCooldownMs:acp.config.modelCooldownMs,reviewerTimeoutMs:acp.config.reviewerTimeoutMs,researcherTimeoutMs:acp.config.researcherTimeoutMs,builderTimeoutMs:acp.config.builderTimeoutMs,models:acp.router.all(),budgets:acp.config.budgets,fallow:acp.config.fallowCommand,coderabbitEnabled:acp.config.coderabbitEnabled},null,2));process.exit(0)}
+ if(command==='ui'){startUi(acp,acp.config.uiPort,acp.config.uiHost);}
+ else if(command==='deployment:oci:check'){console.log(JSON.stringify(checkOciDeployment(),null,2));}
  else if(command==='project:onboard'){console.log(JSON.stringify(await acp.onboardProject(args[0]),null,2));}
  else if(command==='project:list'){console.log(JSON.stringify(acp.projects(),null,2));}
  else if(command==='project:show'){console.log(JSON.stringify(acp.project(args[0]),null,2));}

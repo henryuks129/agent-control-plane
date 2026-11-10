@@ -1,0 +1,12 @@
+node_modules
+dist
+.data
+worktrees
+.env
+.env.*
+!.env.example
+.git
+docs.backup-v0.3.1
+src.backup-v0.3.1
+tests.backup-v0.3.1
+schemas.backup-v0.3.1
