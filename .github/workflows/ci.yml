@@ -1,0 +1,33 @@
+# CI: the checks every pull request must pass before it can merge into main.
+# Why each line exists is explained in docs/guides/ci-setup.md (step 1).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# The workflow can read the code and nothing else.
+permissions:
+  contents: read
+
+# A new push to the same pull request cancels the older run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Typecheck, build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm test

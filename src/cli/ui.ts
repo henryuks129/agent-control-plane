@@ -97,9 +97,9 @@ export function startUi(acp: Orchestrator, port: number, host = '127.0.0.1') {
         if (parts[3] === 'artifacts' && parts[4]) return json(response, 200, acp.artifactPreview(taskId, parts[4]));
       }
       if (parts[0] === 'api' && parts[1] === 'tasks' && parts[3] === 'patches' && request.method === 'POST') {
-        if (action === 'validate') return json(response, 200, acp.validatePatch(taskId, patchId));
+        if (action === 'validate') return json(response, 200, await acp.validatePatch(taskId, patchId));
         if (action === 'approve') return json(response, 200, acp.approvePatch(taskId, patchId));
-        if (action === 'apply') return json(response, 200, acp.applyPatch(taskId, patchId));
+        if (action === 'apply') return json(response, 200, await acp.applyPatch(taskId, patchId));
       }
       if (url.pathname === '/healthz') return json(response, 200, { status: 'ok' });
       if (url.pathname === '/app') {

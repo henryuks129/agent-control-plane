@@ -374,9 +374,9 @@ test('local dashboard exposes patch approval endpoints when local binding is per
   try {
     const root=await fetch(`${base}/`);
     assert.match(root.headers.get('content-type')??'',/charset=utf-8/);
-    assert.match(await root.text(),/Built for HNG product engineers/);
+    assert.match(await root.text(),/ACP · Agent Control Plane/);
     const app=await fetch(`${base}/app`);
-    assert.match(await app.text(),/Task summary/);
+    assert.match(await app.text(),/Decision brief/);
     assert.deepEqual(await (await fetch(`${base}/healthz`)).json(),{status:'ok'});
     assert.equal((await (await fetch(`${base}/api/tasks/TASK-UI/patches`)).json() as any[])[0].id,'PATCH-1');
     assert.equal((await (await fetch(`${base}/api/tasks/TASK-UI/graph`)).json() as any).nodes[0].status,'ready');
