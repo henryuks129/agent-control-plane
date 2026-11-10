@@ -39,6 +39,8 @@
 - authentication and multi-user tenancy
 - observability and usage accounting
 
+Delivery plan: [`acp-v0.6.md`](./acp-v0.6.md).
+
 ## v1.0 — Developer platform
 - installable project bootstrap
 - mature model/provider marketplace adapters

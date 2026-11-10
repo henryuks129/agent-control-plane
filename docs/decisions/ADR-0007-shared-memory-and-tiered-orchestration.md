@@ -97,9 +97,10 @@ the vendor's terms and offers an API-key fallback for every agent.
   own worktree. The default limit is 4 running tasks, and users can raise it.
   Free tiers' rate limits and the machine's CPU and memory set the real ceiling.
   Each patch goes through the same gates as one agent's patch: deterministic
-  checks (typecheck, build, tests, Fallow), the optional CodeRabbit review, the
-  LLM reviewer (evidence separate from judgment), secret scanning, and human
-  approval. Approved patches merge **one at a time** through a merge queue,
+  checks (typecheck, build, tests, Fallow), the patch scope guard, the
+  optional CodeRabbit review, the LLM reviewer (evidence separate from
+  judgment), and human approval. Secret, dependency and security scanners are
+  added in §8a. Approved patches merge **one at a time** through a merge queue,
   with checks re-run on the merged result. A failed or conflicting patch goes
   back to its agent or to an orchestrator; it never blocks the others.
 
@@ -207,6 +208,95 @@ run through ACP.
   context building or the model registry is promoted (`upgrade:*` lifecycle).
   Track pass rate, tokens per task, latency p50/p95, exchange rate.
 
+### 8a. Review and safety checks
+
+What exists today (v0.5):
+
+| Check | Where | Catches |
+|---|---|---|
+| Typecheck, build, tests | `src/reviews/engine.ts` | Broken code |
+| Fallow audit | `src/reviews/engine.ts` | Unused code, duplicates, complexity |
+| Patch scope guard | `src/git/worktrees.ts` | Edits outside the task's paths, `..` and absolute paths |
+| LLM reviewer | `src/reviews/llm.ts` | Bugs, duplicates, dead code, architecture, design, security, performance — as findings that keep evidence and judgment apart |
+| CodeRabbit (optional) | `src/reviews/engine.ts` | External review |
+| Encrypted credentials | `src/security/secrets.ts` | Keys stored at rest (AES-256-GCM) |
+| Human patch approval | dashboard and CLI | Nothing merges unseen |
+
+To add:
+
+- **Secret scanning** of every patch (for example gitleaks) — blocks merge.
+- **Dependency audit** (`npm audit` or OSV-Scanner) when a patch changes a lockfile.
+- **Static security analysis** (for example Semgrep rules) on changed files.
+- **AI-slop checks**, mostly deterministic: new dependencies not asked for,
+  new files or components when the registry already has one, comments and
+  docs that repeat the code, deleted or skipped tests, unusually large diffs
+  for the task size. Fallow and the design registry cover part of this.
+
+Vendor reviewers (judgment, not evidence):
+
+- When the orchestrator is a paid agent, ACP also asks that agent's own
+  reviewer to check each patch: Claude Code's code review and security review,
+  Codex's review. Their output is stored as findings marked
+  `source: vendor-review`, next to the deterministic evidence, never in place
+  of it. A vendor review can block a merge only through a finding the user
+  accepts.
+
+Repository rules that catch AI slop (inspired by T3 Code's own lint plugin):
+
+- **Project lint rules** run as a deterministic check: no low-value comments
+  (comments that repeat the code, divider lines, commented-out code), every
+  lint or type suppression needs a reason, no skipped tests or raised test
+  timeouts without a reason, no polling or real-time waits in tests.
+- **Context budget check:** CI measures how many tokens the agent
+  instructions, `knowledge.md` and tool descriptions cost, and fails when a
+  change grows them without an explicit label.
+- **Patch size label** (XS–XL) on every patch, so large patches for small
+  tasks stand out.
+- **Prompt evals:** any change to prompts, tool descriptions or `handoff.md`
+  format runs a small eval suite (real model, real cases from past failures,
+  plus control cases) before it is promoted.
+
+Review views (inspired by T3 Code):
+
+- **Diff view** per task and per turn, plus the merged result of the queue.
+- **Pull-request review** inside the app for projects that use a Git host,
+  optional, since sign-in does not require GitHub.
+- **Review guides:** a model writes a short, ordered walk-through of a large
+  change (what to read first, why each part changed, where the risk is),
+  linking each stop to the evidence. Reviewers comment line by line along the
+  way.
+
+### 8b. Guard rails, loops and recursion
+
+What exists today (v0.5):
+
+| Guard | Where |
+|---|---|
+| Per-task budget: max tokens, max requests, max minutes | `resolveBudget` in `src/agents/runtime.ts` |
+| At most 2 model attempts per task node | `src/agents/runtime.ts` |
+| Task graph must have no cycles | `src/core/planner.ts` |
+| Queue jobs have a max attempt count | `src/storage/db.ts` |
+| Request timeouts; unhealthy models marked degraded | `src/models/nvidia.ts`, `src/agents/orchestrator.ts` |
+| Concurrency limit | `ConcurrencyManager` |
+| Patch lifecycle: validated → approved → applied; nothing commits or pushes on its own | `src/agents/orchestrator.ts` |
+
+To add for orchestration:
+
+- **Depth limit 1.** Only orchestrators delegate. Workers cannot create new
+  ACP tasks; a vendor agent may use its own sub-agents inside its task, under
+  that task's budget.
+- **Exchange limit.** A task can change hands at most twice (worker → worker
+  → orchestrator). After that it stops and asks the user.
+- **Loop detection.** Stop a task when the same test fails with the same error
+  twice in a row, the same diff is produced twice, or the same tool call
+  repeats 3 times with the same arguments.
+- **Run budget.** A cap on total tokens, requests and minutes for the whole
+  prompt, on top of per-task budgets; free-tier rate limits count toward it.
+- **Replanning limit.** Orchestrators may replan a prompt at most twice.
+- **Tool-call limit** per task for bare API models (default 40).
+- **Stop button** in the app and `Ctrl-C` in the terminal cancel every running
+  task and keep their checkpoints.
+
 ### 9. Command sandbox (later phase)
 
 Worktrees isolate **files**, not **processes**: a command run in a worktree can
@@ -290,8 +380,8 @@ search only for recall — free to run and consistent with ADR-0001.
 ## Relationship to other documents
 
 - **Supersedes for now:** the organization, membership and tenancy scope in
-  `docs/product/acp-v0.6.md`, and GitHub OAuth in `docs/product/hng-launch-mvp.md`.
-  The existing `src/auth/github.ts` and tenancy types are deferred, not part of
+  `docs/product/acp-v0.6.md`, and GitHub OAuth from the HNG launch MVP (its
+  notes are no longer in the repository). The existing `src/auth/github.ts` and tenancy types are deferred, not part of
   this phase.
 - **Builds on:** ADR-0001 (local-first), ADR-0002 (context on demand),
   ADR-0003 (provider-agnostic), ADR-0005 (design-library governance),
@@ -308,11 +398,15 @@ search only for recall — free to run and consistent with ADR-0001.
 7. [ ] Shared tools (browser, computer use, terminal) via function calling; `acp mcp` server; `acp knowledge export`.
 8. [ ] Design library import pipeline → spec → style tags → skills.
 9. [ ] Tracing spans and trace views in app and terminal; golden-task eval suite wired into `upgrade:validate`.
-10. [ ] Update `docs/product/acp-v0.6.md` and `hng-launch-mvp.md` to mark the deferred scope.
+10. [ ] Update `docs/product/acp-v0.6.md` to mark the deferred scope.
 11. [ ] Antigravity and other agents through the Agent Client Protocol registry (Google's official agent), with API-key fallback.
 12. [ ] Container sandbox for commands from API and local models (section 9).
-13. [ ] Decide whether to rename the product: "ACP" collides with the Agent Client Protocol that T3 Code, Zed and Google use.
+13. [x] Name: keep **ACP — Agent Control Plane** for now. Always write it out in full in docs and on the site, because "ACP" alone also means the Agent Client Protocol. Options are kept in `docs/product/naming.md`.
 14. [ ] Run free models through OpenCode by default; keep the bare-API path for review and planning.
 15. [ ] Parallel runner with a concurrency limit and a serial merge queue that re-runs checks after each merge.
 16. [ ] Publish and maintain `docs/guides/free-models.md`; show it in onboarding.
 17. [ ] Add a LICENSE file; the project is open source but the repository has none yet.
+18. [ ] Secret scanning, dependency audit, static security analysis and AI-slop checks as merge gates (§8a).
+19. [ ] Diff view, in-app pull-request review and model-written review guides (§8a).
+20. [ ] Vendor reviewers as a finding source; project lint rules for AI slop; context budget check; patch size labels; prompt evals (§8a).
+21. [ ] Depth, exchange, loop, run-budget, replanning and tool-call limits, plus a stop button (§8b).
