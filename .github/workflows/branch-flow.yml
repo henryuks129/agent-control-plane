@@ -1,0 +1,52 @@
+# Keeps the branch flow honest (ADR-0008 §1):
+#   your branch -> pull request -> dev -> pull request -> main
+name: Branch flow
+
+on:
+  pull_request:
+    # "edited" re-runs the check when someone changes a pull request's target branch.
+    types: [opened, reopened, synchronize, edited, closed]
+
+permissions:
+  contents: read
+
+jobs:
+  source:
+    # main only accepts pull requests from dev, so every change is tried on dev first.
+    name: Only dev merges into main
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - env:
+          BASE: ${{ github.base_ref }}
+          HEAD: ${{ github.head_ref }}
+          SAME_REPO: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+        run: |
+          if [ "$BASE" = "main" ] && { [ "$HEAD" != "dev" ] || [ "$SAME_REPO" != "true" ]; }; then
+            echo "::error::Pull requests into main must come from the dev branch. Change this pull request's base branch to dev."
+            exit 1
+          fi
+          echo "OK: $HEAD -> $BASE"
+
+  cleanup:
+    # GitHub deletes a branch when its pull request is merged (repository setting).
+    # This does the same when a pull request is closed without merging.
+    # The branch can be restored from the pull request page.
+    name: Delete the branch of a closed pull request
+    if: >-
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == false &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.head_ref != 'main' && github.head_ref != 'dev'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.head_ref }}
+        run: |
+          gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$BRANCH" \
+            || echo "Branch $BRANCH was already deleted."

@@ -60,8 +60,10 @@ Needs the maintainer: create the repository, push, then protect `main`.
 1. Create the repository and push this branch.
 2. Add `.github/CODEOWNERS` with `* @<maintainer>`, so every change needs
    the maintainer's review.
-3. Add a ruleset on `main`: require a pull request, require the **CI**
-   check, require code-owner approval, block force pushes and deletion.
+3. Add rulesets on `dev` and `main`: require a pull request, require the
+   **CI** checks, require code-owner approval, block force pushes and
+   deletion. Changes go to `dev` first; `main` only accepts pull requests
+   from `dev` (ADR-0008 §1).
 4. Add a `LICENSE` (the project is open source but has none yet).
 
 ## Step 4 — Docker
