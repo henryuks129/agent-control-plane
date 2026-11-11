@@ -193,6 +193,70 @@ hundred tokens per step, saved as work happens. `handoff.md` is built from
 the latest checkpoint, the task ledger and Git. The app shows each task's
 checkpoints as a short timeline, with `handoff.md` one click away.
 
+### 9e. Tools, browser, sub-agents: borrow what the harness has, add one ACP server
+
+Checked in T3 Code's repository on 2026-11-11 (`docs/user/composer.md`,
+`docs/user/html-renders.md`, `docs/user/devices.md`,
+`docs/orchestration-v2/orchestrator-mcp-server.md`,
+`apps/server/src/mcp/toolkits/`).
+
+- **Skills, plugins and MCP servers:** T3 installs nothing itself. It lists
+  the skills and MCP servers already set up in each provider (for example
+  Claude's `~/.claude/skills` and `.claude/skills`) and lets the user pick
+  them with `$`. After a change, "Restart agent session" reloads them.
+- **One app-owned MCP server, injected into every session:** T3 runs its
+  own MCP server (`t3-code`) and adds it to each provider session's config
+  with a per-session token. Agents get T3's tools without the user installing
+  anything: an embedded preview browser (`preview_open`, `preview_act`,
+  `preview_snapshot`, recording), iOS/Android devices, HTML pages, threads,
+  worktrees and pull requests.
+- **Browser:** T3 has its own. The desktop app embeds an Electron browser
+  that the user sees and agents drive through those `preview_*` tools; a
+  small headless browser checks HTML pages. It is not the harness's browser.
+- **Computer use:** T3 does not control the desktop. Device control is
+  limited to simulators and emulators.
+- **Sub-agents:** T3 adds its own (`t3_thread` tools): a parent agent starts
+  a child thread on any provider, which receives only the task prompt. Where
+  a harness has native sub-agents (Claude's Task tool), they keep working
+  inside that harness.
+
+For ACP:
+- Agents keep their own skills, plugins, MCP servers, sub-agents, browser
+  and computer-use tools. ACP lists and toggles them; it does not reinstall
+  them.
+- ACP adds one server of its own, injected into every agent session: memory
+  (read and write `knowledge.md` and checkpoints), task hand-off to another
+  agent, project activity and the design library. Nothing to install.
+- Knowledge and design-library skills are plain files ACP passes in. "Calling
+  a tool instead of installing it" works because the ACP server is already
+  attached to every session.
+- An embedded preview browser comes later, after the Electron app.
+
+### 9f. What "memory" means in ACP
+
+Vendor memory today (checked 2026-11-11):
+- Claude Code: `CLAUDE.md` files written by people and an auto-memory folder
+  written by Claude. Chats are saved as files on the computer.
+- Codex: `AGENTS.md` files and an optional Memories feature that summarises
+  past sessions into `~/.codex/memories/`. Chats are saved in
+  `~/.codex/sessions/`.
+- Claude (chat app): an "import memory" tool. Claude gives you a prompt to
+  paste into ChatGPT, and you paste ChatGPT's answer back. It moves remembered
+  facts, not full chats, and it is for the chat apps, not Codex sessions.
+- None of these is shared between vendors.
+
+ACP memory is one store shared by every connected agent, with two parts:
+- **Project knowledge** (`knowledge.md`): goals, rules and decisions that
+  stay true. Changed by agents with the user's approval.
+- **Task progress** (checkpoints): what each task has done and what is
+  next. Written automatically as work happens.
+
+When one agent stops, the next one reads the task's latest checkpoint and the
+relevant knowledge, not the whole chat, so the user writes no briefing. This
+matches T3's "portable handoffs" (a budgeted selection of recent messages,
+with a tool to read older ones), but ACP hands over a written state instead
+of raw messages.
+
 ### 10. Order of work
 
 1. CI and Docker setup, step by step (`docs/guides/ci-setup.md`).
