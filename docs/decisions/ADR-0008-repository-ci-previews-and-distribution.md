@@ -280,6 +280,52 @@ matches T3's "portable handoffs" (a budgeted selection of recent messages,
 with a tool to read older ones), but ACP hands over a written state instead
 of raw messages.
 
+### 9g. Memory belongs to the project, in layers
+
+Decided 2026-11-11. Memory is per project, not per file. Rules can be
+narrowed to files or folders, the way Claude Code (`CLAUDE.md` in
+subfolders, `.claude/rules/` with paths) and Codex (nested `AGENTS.md`,
+closest file wins) already work. T3 Code has no memory of its own; each
+agent reads its own instruction files.
+
+| Layer | Holds | Where |
+|---|---|---|
+| User | Preferences for every project | ACP account or local settings |
+| Project | `knowledge.md`: goals, rules, decisions, tools | One per project |
+| Path rules | Rules for matching files, e.g. `src/api/**` | Project memory, matched by path |
+| Task | Checkpoints and `handoff.md` | One per task |
+
+- An agent receives the user layer, the project layer, only the path rules
+  that match the files it is working on, and its task's latest checkpoint.
+- When layers disagree, the narrower one wins (task over path rule over
+  project over user), as in Codex.
+- Proposed, not decided: ACP writes the project layer and path rules out to
+  `AGENTS.md` and `CLAUDE.md` in the matching folders, so Claude Code, Codex
+  and OpenCode pick them up even without the ACP server. Engineering
+  decisions still open:
+  - Which is the source of truth, ACP's store or the files, and how changes
+    flow both ways.
+  - What happens to `AGENTS.md`/`CLAUDE.md` the project already has (merge,
+    a marked ACP section, or a separate imported file).
+  - Whether generated files are committed to Git or ignored.
+  - Size limits, since agents load these files into every session.
+  - How edits people make to the files directly come back as proposed
+    memory changes instead of being overwritten.
+
+### 9h. Importing memory from each harness (proposed)
+
+Each harness's own memory can be brought into ACP's shared memory, so every
+agent can use it:
+- **Files ACP can read directly:** `CLAUDE.md` and Claude Code's auto-memory
+  folder; `AGENTS.md` and Codex's `~/.codex/memories/`; OpenCode's
+  `AGENTS.md`. Past chats (`~/.claude/projects/`, `~/.codex/sessions/`) can
+  be summarised into checkpoints on request.
+- **Chat apps (Claude.ai, ChatGPT):** no API for memory. The user exports or
+  copies it (for example with Claude's import-memory prompt) and pastes it in.
+- Every imported item is a proposal the user accepts, edits or rejects; it
+  keeps its source (which harness, which file, when), is scanned for secrets
+  first, and is sorted into a layer (user, project, path rule).
+
 ### 10. Order of work
 
 1. CI and Docker setup, step by step (`docs/guides/ci-setup.md`).
@@ -312,6 +358,7 @@ of raw messages.
 12. [ ] Git host view in ACP.
 13. [ ] Rebuild the website, desktop app and terminal designs.
 14. [ ] Optional ACP account with Clerk (remote access, phone app), only when needed (§9a).
+15. [ ] Layered memory: user, project, path rules, task; sync to `AGENTS.md` and `CLAUDE.md` (§9g).
 
 Design canvas (website Home, Download, Docs, Security, Report a problem;
 desktop app; terminal), updated 2026-11-11:
