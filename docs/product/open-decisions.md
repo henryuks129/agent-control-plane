@@ -24,6 +24,6 @@ placeholder everywhere it appears.
 
 | Question | Status |
 |---|---|
-| Plain chat (no code changes) as well as coding agents? | Proposed: one thread type. Coding agents by default; a thread can be "ask only", with no file edits. See ADR-0008 §9b |
+| Plain chat (no code changes) as well as coding agents? | Decided: one thread type, no mode switch. Questions get answers, requests become tasks. See ADR-0008 §9b |
 | Optional ACP account (Clerk) | Only when remote access or the phone app is built (ADR-0008 §9a) |
 | Product name | Keep "ACP — Agent Control Plane" (docs/product/naming.md) |

@@ -160,17 +160,32 @@ For ACP:
 - Only Clerk's public keys go in the client. The secret key stays on the
   server.
 
-### 9b. Chat and coding in one thread (proposed)
+### 9b. Chat and coding in one thread, with no mode switch
 
 T3 Code is coding agents only; general chat is a separate product (T3
 Chat). Baton and agent-corral/coral run coding agents in worktrees and
 have no plain chat. agentcairn and Commonplace are memory or knowledge
 layers that plug into those agents rather than apps.
 
-Proposal for ACP: one kind of thread with a **Code / Ask** switch. Code
-lets agents edit files in a worktree; Ask answers questions and changes
-nothing. Ask still uses the same agents and the project's memory, so
-there is no separate chat product to build.
+Decided 2026-11-11: one kind of thread, and no Code / Ask switch (the
+maintainer found it confusing). A question gets an answer in the thread;
+a request for a change becomes tasks. No switch is needed for safety,
+because agents only edit their own worktree and nothing reaches the
+project until the user approves it in Review.
+
+### 9b-1. Thread controls live on the tasks, not in the header
+
+Decided 2026-11-11: no Stop, Resume or Review buttons in the thread
+header. The header shows only a status line ("2 working · 2 ready to
+review").
+- A ready task shows a **Review** button on its own row.
+- A stopped task shows **Resume** on its row.
+- A working task can be stopped from its opened row ("Stop this task").
+- Stopping everything uses a stop button beside Send in the message box,
+  shown only while agents are working, as in common chat apps.
+- A new request shows as working the moment it is sent, before the
+  orchestrator has split it into tasks (the same fix T3 shipped in commit
+  a0efdae).
 
 ### 9c. Where plan usage comes from
 
@@ -231,6 +246,11 @@ For ACP:
   a tool instead of installing it" works because the ACP server is already
   attached to every session.
 - An embedded preview browser comes later, after the Electron app.
+- **Orchestrator hand-offs follow T3's sub-agent pattern:** an orchestrator
+  starts a child task on any connected agent (for example Claude handing work
+  to Codex or a free model) through the ACP server. The child receives the
+  task, its scope and the relevant memory, not the parent's whole chat.
+  Each agent's own sub-agents keep working inside that agent.
 
 ### 9f. What "memory" means in ACP
 
@@ -245,7 +265,10 @@ Vendor memory today (checked 2026-11-11):
   facts, not full chats, and it is for the chat apps, not Codex sessions.
 - None of these is shared between vendors.
 
-ACP memory is one store shared by every connected agent, with two parts:
+Shared memory across vendors is ACP's answer to this, and a core reason ACP
+exists (confirmed by the maintainer 2026-11-11). ACP memory is one store
+shared by every connected agent, Claude, Codex, Antigravity and OpenCode
+models alike, with two parts:
 - **Project knowledge** (`knowledge.md`): goals, rules and decisions that
   stay true. Changed by agents with the user's approval.
 - **Task progress** (checkpoints): what each task has done and what is
