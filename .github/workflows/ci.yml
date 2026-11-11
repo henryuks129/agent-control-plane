@@ -31,3 +31,25 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
       - run: npm test
+
+  docker:
+    name: Docker image starts and is healthy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      # Same settings people use locally (compose.yaml): read-only, no capabilities.
+      - run: docker compose up -d --build
+      - name: Wait for the health check
+        run: |
+          for i in $(seq 1 30); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' "$(docker compose ps -q acp)")
+            echo "health: $status"
+            [ "$status" = healthy ] && exit 0
+            sleep 3
+          done
+          docker compose logs acp
+          exit 1
+      - run: curl -fsS http://127.0.0.1:4317/healthz
+      - if: always()
+        run: docker compose down -v

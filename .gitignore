@@ -9,3 +9,9 @@ worktrees/*
 *.log
 .DS_Store
 .data-test-upgrades/
+
+# ACP memory that stays on this computer (checkpoints, captures, caches)
+.acp/local/
+
+# Old local copies
+*.backup-v*/

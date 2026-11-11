@@ -1,8 +1,45 @@
-# Agent Control Plane (ACP) v0.3.1
+# Agent Control Plane (ACP)
 
-A local-first, provider-agnostic control plane for resilient multi-agent software development.
+**All your coding agents. One memory.**
 
-## v0.3 capabilities
+ACP is a free, open-source workspace for the coding agents you already use:
+Claude Code, Codex, Antigravity, and free or local models through OpenCode.
+They share one memory, work in parallel in their own Git worktrees, and hand
+off to each other without losing the thread. Nothing in your project changes
+until you approve it.
+
+Website: <https://henryuks129.github.io/agent-control-plane/> ·
+License: [MIT](LICENSE)
+
+> **Status: in development.** The local dashboard and patch review work today
+> and run in Docker. Agent connections, layered shared memory and the desktop
+> app are being built. Decisions are recorded in
+> [docs/decisions](docs/decisions), starting with ADR-0007 and ADR-0008.
+
+## Quick start
+
+With Docker (step by step in [docs/guides/docker.md](docs/guides/docker.md)):
+
+```bash
+git clone https://github.com/henryuks129/agent-control-plane.git
+cd agent-control-plane
+docker compose up -d
+# open http://127.0.0.1:4317
+```
+
+From source (Node.js 22.5 or newer):
+
+```bash
+npm install
+npm run build
+node dist/src/cli/main.js doctor
+node dist/src/cli/main.js ui
+```
+
+Settings are optional and go in a `.env` file you create; the Docker guide
+lists them. `.env` is never committed.
+
+## Capabilities so far (v0.3–v0.5)
 
 - dependency-graph task planning
 - sequential, parallel and bounded swarm execution
@@ -23,18 +60,11 @@ A local-first, provider-agnostic control plane for resilient multi-agent softwar
 
 ACP itself has no subscription requirement. NVIDIA/API usage and optional external tools are separate costs/limits.
 
-## Quick start
+## Command line
 
 ```bash
-cp .env.example .env
-# add NVIDIA_API_KEY if you want live model execution
-npm install
-npm run typecheck
-npm run build
-node dist/src/cli/main.js doctor
 node dist/src/cli/main.js task:create tasks/TASK-0001.json
 node dist/src/cli/main.js task:plan TASK-0001
-node dist/src/cli/main.js ui
 ```
 
 The initial implementation deliberately uses Node built-ins for storage and the UI so ACP has no required runtime framework subscription or hosted service.

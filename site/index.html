@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent Control Plane (ACP)</title>
+<meta name="description" content="ACP is a free, open-source workspace where the coding agents you already use share one memory, work in parallel, and change nothing until you approve it.">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Crect width='20' height='20' rx='5' fill='%23EDEDEF'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#000;--panel:#0B0B0D;--line:#1E1E22;--line-2:#26262B;--text:#EDEDEF;--soft:#C9C9CF;--muted:#A1A1AA;--dim:#6B6B74;--ok:#4ADE80;--warn:#FBBF24;--mono:'JetBrains Mono',ui-monospace,monospace}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+a{color:var(--muted);text-decoration:none}a:hover{color:#fff}
+a:focus-visible{outline:2px solid #8AA4FF;outline-offset:3px;border-radius:4px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 32px}
+header .wrap{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;padding-top:22px;padding-bottom:22px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:600;color:var(--text)}
+.brand i{width:20px;height:20px;border-radius:5px;background:var(--text)}
+.brand span{font-weight:400;color:var(--dim)}
+nav{display:flex;flex-wrap:wrap;gap:22px;align-items:center;font-size:14px}
+.btn{display:inline-block;color:#000;background:var(--text);padding:12px 20px;border-radius:10px;font-weight:600;font-size:15px}
+.btn:hover{color:#000;background:#fff}
+.btn.small{padding:8px 14px;border-radius:8px;font-size:14px}
+.btn.ghost{color:var(--soft);background:transparent;border:1px solid var(--line-2);font-weight:500}
+.btn.ghost:hover{color:#fff}
+.hero{text-align:center;padding:96px 0 40px}
+.eyebrow{margin:0 0 18px;font-size:13px;color:#8A8A93}
+h1{margin:0 auto;max-width:820px;font-size:64px;line-height:1.04;font-weight:600;letter-spacing:-.035em}
+h1 span{color:var(--dim)}
+.lead{margin:22px auto 0;max-width:580px;font-size:18px;color:var(--muted)}
+.ctas{margin-top:32px;display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
+.status{display:inline-flex;gap:8px;align-items:center;margin-top:22px;font-size:13px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:6px 12px}
+.status::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--warn)}
+section{padding-top:120px}
+h2{margin:0;font-size:36px;font-weight:600;letter-spacing:-.03em;line-height:1.15}
+.sub{margin:12px 0 0;max-width:640px;color:var(--muted)}
+.steps{margin:44px 0 0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:32px}
+.steps li{border-top:1px solid #222227;padding-top:18px}
+.num{margin:0 0 10px;font-family:var(--mono);font-size:12px;color:var(--dim)}
+h3{margin:0 0 8px;font-size:18px;font-weight:600}
+.steps p:last-child,.card p{margin:0;color:var(--muted);font-size:14.5px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:56px;align-items:start}
+.tag{margin:0 0 10px;font-family:var(--mono);font-size:13px}
+.panel{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:22px}
+.layers{width:100%;border-collapse:collapse;font-size:14px}
+.layers th{color:var(--dim);font-weight:500;font-size:12.5px;text-align:left;padding:0 0 10px}
+.layers td{padding:10px 0;border-top:1px solid #141417;vertical-align:top}
+.layers td:first-child{width:34%;font-weight:500}
+.layers td+td{color:var(--muted)}
+code,.mono{font-family:var(--mono);font-size:.88em}
+.checks{margin:22px 0 0;padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;font-size:14px;color:var(--soft)}
+.report div+div{margin-top:14px}
+.report b{display:block;margin-bottom:3px}
+.report p{margin:0;color:var(--muted);font-size:14px}
+.report .meta{font-size:12px;color:var(--dim);margin-bottom:14px}
+.chips{margin-top:32px;display:flex;flex-wrap:wrap;gap:8px;font-size:14px}
+.chip{border:1px solid #222227;border-radius:999px;padding:8px 14px}
+.chip.free{border-color:#1F3A2A;color:#86EFAC}
+.road{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:36px}
+.road h3{display:flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.road ul{margin:10px 0 0;padding-left:18px;color:var(--muted);font-size:14.5px}
+.term{margin-top:24px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;font-family:var(--mono);font-size:14px;overflow-x:auto;white-space:pre;color:var(--soft)}
+.term .c{color:var(--dim)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:32px}
+.card{border:1px solid var(--line);border-radius:14px;padding:22px;color:var(--text);display:block}
+.card h3{font-size:16px}
+.final{text-align:center;padding:140px 0}
+.final h2{font-size:44px;letter-spacing:-.035em}
+footer{border-top:1px solid #141417;margin-top:0}
+footer .wrap{display:flex;flex-wrap:wrap;gap:20px;justify-content:space-between;padding-top:32px;padding-bottom:32px;font-size:13px;color:var(--dim)}
+@media (max-width:640px){
+  .wrap{padding:0 16px}
+  .hero{padding-top:56px}
+  h1{font-size:40px}
+  .lead{font-size:16px}
+  h2{font-size:28px}
+  .final h2{font-size:30px}
+  section{padding-top:80px}
+  .checks{grid-template-columns:1fr}
+  nav{gap:16px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <a class="brand" href="./"><i aria-hidden="true"></i>ACP <span>Agent Control Plane</span></a>
+    <nav aria-label="Main">
+      <a href="#how">How it works</a>
+      <a href="#memory">Memory</a>
+      <a href="#status">Status</a>
+      <a class="btn small" href="https://github.com/henryuks129/agent-control-plane">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+<div class="wrap hero">
+  <p class="eyebrow">Free and open source · MIT license</p>
+  <h1>All your coding agents.<br><span>One memory.</span></h1>
+  <p class="lead">Bring Claude Code, Codex, free and local models. They plan together, work in parallel and hand off without losing the thread. Nothing in your project changes until you approve it.</p>
+  <div class="ctas">
+    <a class="btn" href="https://github.com/henryuks129/agent-control-plane#quick-start">Run it with Docker</a>
+    <a class="btn ghost" href="https://github.com/henryuks129/agent-control-plane">Read the code</a>
+  </div>
+  <p class="status">In development · the desktop app is not released yet</p>
+</div>
+
+<section id="how" aria-labelledby="how-h">
+  <div class="wrap">
+    <h2 id="how-h">How it works</h2>
+    <p class="sub">ACP doesn't replace your agents. It connects them, gives them one shared memory, and keeps a person in charge of what changes.</p>
+    <ol class="steps">
+      <li><p class="num">01</p><h3>Connect what you have</h3><p>Sign in to Claude Code, Codex or Antigravity in their own apps. ACP starts them for you and never sees your password or tokens. No paid plan? Use free models through OpenCode.</p></li>
+      <li><p class="num">02</p><h3>Pick an orchestrator</h3><p>Star one or two agents. They talk through your goal, split it into tasks and hand each task to the model best suited to it.</p></li>
+      <li><p class="num">03</p><h3>Work runs in parallel</h3><p>Each task runs in its own Git worktree. If an agent stops or its plan runs low, another picks up from the latest checkpoint, not the whole chat.</p></li>
+      <li><p class="num">04</p><h3>You approve every change</h3><p>Each change is tested and scanned and arrives with a report. Approved changes merge one at a time, with checks run again after each.</p></li>
+    </ol>
+  </div>
+</section>
+
+<section id="memory" aria-labelledby="memory-h">
+  <div class="wrap two">
+    <div>
+      <p class="tag" style="color:#8AA4FF">shared memory</p>
+      <h2 id="memory-h">Switch agents without writing a briefing.</h2>
+      <p class="sub">Claude, ChatGPT and Gemini each keep their own memory, locked in their own app. ACP keeps one memory for every agent you connect, owned by you.</p>
+      <p class="sub">Project memory lives in your repository, so it's reviewed like code and works even without ACP running. ACP also writes it into the <code>AGENTS.md</code> and <code>CLAUDE.md</code> files your agents already read.</p>
+    </div>
+    <div class="panel">
+      <table class="layers">
+        <thead><tr><th scope="col">Layer</th><th scope="col">What it holds</th></tr></thead>
+        <tbody>
+          <tr><td>You</td><td>Preferences for every project</td></tr>
+          <tr><td>Project</td><td>Goals, rules and decisions in <code>.acp/knowledge.md</code></td></tr>
+          <tr><td>Folder rules</td><td>"In <code>src/api</code>, always…", matched by path</td></tr>
+          <tr><td>Task</td><td>Checkpoints and <code>handoff.md</code></td></tr>
+        </tbody>
+      </table>
+      <p style="margin:14px 0 0;font-size:13px;color:var(--dim)">The narrower layer wins, so a folder rule beats a project rule.</p>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="review-h">
+  <div class="wrap two">
+    <div>
+      <p class="tag" style="color:#F0ABFC">review and safety</p>
+      <h2 id="review-h">Evidence first, opinions labelled.</h2>
+      <p class="sub">Every change runs the same checks, whichever model wrote it. Tool results are shown as evidence. Comments from AI reviewers are marked as opinion, so you know which is which.</p>
+      <ul class="checks">
+        <li>✓ Tests and types</li><li>✓ Stays inside its scope</li><li>✓ No secrets committed</li><li>✓ Known-vulnerable packages</li><li>✓ Security patterns</li><li>✓ Dead code and duplicates</li>
+      </ul>
+    </div>
+    <div class="panel report">
+      <p class="meta">Example patch report</p>
+      <div><b>Problem</b><p>New accounts stored the password as plain text.</p></div>
+      <div><b>Change</b><p>Hash the password before saving, using the existing helper.</p></div>
+      <div><b>Scope</b><p class="mono">src/api/account/** · no new dependencies</p></div>
+      <div><b>Verification</b><p class="mono">npm test · 41 passed<br>new test fails on main, passes here</p></div>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="works-h">
+  <div class="wrap">
+    <h2 id="works-h">Use your plan, or start free.</h2>
+    <p class="sub">Paid plans run in the maker's own app, signed in by you. Free models run through OpenCode, so they can edit files and run commands too.</p>
+    <div class="chips">
+      <span class="chip">Claude Code</span><span class="chip">Codex</span><span class="chip">Antigravity</span><span class="chip">OpenCode</span>
+      <span class="chip free">NVIDIA · free tier</span><span class="chip free">Ollama · local</span>
+    </div>
+  </div>
+</section>
+
+<section id="status" aria-labelledby="status-h">
+  <div class="wrap">
+    <h2 id="status-h">Where ACP is today.</h2>
+    <p class="sub">We'd rather tell you plainly than overpromise.</p>
+    <div class="road">
+      <div class="panel"><h3><span class="dot" style="background:var(--ok)"></span>Works now</h3><ul><li>Local dashboard for tasks, checkpoints and patches</li><li>Patch review: validate, approve, apply</li><li>Each task in its own Git worktree</li><li>Runs in Docker on your computer</li></ul></div>
+      <div class="panel"><h3><span class="dot" style="background:var(--warn)"></span>Being built</h3><ul><li>Connecting Claude Code, Codex, Antigravity and OpenCode</li><li>Shared memory in layers</li><li>Orchestrators and handoffs</li></ul></div>
+      <div class="panel"><h3><span class="dot" style="background:var(--dim)"></span>Planned</h3><ul><li>Desktop app for macOS, Windows and Linux</li><li>Screen recordings as evidence in reports</li><li>Design library as skills</li></ul></div>
+    </div>
+    <div class="term" aria-label="Quick start commands"><span class="c"># Try it with Docker</span>
+git clone https://github.com/henryuks129/agent-control-plane.git
+cd agent-control-plane
+docker compose up -d
+<span class="c"># then open http://127.0.0.1:4317</span></div>
+  </div>
+</section>
+
+<section aria-labelledby="open-h">
+  <div class="wrap">
+    <h2 id="open-h">Built in the open.</h2>
+    <div class="cards">
+      <a class="card" href="https://github.com/henryuks129/agent-control-plane"><h3>Read the code</h3><p>Everything ACP does is on GitHub, including the checks every change must pass.</p></a>
+      <a class="card" href="https://github.com/henryuks129/agent-control-plane/pulls"><h3>Contribute</h3><p>Open a pull request. The maintainer reviews every one before it reaches main.</p></a>
+      <a class="card" href="https://github.com/henryuks129/agent-control-plane/issues/new"><h3>Report a problem</h3><p>Tell us what happened in plain words. Leave out keys and passwords.</p></a>
+    </div>
+  </div>
+</section>
+
+<div class="wrap final">
+  <h2>Bring the agents you already pay for.</h2>
+  <div class="ctas"><a class="btn" href="https://github.com/henryuks129/agent-control-plane">Star on GitHub</a></div>
+</div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>ACP — Agent Control Plane · free and open source, MIT license</span>
+    <span><a href="https://github.com/henryuks129/agent-control-plane">GitHub</a></span>
+  </div>
+</footer>
+</body>
+</html>

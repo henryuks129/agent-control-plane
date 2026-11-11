@@ -1,0 +1,31 @@
+# Run ACP in a container on your own computer.
+#   docker compose up -d      start it, then open http://127.0.0.1:4317
+#   docker compose logs -f    watch what it is doing
+#   docker compose down       stop it (your data stays in the acp-data volume)
+# Step-by-step guide: docs/guides/docker.md
+services:
+  acp:
+    build: .
+    image: acp:local
+    # Only this computer can reach ACP. Do not change 127.0.0.1 unless you have
+    # put something with sign-in in front of it.
+    ports:
+      - "127.0.0.1:4317:4317"
+    # Optional: settings and keys. The file stays on your computer and is never
+    # copied into the image (.dockerignore excludes it).
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - acp-data:/var/lib/acp
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+
+volumes:
+  acp-data:
