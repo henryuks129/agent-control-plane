@@ -160,6 +160,39 @@ For ACP:
 - Only Clerk's public keys go in the client. The secret key stays on the
   server.
 
+### 9b. Chat and coding in one thread (proposed)
+
+T3 Code is coding agents only; general chat is a separate product (T3
+Chat). Baton and agent-corral/coral run coding agents in worktrees and
+have no plain chat. agentcairn and Commonplace are memory or knowledge
+layers that plug into those agents rather than apps.
+
+Proposal for ACP: one kind of thread with a **Code / Ask** switch. Code
+lets agents edit files in a worktree; Ask answers questions and changes
+nothing. Ask still uses the same agents and the project's memory, so
+there is no separate chat product to build.
+
+### 9c. Where plan usage comes from
+
+ACP doesn't invent the numbers. Each harness reports them, and ACP turns
+them into one format:
+- Claude Code: the Claude Agent SDK's usage request and its rate-limit
+  events (5-hour and 7-day windows). T3 Code reads the same
+  (`apps/server/src/provider/claudeUsageLimits.ts`).
+- Codex: rate-limit readings sent by the Codex app-server.
+- Antigravity: Google's quota service, using the user's own sign-in (T3
+  commit 047d492).
+- API and free models: no plan window. ACP counts its own requests and
+  reads the provider's rate-limit replies, for example NVIDIA's about 40
+  requests a minute, and labels these as estimates.
+
+### 9d. Checkpoints stay
+
+Checkpoints (`docs/protocols/checkpoint.md`) are still the core: a few
+hundred tokens per step, saved as work happens. `handoff.md` is built from
+the latest checkpoint, the task ledger and Git. The app shows each task's
+checkpoints as a short timeline, with `handoff.md` one click away.
+
 ### 10. Order of work
 
 1. CI and Docker setup, step by step (`docs/guides/ci-setup.md`).
