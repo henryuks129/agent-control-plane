@@ -140,6 +140,26 @@ Confirmed by the maintainer: plan usage windows drive routing (ADR-0007
 §2), and every patch carries a Problem / Change / Scope / Verification
 report (ADR-0007 §8a). The pull request template uses the same shape.
 
+### 9a. Accounts: Clerk for the optional ACP account, not for agents
+
+Checked in T3 Code's repository on 2026-11-11 (`docs/internals/t3-connect.md`,
+`docs/operations/connect-setup.md`). T3 uses Clerk only for **T3 Connect**,
+an optional cloud account. It lets you reach your own machine from other
+devices and the phone app through a relay, and it is turned off in a fresh
+clone. Agents are not onboarded through Clerk: each provider signs in through
+its maker's own app or key.
+
+For ACP:
+- ACP works with no account. If we add an account (for remote access, the
+  phone app or syncing settings), Clerk is a good fit, the same way T3 uses
+  it.
+- Agents keep connecting through their makers' runtimes (ADR-0007).
+  Clerk signs users in to *our* app. It can't hold a user's Claude or ChatGPT
+  subscription login, and vendors don't allow passing those tokens through a
+  third party.
+- Only Clerk's public keys go in the client. The secret key stays on the
+  server.
+
 ### 10. Order of work
 
 1. CI and Docker setup, step by step (`docs/guides/ci-setup.md`).
@@ -171,3 +191,8 @@ report (ADR-0007 §8a). The pull request template uses the same shape.
 11. [ ] Download page with operating-system detection and install commands.
 12. [ ] Git host view in ACP.
 13. [ ] Rebuild the website, desktop app and terminal designs.
+14. [ ] Optional ACP account with Clerk (remote access, phone app), only when needed (§9a).
+
+Design canvas (website Home, Download, Docs, Security, Report a problem;
+desktop app; terminal), updated 2026-11-11:
+https://claude.ai/artifact/UCtkA4QzDL5vdkdBD3stdS
