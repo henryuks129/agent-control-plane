@@ -40,6 +40,11 @@ create a file called `.env` next to `compose.yaml`:
 
 Then restart: `docker compose up -d`.
 
+Inside Docker, ACP's data folder, port and address are fixed by
+`compose.yaml` and ignore `ACP_DATA_DIR`, `ACP_ARTIFACTS_DIR`,
+`ACP_WORKTREE_DIR`, `ACP_UI_HOST` and `ACP_UI_PORT` from `.env`. Those
+settings are for running ACP without Docker.
+
 `.env` stays on your computer. It is listed in `.gitignore` and
 `.dockerignore`, so it is never committed or copied into the image.
 

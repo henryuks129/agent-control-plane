@@ -16,6 +16,14 @@ services:
     env_file:
       - path: .env
         required: false
+    # Container paths and address. These beat anything in .env, which is often
+    # written for running ACP outside Docker (for example ACP_DATA_DIR=.data).
+    environment:
+      ACP_DATA_DIR: /var/lib/acp
+      ACP_ARTIFACTS_DIR: /var/lib/acp/artifacts
+      ACP_WORKTREE_DIR: /var/lib/acp/worktrees
+      ACP_UI_HOST: 0.0.0.0
+      ACP_UI_PORT: "4317"
     volumes:
       - acp-data:/var/lib/acp
     read_only: true
