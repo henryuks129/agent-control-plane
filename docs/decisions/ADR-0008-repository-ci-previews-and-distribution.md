@@ -299,18 +299,48 @@ agent reads its own instruction files.
   that match the files it is working on, and its task's latest checkpoint.
 - When layers disagree, the narrower one wins (task over path rule over
   project over user), as in Codex.
-- Proposed, not decided: ACP writes the project layer and path rules out to
-  `AGENTS.md` and `CLAUDE.md` in the matching folders, so Claude Code, Codex
-  and OpenCode pick them up even without the ACP server. Engineering
-  decisions still open:
-  - Which is the source of truth, ACP's store or the files, and how changes
-    flow both ways.
-  - What happens to `AGENTS.md`/`CLAUDE.md` the project already has (merge,
-    a marked ACP section, or a separate imported file).
-  - Whether generated files are committed to Git or ignored.
-  - Size limits, since agents load these files into every session.
-  - How edits people make to the files directly come back as proposed
-    memory changes instead of being overwritten.
+#### Memory files in the repository (decided 2026-11-11)
+
+1. **Source of truth: files in Git, for the project and path layers.**
+   They live in `.acp/knowledge.md` and `.acp/rules/*.md` (each rule file has
+   a `paths:` list, such as `src/api/**`). This follows non-negotiable 3
+   (Git is the source of truth), means changes are reviewed in pull requests
+   like code, and works without ACP running. The user layer and task
+   checkpoints are not project files: they stay in ACP's store (local, a
+   folder, or the user's database). ACP keeps a search index of everything,
+   rebuilt from these sources, never edited by hand. One writer per layer
+   means there is no two-way sync to get wrong.
+2. **Existing `AGENTS.md` and `CLAUDE.md`: never rewritten.** ACP adds one
+   marked block to `AGENTS.md` (`<!-- acp:begin -->` … `<!-- acp:end -->`)
+   and leaves everything outside it alone. If `CLAUDE.md` exists and does
+   not mention `AGENTS.md`, ACP adds the line `@AGENTS.md` (Claude Code's
+   import syntax) instead of copying content. On first connect, the existing
+   content is offered for import into `.acp/` as proposals (§9h); the user
+   may then shorten the original files, but ACP does not.
+   Path rules are written where each tool looks for them: a block in
+   `AGENTS.md` inside the matching folder (Codex, OpenCode) and
+   `.claude/rules/acp-<name>.md` with the same `paths:` (Claude Code).
+3. **Committed:** `.acp/knowledge.md`, `.acp/rules/`, and the generated
+   blocks and files, so teammates and CI agents get the same memory and
+   every change shows in a diff. **Ignored:** `.acp/local/` (checkpoints,
+   `handoff.md`, captures, caches, personal notes). ACP adds that line to
+   `.gitignore` itself. Checkpoints stay out of Git because they change
+   constantly and can quote secrets from logs.
+4. **Size limits:** the generated block is a summary with pointers, not the
+   whole memory. Budget: 8 KB for the root `AGENTS.md` block, 4 KB per folder
+   block or rule file. Codex stops reading project instructions at 32 KiB by
+   default, and every byte loads into every session, so the budget leaves
+   room for the user's own text. Agents fetch the full memory on demand
+   through ACP's server. The CI context budget check (action item 6) fails a
+   pull request that goes over.
+5. **Edits made straight to the files:**
+   - Outside the ACP block: the user's own text. ACP never touches it.
+   - In `.acp/` files: normal edits; that is the source, so nothing to sync.
+   - Inside a generated block: ACP stores a hash of what it wrote. If the
+     hash no longer matches, ACP does not overwrite it; it shows the edit as
+     a proposed change to `.acp/` for the user to accept or reject, then
+     regenerates.
+   - The same check runs in CI, so an edited block cannot merge unnoticed.
 
 ### 9h. Importing memory from each harness (proposed)
 
@@ -325,6 +355,25 @@ agent can use it:
 - Every imported item is a proposal the user accepts, edits or rejects; it
   keeps its source (which harness, which file, when), is scanned for secrets
   first, and is sorted into a layer (user, project, path rule).
+
+### 9i. Preview captures as evidence (decided 2026-11-11)
+
+Same idea as T3 Code's browser captures:
+- The preview browser can take screenshots and screen recordings. The user
+  can take them, and agents can through ACP's server
+  (`preview_screenshot`, `preview_recording_start`, `preview_recording_stop`).
+- An agent attaches them to its patch report as proof the change works.
+  They count as evidence, separate from the agent's own claims (ADR-0004).
+- The user can draw on the preview and dictate a note to show what is wrong;
+  that goes back to the task as feedback.
+- Captures are saved in `.acp/local/captures/` (not committed) and deleted
+  after a number of days the user sets (default 14). A report whose capture
+  was deleted says so instead of showing a broken link.
+
+### 9j. Name
+
+The project is **Agent Control Plane**, shortened to **ACP**. Repository:
+`agent-control-plane`.
 
 ### 10. Order of work
 

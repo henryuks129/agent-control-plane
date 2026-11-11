@@ -26,7 +26,7 @@ placeholder everywhere it appears.
 |---|---|
 | Plain chat (no code changes) as well as coding agents? | Decided: one thread type, no mode switch. Questions get answers, requests become tasks. See ADR-0008 §9b |
 | Memory scope | Decided: per project, in layers (user, project, path rules, task); narrower wins. See ADR-0008 §9g |
-| Write memory to `AGENTS.md`/`CLAUDE.md` | Open: engineering decisions listed in ADR-0008 §9g |
+| Write memory to `AGENTS.md`/`CLAUDE.md` | Decided: `.acp/` files in Git are the source; ACP writes a marked block. See ADR-0008 §9g |
 | Import memory from each harness | Proposed: ADR-0008 §9h |
 | Optional ACP account (Clerk) | Only when remote access or the phone app is built (ADR-0008 §9a) |
 | Product name | Keep "ACP — Agent Control Plane" (docs/product/naming.md) |
