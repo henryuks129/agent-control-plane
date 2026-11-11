@@ -25,6 +25,11 @@ step-by-step setup is in `docs/guides/ci-setup.md`.
   passing, one approval from a code owner (`.github/CODEOWNERS` names the
   maintainer), a linear history, and no force pushes or deletions.
 - Only the maintainer can merge. Agents never merge; they open pull requests.
+- GitHub does not let anyone approve their own pull request, so with one
+  maintainer the ruleset lets repository admins bypass the approval, but only
+  when merging a pull request: the maintainer's own changes still go through
+  a pull request and must pass CI. Direct pushes are blocked for everyone.
+  Merges are squash-only, which keeps the history linear.
 
 ### 2. CI checks, and why each exists
 
@@ -395,8 +400,8 @@ The project is **Agent Control Plane**, shortened to **ACP**. Repository:
 
 1. [x] CI workflow: typecheck, build, test (`.github/workflows/ci.yml`).
 2. [x] Pull request template in the patch report shape.
-3. [ ] Create the GitHub repository, push, add `CODEOWNERS` and the `main` ruleset.
-4. [ ] Docker: health check, `compose.yaml`, CI build and smoke test, GHCR images.
+3. [x] Create the GitHub repository, push, add `CODEOWNERS` and the `main` ruleset (2026-11-11).
+4. [ ] Docker: GHCR images. (Done: health check, `compose.yaml`, CI build and smoke test.)
 5. [ ] Secret scanning, dependency audit, CodeQL.
 6. [ ] Pull request size labels and context budget check.
 7. [ ] Website previews on Cloudflare Pages; Docker image per pull request.
