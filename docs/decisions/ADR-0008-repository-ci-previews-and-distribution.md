@@ -355,6 +355,22 @@ agent can use it:
   folder; `AGENTS.md` and Codex's `~/.codex/memories/`; OpenCode's
   `AGENTS.md`. Past chats (`~/.claude/projects/`, `~/.codex/sessions/`) can
   be summarised into checkpoints on request.
+- **What Codex keeps (checked on the maintainer's machine 2026-11-11):**
+  `~/.codex/memories/` is a Git-tracked folder with `memory_summary.md` (a
+  short index: user profile, preferences, tips, then one section per project
+  folder), `MEMORY.md` (detailed notes grouped by task, with "Reusable
+  knowledge" and "Failures and how to do differently"), and
+  `raw_memories.md`. Turned on by `[memories] generate_memories` and
+  `use_memories` in `config.toml`. Chats are in `~/.codex/sessions/`.
+  ACP can read the summary and the per-project sections directly.
+- **Vendor-to-vendor import already exists one way:** ChatGPT/Codex's
+  Settings › Import brings in Claude Code projects (it just points at the
+  same folders), chat sessions, plugins and MCP servers. A session is
+  copied from Claude Code's transcript file into a new Codex chat; the
+  import log (`~/.codex/external_agent_session_imports.json`) records only
+  the source file, a hash and the new chat id. Claude Code's own memory
+  folder is not offered for import. ACP differs by being shared both ways
+  and keeping one copy instead of duplicating chats into each app.
 - **Chat apps (Claude.ai, ChatGPT):** no API for memory. The user exports or
   copies it (for example with Claude's import-memory prompt) and pastes it in.
 - Every imported item is a proposal the user accepts, edits or rejects; it

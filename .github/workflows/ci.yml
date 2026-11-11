@@ -38,6 +38,9 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      # A .env written for running outside Docker must not break the container
+      # (it once pointed ACP_DATA_DIR at the read-only app folder).
+      - run: printf 'ACP_DATA_DIR=.data\nACP_UI_HOST=127.0.0.1\n' > .env
       # Same settings people use locally (compose.yaml): read-only, no capabilities.
       - run: docker compose up -d --build
       - name: Wait for the health check
