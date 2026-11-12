@@ -33,8 +33,8 @@ routing with health (ADR-0006), worktree isolation and human-gated patches.
 - **Free.** ACP charges nothing. Users bring their own subscriptions, API keys
   and local models, used from one interface (desktop app and terminal).
 - **Plain ACP account.** No GitHub sign-in and no organizations in this phase.
-- **Similar space to T3 Code** (a front end over existing agent CLIs); ACP's
-  difference is shared memory, orchestration and governed hand-over.
+- **A front end over existing agent CLIs.** What ACP adds is shared memory,
+  orchestration and governed hand-over.
 
 ### Forces
 
@@ -65,7 +65,7 @@ thinking, code, vision, image generation, video, long context, local/private)
 and health (ADR-0006). Orchestrators see this registry, so they can choose the
 right model for each task.
 
-**How subscriptions are connected (the T3 Code pattern).** ACP never reads,
+**How subscriptions are connected.** ACP never reads,
 stores or forwards a subscription token. It launches the vendor's own runtime
 and the vendor handles sign-in:
 
@@ -109,7 +109,7 @@ the vendor's terms and offers an API-key fallback for every agent.
   orchestrator routes away from a plan near its limit before it runs out,
   instead of failing mid-task. Readings come from the vendor's own runtime or
   usage endpoint for the user's sign-in; each vendor can meter different
-  account types in different places (T3 Code found Google meters personal and
+  account types in different places (Google, for example, meters personal and
   business Antigravity accounts on different hosts), so each adapter needs
   tests with real readings.
 
@@ -250,7 +250,7 @@ Vendor reviewers (judgment, not evidence):
   of it. A vendor review can block a merge only through a finding the user
   accepts.
 
-Repository rules that catch AI slop (inspired by T3 Code's own lint plugin):
+Repository rules that catch AI slop:
 
 - **Project lint rules** run as a deterministic check: no low-value comments
   (comments that repeat the code, divider lines, commented-out code), every
@@ -271,7 +271,7 @@ Repository rules that catch AI slop (inspired by T3 Code's own lint plugin):
   the new code passes. This is the evidence half of review; the model's
   explanation is the judgment half.
 
-Review views (inspired by T3 Code):
+Review views:
 
 - **Diff view** per task and per turn, plus the merged result of the queue.
 - **Pull-request review** inside the app for projects that use a Git host,
