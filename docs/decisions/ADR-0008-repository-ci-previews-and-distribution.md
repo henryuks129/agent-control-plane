@@ -19,17 +19,35 @@ step-by-step setup is in `docs/guides/ci-setup.md`.
 
 ### 1. Only the maintainer can change `main`
 
+Branch flow (decided 2026-11-11):
+
+```text
+your branch → pull request → dev → pull request → main
+```
+
+- **`dev`** is where every change lands first, and it is the repository's
+  default branch, so new pull requests target it automatically. Changes are
+  tried on `dev` until they are known to be free of bugs.
+- **`main`** is the released code. It only accepts pull requests from `dev`
+  (the "Only dev merges into main" check fails anything else). The website
+  is published from `main`.
 - Contributors fork the repository or work on a branch and open a pull
-  request. Nobody pushes to `main` directly.
-- A GitHub ruleset on `main` requires: a pull request, all required checks
-  passing, one approval from a code owner (`.github/CODEOWNERS` names the
-  maintainer), a linear history, and no force pushes or deletions.
+  request into `dev`. Nobody pushes to `dev` or `main` directly.
+- Rulesets on both branches require: a pull request, all required checks
+  passing, review threads resolved, and no force pushes or deletions.
+  Nobody can bypass these, the maintainer included.
+- A second ruleset on each branch requires one approval from a code owner
+  (`.github/CODEOWNERS` names the maintainer). GitHub does not let anyone
+  approve their own pull request, so repository admins may bypass this one
+  rule, and only when merging a pull request.
+- Merge methods: pull requests into `dev` are squashed (one commit each, a
+  straight-line history). `dev` into `main` uses a merge commit, so the two
+  branches keep the same commits and never drift apart.
+- Branches are deleted automatically when their pull request is merged
+  (repository setting) or closed without merging (the "Branch flow"
+  workflow). `dev` and `main` are never deleted. A deleted branch can be
+  restored from its pull request page.
 - Only the maintainer can merge. Agents never merge; they open pull requests.
-- GitHub does not let anyone approve their own pull request, so with one
-  maintainer the ruleset lets repository admins bypass the approval, but only
-  when merging a pull request: the maintainer's own changes still go through
-  a pull request and must pass CI. Direct pushes are blocked for everyone.
-  Merges are squash-only, which keeps the history linear.
 
 ### 2. CI checks, and why each exists
 
