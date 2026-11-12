@@ -414,12 +414,133 @@ Same idea as T3 Code's browser captures:
 The project is **Agent Control Plane**, shortened to **ACP**. Repository:
 `agent-control-plane`.
 
+### 9k. Design skills are built in, not something you call (decided 2026-11-12)
+
+Problem: AI front-end work is sloppy unless the user knows which skill to
+call and how to prompt. Most users do not. So for a design task, ACP attaches
+high-end front-end skills on its own.
+
+- **Detecting a design task:** the task's scope touches front-end files
+  (`*.css`, `*.html`, `*.tsx`, `*.jsx`, `*.vue`, `*.svelte`, Tailwind or theme
+  config), or the request asks for a page, screen, component or visual
+  design. The orchestrator may also mark a task as design work.
+- **Attaching:** ACP places the skills in the task's own worktree, in the
+  folders each agent already reads (`.claude/skills`, `.agents/skills`), and
+  lists them in `.git/info/exclude` so they are never committed. The user's
+  repository is not touched. Agents that do not read skill folders get the
+  skill's short instructions in the task context instead.
+- **Only when needed:** skills attach to design tasks only, so other tasks
+  keep their context small (non-negotiable 2).
+- **Checked afterwards:** the review step runs the design library's
+  anti-pattern rules on the patch, so poor output is caught, not only
+  discouraged.
+- **User control:** on by default. A project can turn it off, pick which
+  skills apply, or add its own. The design library's styles (ADR-0007) are
+  the same mechanism with a style chosen.
+- **We do not write our own pack.** ACP ships existing skills whose licence
+  allows it, each pinned to a reviewed commit. A skill is instructions an
+  agent follows with the user's permissions, so updates are reviewed like
+  code and never pulled automatically.
+
+Licences, read from each repository on 2026-11-12:
+
+| Skill | Repository | Licence | Decision |
+|---|---|---|---|
+| Impeccable | `pbakaus/impeccable` | Apache-2.0 | Ship as the default. Keep its `LICENSE` and `NOTICE` |
+| Huashu Design | `alchaincyf/huashu-design` | MIT (changed from a stricter licence in 2026) | Ship, for prototypes and motion. Pin the commit; re-check the licence on update |
+| Awwwards | `juliobsz/skills` | MIT | Ship the skill files only. Its installer sends usage data, so ACP does not run it |
+| Awwwards (other) | `tponscr-debug/claude-skill-awwwards` | No licence file | Cannot ship. Users may add it themselves |
+| Be ambitious | `az9713/be-ambitious-skill` | MIT | Optional: it rewrites a prompt to aim higher. Small enough to review fully |
+| 21st.dev Magic | `21st-dev/magic-mcp` | ISC | Not bundled. It is a hosted service that needs the user's own API key; offer it as a connector |
+| Open Generative AI | `Anil-matcha/Open-Generative-AI` | MIT | Not a design skill. It is an image and video studio; a later option for generated media |
+| "watch", "muse agent" | not identified | unknown | Need a link from the maintainer |
+
+Anthropic's own `frontend-design` skill, which Impeccable builds on, has no
+licence file at the top of `anthropics/skills`; check that skill's own folder
+before shipping it separately.
+
+### 9l. The mistake guard (proposed 2026-11-12)
+
+ACP already saves review findings and agent failures as lessons, turns them
+into candidate upgrades the user approves, and includes the approved index in
+every task (v0.3.1). What is missing is choosing the lessons that matter for
+*this* task. The guard adds that.
+
+- **A rule is small and specific:** what went wrong (with the evidence), the
+  fix, the paths it applies to, and the task it came from. Optionally a
+  `check:` command or pattern that can detect the mistake.
+- **Where rules live:** approved rules are path rules in `.acp/rules/`
+  (§9g), so they are in Git, reviewed like code, and shared by every agent
+  and teammate. Personal ones stay in the user layer.
+- **Before a task (the guard):** ACP matches the task's files and words
+  against the rules and gives the agent only the few that match, under
+  "Past mistakes here", inside a 2 KB budget. Matching is by path and
+  keyword, with no model call, so it is free and repeatable.
+- **After a task:** rules with a `check:` run in review as deterministic
+  evidence. A rule without one is advice to the agent, not enforcement, and
+  the interface says so.
+- **Writing a rule:** when a check fails or the user rejects a patch and a
+  fix follows, ACP drafts the rule. Nothing becomes a rule until the user
+  approves it.
+- **Keeping the list short:** ACP counts how often each rule was shown and
+  how often its check caught something. Rules that have not matched for a
+  long time are proposed for removal.
+
+### 9m. Clients: web app, desktop app and terminal on one server (decided 2026-11-12)
+
+- One ACP server runs on the user's machine and owns the agents, worktrees,
+  memory and Git. It is the only part that touches the project.
+- **Web app:** the interface, opened in a browser at `127.0.0.1`. Built once.
+- **Desktop app:** Electron, wrapping the same web app and starting the
+  server for the user (§5).
+- **Terminal:** the `acp` command, talking to the same server, so a thread
+  started in one client continues in another.
+- A hosted web address and a phone app need a relay and sign-in, so they come
+  later with the optional account (§9a).
+- ACP is built in this repository, not as a fork of T3 Code. T3 is MIT, so
+  ideas and, where useful, code can be reused with attribution. See
+  `docs/research/t3-code-comparison.md`.
+
+### 9n. Adopted from T3 Code (decided 2026-11-12)
+
+- **Permission modes** per thread: supervised, auto-accept edits, full
+  access. Supervised is ACP's default, because the human gate is the point.
+- **Fork a thread** and **side chat** (ask about a thread without adding to
+  it).
+- **Visual replies:** an agent may answer with a sandboxed HTML page shown in
+  the thread.
+- **Secret request card:** when an agent needs a credential, the user types
+  it into a private card; it never enters the chat, memory, checkpoints or
+  logs (non-negotiable 11).
+- **A cheap model for small text:** thread titles, commit messages and pull
+  request text.
+- **Scenarios:** a real-app test that fails before a fix and passes after,
+  kept as evidence.
+- **Outside agents:** ACP's MCP server lets agents ACP did not start (Claude
+  Code or Codex in a terminal, T3 Code) read and write ACP memory.
+- Later: scheduled tasks, remote access, more Git hosts than GitHub.
+
 ### 10. Order of work
 
-1. CI and Docker setup, step by step (`docs/guides/ci-setup.md`).
-2. A detailed `README.md` and `CONTRIBUTING.md`.
-3. Rebuild the website, desktop app and terminal designs from ADR-0007 and
-   this ADR.
+Done: CI, Docker, the public repository and the `dev` → `main` flow.
+
+Build order from 2026-11-12. Each milestone is usable on its own.
+
+1. **Memory core.** `.acp/` layered memory, path-rule matching, the mistake
+   guard's matcher, the `AGENTS.md` block with hash and size budget, CLI
+   commands, tests (§9g, §9l).
+2. **ACP MCP server.** Memory read and search, checkpoint write, hand a task
+   to another agent. Works from Claude Code, Codex and T3 Code straight away
+   (§9e, §9n).
+3. **Agent runtime.** Start Claude Code, Codex and OpenCode in worktrees;
+   threads made of tasks; permission modes (§9b, §9n).
+4. **Web app.** Rebuild the interface from the design canvas: thread, task
+   rows, review, usage. Design skills attach on their own (§9k).
+5. **Terminal.** The `acp` command with the same threads.
+6. **Desktop app.** Electron around the web app; signing.
+7. **Thread extras.** Forks, side chats, visual replies, preview captures,
+   secret request card (§9i, §9n).
+8. **Remote.** Optional account, hosted web address, phone.
 
 ## Consequences
 
@@ -447,6 +568,11 @@ The project is **Agent Control Plane**, shortened to **ACP**. Repository:
 13. [ ] Rebuild the website, desktop app and terminal designs.
 14. [ ] Optional ACP account with Clerk (remote access, phone app), only when needed (§9a).
 15. [ ] Layered memory: user, project, path rules, task; sync to `AGENTS.md` and `CLAUDE.md` (§9g).
+16. [ ] Mistake guard: match rules to a task before it starts; run `check:` rules in review (§9l).
+17. [ ] Built-in design skills: vendor the licensed skills at pinned commits; attach to design tasks (§9k).
+18. [ ] ACP MCP server for ACP-started and outside agents (§9e, §9n).
+19. [ ] Web app, terminal and desktop clients on one server (§9m).
+20. [ ] Permission modes, forks, side chats, visual replies, secret request card (§9n).
 
 Design canvas (website Home, Download, Docs, Security, Report a problem;
 desktop app; terminal), updated 2026-11-11:
