@@ -223,3 +223,53 @@ test('an ordinary failure is not mistaken for a sign-in problem', async () => {
   assert.doesNotMatch(result.output, /sign-in was refused/);
   assert.match(result.output, /--model/, 'a failed run suggests trying another model');
 });
+
+// ---- Design skills attach on their own ----
+
+test('a design request gets the design skills in its worktree and is told to follow them', async () => {
+  const root = tempRepo();
+  const worktreeDir = path.join(root, 'worktrees');
+  const calls: Array<{ args: string[]; cwd?: string }> = [];
+  const result = await runAgent(
+    { root, worktreeDir, dataDir: path.join(root, '.data'), agentId: 'codex', request: 'Build a landing page', mode: 'edit', files: [], runId: 'run-design' },
+    { run: fakeCodex(calls) },
+  );
+  const worktree = path.join(worktreeDir, 'run-design');
+  assert.ok(fs.existsSync(path.join(worktree, '.agents/skills/impeccable/SKILL.md')));
+  assert.ok(fs.existsSync(path.join(worktree, '.claude/skills/awwwards/SKILL.md')));
+  assert.match(calls[0].args.at(-1)!, /# Design skills\n[\s\S]*- impeccable: [\s\S]*# Request\nBuild a landing page$/);
+  assert.deepEqual(result.skills, ['impeccable', 'awwwards']);
+  assert.deepEqual(result.changed, ['notes.txt'], 'the skills are not reported as changes');
+});
+
+test('a request that is not design work gets no design skills', async () => {
+  const root = tempRepo();
+  const worktreeDir = path.join(root, 'worktrees');
+  const calls: Array<{ args: string[]; cwd?: string }> = [];
+  const result = await runAgent(
+    { root, worktreeDir, dataDir: path.join(root, '.data'), agentId: 'codex', request: 'Add an endpoint', mode: 'edit', files: ['src/api/a.ts'], runId: 'run-plain' },
+    { run: fakeCodex(calls) },
+  );
+  assert.equal(fs.existsSync(path.join(worktreeDir, 'run-plain', '.agents')), false);
+  assert.doesNotMatch(calls[0].args.at(-1)!, /Design skills/);
+  assert.deepEqual(result.skills, []);
+});
+
+test('a project that turns design skills off gets none, even for design work', async () => {
+  const root = tempRepo();
+  fs.writeFileSync(path.join(root, '.acp/settings.json'), JSON.stringify({ designSkills: false }));
+  const worktreeDir = path.join(root, 'worktrees');
+  const calls: Array<{ args: string[]; cwd?: string }> = [];
+  const result = await runAgent(
+    { root, worktreeDir, dataDir: path.join(root, '.data'), agentId: 'codex', request: 'Build a landing page', mode: 'edit', files: [], runId: 'run-off' },
+    { run: fakeCodex(calls) },
+  );
+  assert.deepEqual(result.skills, []);
+  assert.doesNotMatch(calls[0].args.at(-1)!, /Design skills/);
+});
+
+test('agents:run says which design skills were attached', async () => {
+  const root = tempRepo();
+  const result = await runAgentsCommand('agents:run', ['codex', 'Build', 'a', 'landing', 'page'], { root, worktreeDir: path.join(root, 'worktrees'), dataDir: path.join(root, '.data') }, { run: fakeCodex([]) });
+  assert.match(result.output, /Design skills: impeccable, awwwards/);
+});

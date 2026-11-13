@@ -1,0 +1,56 @@
+{
+  "skills": [
+    {
+      "name": "impeccable",
+      "repository": "pbakaus/impeccable",
+      "commit": "c4cd1924c389f68d37c687d9c2bbf13f12547c41",
+      "source": ".claude/skills/impeccable",
+      "licence": "Apache-2.0",
+      "role": "default",
+      "keywords": [],
+      "summary": "the quality bar for any interface work: layout, type, colour, motion, polish and review.",
+      "digest": "6bed4ca32eef70d52e7333d8f0cb8a14b9a4834324d6a358fc4805289daf9b5a"
+    },
+    {
+      "name": "huashu-design",
+      "repository": "alchaincyf/huashu-design",
+      "commit": "e8d1148a80d5a281d4247cffe320add3df017928",
+      "source": ".",
+      "licence": "MIT",
+      "role": "on-request",
+      "keywords": [
+        "prototype",
+        "mockup",
+        "mock-up",
+        "slide",
+        "deck",
+        "animation",
+        "animate",
+        "motion",
+        "video",
+        "infographic"
+      ],
+      "summary": "high-fidelity HTML prototypes, slide decks, motion graphics and animation.",
+      "digest": "bbd49dbd1f9d9207f222e8565d90de61fafd19c9054c6c59b60f8cc41df2b38d"
+    },
+    {
+      "name": "awwwards",
+      "repository": "juliobsz/skills",
+      "commit": "add880bd6ec9f5592a1482846fc0dd282c9161bc",
+      "source": "awwwards",
+      "licence": "MIT",
+      "role": "on-request",
+      "keywords": [
+        "website",
+        "web site",
+        "landing page",
+        "homepage",
+        "home page",
+        "portfolio",
+        "marketing site"
+      ],
+      "summary": "whole websites built to an award-level bar: concept, art direction, type and motion.",
+      "digest": "d3d3cd2f6dc1afdfa3ac19b04ee15b9696e84aa4c36faadc83f2edff1955ceb7"
+    }
+  ]
+}

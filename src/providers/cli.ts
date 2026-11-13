@@ -57,6 +57,7 @@ export async function runAgentsCommand(
           `Worktree: ${result.worktree}`,
           `Branch:   ${result.branch}`,
           changed,
+          ...(result.skills.length ? [`Design skills: ${result.skills.join(', ')}`] : []),
           `Nothing has been merged. Review with: git -C ${result.worktree} diff`,
           ...(result.hint ? [result.hint] : []),
         ].join('\n'),
