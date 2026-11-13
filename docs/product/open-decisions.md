@@ -32,7 +32,6 @@ placeholder everywhere it appears.
 | "watch" and "muse agent" skills | Open: need a link to each to check its licence (ADR-0008 §9k) |
 | Mistake guard | Proposed: rules matched to each task before it starts. See ADR-0008 §9l |
 | Clients | Decided: web app, desktop app and terminal on one server. See ADR-0008 §9m |
-| Build on T3 Code or separately? | Working decision: separately, reusing ideas; ACP's MCP server also works with T3. See docs/research/t3-code-comparison.md |
 | Name clash with Agent Client Protocol ("ACP") | Open: keep the name, say it in full on first mention |
 | Optional ACP account (Clerk) | Only when remote access or the phone app is built (ADR-0008 §9a) |
 | Product name | Keep "ACP — Agent Control Plane" (docs/product/naming.md) |

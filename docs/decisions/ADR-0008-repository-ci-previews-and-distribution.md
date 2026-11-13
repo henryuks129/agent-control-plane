@@ -96,7 +96,7 @@ Container Registry (`ghcr.io`) from `main` and for each pull request.
 
 - **Electron** for macOS, Windows and Linux. ACP is already Node and
   TypeScript, so Electron can run the ACP server inside the app and reuse
-  the web interface. T3 Code makes the same choice.
+  the web interface.
 - **Electron does not build iOS apps.** An iPhone or iPad app is a separate
   project (SwiftUI) and a later phase. The likely first version is a
   remote view of a desktop's tasks and approvals, not a full workspace.
@@ -141,9 +141,8 @@ Container Registry (`ghcr.io`) from `main` and for each pull request.
   `source:app`; `needs-triage`; `priority:p0` to `priority:p3`.
 - **Priority:** reporters say how bad the problem is ("I can't work", "a
   workaround exists", "it looks wrong"). That suggests a priority, and
-  triage sets the final one. Triage can be done by an ACP agent, following
-  the "automated issue flow" T3 Code uses, with the maintainer confirming
-  any `priority:p0`.
+  triage sets the final one. Triage can be done by an ACP agent, with the
+  maintainer confirming any `priority:p0`.
 
 ### 8. Git host view inside ACP
 
@@ -165,17 +164,12 @@ report (ADR-0007 §8a). The pull request template uses the same shape.
 
 ### 9a. Accounts: Clerk for the optional ACP account, not for agents
 
-Checked in T3 Code's repository on 2026-11-11 (`docs/internals/t3-connect.md`,
-`docs/operations/connect-setup.md`). T3 uses Clerk only for **T3 Connect**,
-an optional cloud account. It lets you reach your own machine from other
-devices and the phone app through a relay, and it is turned off in a fresh
-clone. Agents are not onboarded through Clerk: each provider signs in through
-its maker's own app or key.
+Clerk is a hosted sign-in service. Agents are never onboarded through it:
+each provider signs in through its maker's own app or key.
 
 For ACP:
 - ACP works with no account. If we add an account (for remote access, the
-  phone app or syncing settings), Clerk is a good fit, the same way T3 uses
-  it.
+  phone app or syncing settings), Clerk is a good fit.
 - Agents keep connecting through their makers' runtimes (ADR-0007).
   Clerk signs users in to *our* app. It can't hold a user's Claude or ChatGPT
   subscription login, and vendors don't allow passing those tokens through a
@@ -185,8 +179,8 @@ For ACP:
 
 ### 9b. Chat and coding in one thread, with no mode switch
 
-T3 Code is coding agents only; general chat is a separate product (T3
-Chat). Baton and agent-corral/coral run coding agents in worktrees and
+Most agent workspaces are for coding only, with general chat as a separate
+product. Baton and agent-corral/coral run coding agents in worktrees and
 have no plain chat. agentcairn and Commonplace are memory or knowledge
 layers that plug into those agents rather than apps.
 
@@ -207,19 +201,16 @@ review").
 - Stopping everything uses a stop button beside Send in the message box,
   shown only while agents are working, as in common chat apps.
 - A new request shows as working the moment it is sent, before the
-  orchestrator has split it into tasks (the same fix T3 shipped in commit
-  a0efdae).
+  orchestrator has split it into tasks.
 
 ### 9c. Where plan usage comes from
 
 ACP doesn't invent the numbers. Each harness reports them, and ACP turns
 them into one format:
 - Claude Code: the Claude Agent SDK's usage request and its rate-limit
-  events (5-hour and 7-day windows). T3 Code reads the same
-  (`apps/server/src/provider/claudeUsageLimits.ts`).
+  events (5-hour and 7-day windows).
 - Codex: rate-limit readings sent by the Codex app-server.
-- Antigravity: Google's quota service, using the user's own sign-in (T3
-  commit 047d492).
+- Antigravity: Google's quota service, using the user's own sign-in.
 - API and free models: no plan window. ACP counts its own requests and
   reads the provider's rate-limit replies, for example NVIDIA's about 40
   requests a minute, and labels these as estimates.
@@ -233,32 +224,6 @@ checkpoints as a short timeline, with `handoff.md` one click away.
 
 ### 9e. Tools, browser, sub-agents: borrow what the harness has, add one ACP server
 
-Checked in T3 Code's repository on 2026-11-11 (`docs/user/composer.md`,
-`docs/user/html-renders.md`, `docs/user/devices.md`,
-`docs/orchestration-v2/orchestrator-mcp-server.md`,
-`apps/server/src/mcp/toolkits/`).
-
-- **Skills, plugins and MCP servers:** T3 installs nothing itself. It lists
-  the skills and MCP servers already set up in each provider (for example
-  Claude's `~/.claude/skills` and `.claude/skills`) and lets the user pick
-  them with `$`. After a change, "Restart agent session" reloads them.
-- **One app-owned MCP server, injected into every session:** T3 runs its
-  own MCP server (`t3-code`) and adds it to each provider session's config
-  with a per-session token. Agents get T3's tools without the user installing
-  anything: an embedded preview browser (`preview_open`, `preview_act`,
-  `preview_snapshot`, recording), iOS/Android devices, HTML pages, threads,
-  worktrees and pull requests.
-- **Browser:** T3 has its own. The desktop app embeds an Electron browser
-  that the user sees and agents drive through those `preview_*` tools; a
-  small headless browser checks HTML pages. It is not the harness's browser.
-- **Computer use:** T3 does not control the desktop. Device control is
-  limited to simulators and emulators.
-- **Sub-agents:** T3 adds its own (`t3_thread` tools): a parent agent starts
-  a child thread on any provider, which receives only the task prompt. Where
-  a harness has native sub-agents (Claude's Task tool), they keep working
-  inside that harness.
-
-For ACP:
 - Agents keep their own skills, plugins, MCP servers, sub-agents, browser
   and computer-use tools. ACP lists and toggles them; it does not reinstall
   them.
@@ -269,7 +234,7 @@ For ACP:
   a tool instead of installing it" works because the ACP server is already
   attached to every session.
 - An embedded preview browser comes later, after the Electron app.
-- **Orchestrator hand-offs follow T3's sub-agent pattern:** an orchestrator
+- **Orchestrator hand-offs go through ACP's server:** an orchestrator
   starts a child task on any connected agent (for example Claude handing work
   to Codex or a free model) through the ACP server. The child receives the
   task, its scope and the relevant memory, not the parent's whole chat.
@@ -298,18 +263,15 @@ models alike, with two parts:
   next. Written automatically as work happens.
 
 When one agent stops, the next one reads the task's latest checkpoint and the
-relevant knowledge, not the whole chat, so the user writes no briefing. This
-matches T3's "portable handoffs" (a budgeted selection of recent messages,
-with a tool to read older ones), but ACP hands over a written state instead
-of raw messages.
+relevant knowledge, not the whole chat, so the user writes no briefing. ACP
+hands over a written state, not a selection of raw messages.
 
 ### 9g. Memory belongs to the project, in layers
 
 Decided 2026-11-11. Memory is per project, not per file. Rules can be
 narrowed to files or folders, the way Claude Code (`CLAUDE.md` in
 subfolders, `.claude/rules/` with paths) and Codex (nested `AGENTS.md`,
-closest file wins) already work. T3 Code has no memory of its own; each
-agent reads its own instruction files.
+closest file wins) already work.
 
 | Layer | Holds | Where |
 |---|---|---|
@@ -397,7 +359,7 @@ agent can use it:
 
 ### 9i. Preview captures as evidence (decided 2026-11-11)
 
-Same idea as T3 Code's browser captures:
+How captures work:
 - The preview browser can take screenshots and screen recordings. The user
   can take them, and agents can through ACP's server
   (`preview_screenshot`, `preview_recording_start`, `preview_recording_stop`).
@@ -497,11 +459,9 @@ every task (v0.3.1). What is missing is choosing the lessons that matter for
   started in one client continues in another.
 - A hosted web address and a phone app need a relay and sign-in, so they come
   later with the optional account (§9a).
-- ACP is built in this repository, not as a fork of T3 Code. T3 is MIT, so
-  ideas and, where useful, code can be reused with attribution. See
-  `docs/research/t3-code-comparison.md`.
+- ACP is built in this repository as its own codebase.
 
-### 9n. Adopted from T3 Code (decided 2026-11-12)
+### 9n. Thread and safety features (decided 2026-11-12)
 
 - **Permission modes** per thread: supervised, auto-accept edits, full
   access. Supervised is ACP's default, because the human gate is the point.
@@ -516,8 +476,8 @@ every task (v0.3.1). What is missing is choosing the lessons that matter for
   request text.
 - **Scenarios:** a real-app test that fails before a fix and passes after,
   kept as evidence.
-- **Outside agents:** ACP's MCP server lets agents ACP did not start (Claude
-  Code or Codex in a terminal, T3 Code) read and write ACP memory.
+- **Outside agents:** ACP's MCP server lets agents ACP did not start (for example
+  Claude Code or Codex in a terminal) read and write ACP memory.
 - Later: scheduled tasks, remote access, more Git hosts than GitHub.
 
 ### 10. Order of work
@@ -530,7 +490,7 @@ Build order from 2026-11-12. Each milestone is usable on its own.
    guard's matcher, the `AGENTS.md` block with hash and size budget, CLI
    commands, tests (§9g, §9l).
 2. **ACP MCP server.** Memory read and search, checkpoint write, hand a task
-   to another agent. Works from Claude Code, Codex and T3 Code straight away
+   to another agent. Works from Claude Code and Codex straight away
    (§9e, §9n).
 3. **Agent runtime.** Start Claude Code, Codex and OpenCode in worktrees;
    threads made of tasks; permission modes (§9b, §9n).
@@ -561,7 +521,7 @@ Build order from 2026-11-12. Each milestone is usable on its own.
 6. [ ] Pull request size labels and context budget check.
 7. [ ] Website previews on Cloudflare Pages; Docker image per pull request.
 8. [ ] Issue forms, labels, website and app "Report a problem" form.
-9. [ ] `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `LICENSE`.
+9. [ ] `SECURITY.md`. (Done: `README.md`, `CONTRIBUTING.md`, `LICENSE`.)
 10. [ ] Electron desktop app; signing and notarisation.
 11. [ ] Download page with operating-system detection and install commands.
 12. [ ] Git host view in ACP.
