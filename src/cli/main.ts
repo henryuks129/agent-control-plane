@@ -4,10 +4,15 @@ import { Orchestrator } from '../agents/orchestrator.js';
 import { startUi } from './ui.js';
 import type { Checkpoint, Task } from '../core/types.js';
 import { checkOciDeployment } from '../deployment/oci.js';
+import { loadConfig } from '../core/config.js';
+import { runMemoryCommand } from '../memory/cli.js';
 
 function usage(){console.log(`ACP v0.3.1
 
 Commands:
+  memory:init
+  memory:show [--request "<text>"] <files...>
+  memory:sync [--check]
   doctor
   ui
   deployment:oci:check
@@ -54,7 +59,11 @@ Commands:
   artifact:preview <TASK-ID> <ARTIFACT-ID>
   design:candidate <name> <file.md>
 `)}
-const command=process.argv[2];const args=process.argv.slice(3);const acp=new Orchestrator();
+const command=process.argv[2];const args=process.argv.slice(3);
+// Memory commands only read and write files in this project, so they run before the
+// orchestrator starts and need no database and no model key.
+if(command?.startsWith('memory:')){const result=runMemoryCommand(command,args,{root:process.cwd(),dataDir:loadConfig().dataDir});console.log(result.output);process.exit(result.exitCode)}
+const acp=new Orchestrator();
 try{
  if(!command||command==='help'){usage();process.exit(0)}
  if(command==='doctor'){console.log(JSON.stringify({version:'0.3.1',node:process.version,dataDir:acp.config.dataDir,artifactsDir:acp.config.artifactsDir,uiHost:acp.config.uiHost,nvidiaConfigured:Boolean(acp.config.nvidia.apiKey),nvidiaBaseUrl:acp.config.nvidia.baseUrl,maxConcurrency:acp.config.maxConcurrency,requestTimeoutMs:acp.config.requestTimeoutMs,modelCooldownMs:acp.config.modelCooldownMs,reviewerTimeoutMs:acp.config.reviewerTimeoutMs,researcherTimeoutMs:acp.config.researcherTimeoutMs,builderTimeoutMs:acp.config.builderTimeoutMs,models:acp.router.all(),budgets:acp.config.budgets,fallow:acp.config.fallowCommand,coderabbitEnabled:acp.config.coderabbitEnabled},null,2));process.exit(0)}

@@ -527,8 +527,8 @@ Build order from 2026-11-12. Each milestone is usable on its own.
 12. [ ] Git host view in ACP.
 13. [ ] Rebuild the website, desktop app and terminal designs.
 14. [ ] Optional ACP account with Clerk (remote access, phone app), only when needed (§9a).
-15. [ ] Layered memory: user, project, path rules, task; sync to `AGENTS.md` and `CLAUDE.md` (§9g).
-16. [ ] Mistake guard: match rules to a task before it starts; run `check:` rules in review (§9l).
+15. [ ] Layered memory: folder-level `AGENTS.md` blocks and `.claude/rules/` files; proposing hand edits back into `.acp/`. (Done: the four layers, path rules, root `AGENTS.md` block, `CLAUDE.md` import, secret scan, CI check; see `docs/guides/memory.md`.)
+16. [ ] Mistake guard: run `check:` rules in review; draft rules from failed checks; count how often each rule matches. (Done: matching rules to a task before it starts.)
 17. [ ] Built-in design skills: vendor the licensed skills at pinned commits; attach to design tasks (§9k).
 18. [ ] ACP MCP server for ACP-started and outside agents (§9e, §9n).
 19. [ ] Web app, terminal and desktop clients on one server (§9m).
