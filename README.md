@@ -11,10 +11,63 @@ until you approve it.
 Website: <https://henryuks129.github.io/agent-control-plane/> ·
 License: [MIT](LICENSE)
 
-> **Status: in development.** The local dashboard and patch review work today
-> and run in Docker. Agent connections, layered shared memory and the desktop
-> app are being built. Decisions are recorded in
-> [docs/decisions](docs/decisions), starting with ADR-0007 and ADR-0008.
+> **Status: in development.** Working today, from the command line: shared
+> memory, running Claude Code, Codex and OpenCode in their own worktrees,
+> built-in design skills, and an MCP server. The local dashboard and patch
+> review run in Docker. The web, desktop and terminal apps come next. See
+> [Roadmap](#roadmap).
+
+## How it works
+
+1. **Connect what you have.** Sign in to Claude Code, Codex or Antigravity in
+   their own apps. ACP starts them for you and never sees your password or
+   tokens. No paid plan? Use free or local models through OpenCode.
+2. **Pick an orchestrator.** Star one or two agents. They split your goal
+   into tasks and hand each to the agent best suited to it.
+3. **Work runs in parallel.** Each task runs in its own Git worktree. If an
+   agent stops or its plan runs low, another picks up from the latest
+   checkpoint, not the whole chat.
+4. **You approve every change.** Each change is tested and scanned and
+   arrives with a report. Tool results are evidence; AI comments are marked
+   as opinion.
+
+## What makes ACP different
+
+- **One memory for every agent, owned by you.** Project memory lives in your
+  repository as plain files, in layers. The narrower layer wins.
+
+  | Layer | Holds | Where |
+  |---|---|---|
+  | You | Preferences for every project | ACP's own storage |
+  | Project | Goals, rules, decisions | `.acp/knowledge.md` |
+  | Folder rules | "In `src/api`, always…" | `.acp/rules/*.md`, matched by path |
+  | Task | Checkpoints and `handoff.md` | `.acp/local/` (not committed) |
+
+  ACP also writes a short summary into the `AGENTS.md` and `CLAUDE.md` files
+  your agents already read, without touching your own text in them.
+- **A guard against repeated mistakes.** When a fix is approved as a rule,
+  ACP shows it to the next agent that works on the same files, before it
+  starts.
+- **Design skills built in.** Front-end tasks get high-end design skills
+  attached automatically; nobody has to call a skill by name.
+- **Evidence-first review.** Every change passes the same checks, whichever
+  model wrote it, and merges one at a time.
+
+## Roadmap
+
+| # | Milestone | Status |
+|---|---|---|
+| 1 | Memory core: layers, folder rules, mistake guard, `AGENTS.md` summary | Works |
+| 2 | ACP's MCP server, so any agent can read the memory, propose rules and leave checkpoints | Works |
+| 3 | Agent runtime: start Claude Code, Codex and OpenCode in worktrees | Single runs work; threads next |
+| 4 | Web app | Planned |
+| 5 | Terminal (`acp` command) | Planned |
+| 6 | Desktop app for macOS, Windows and Linux | Planned |
+| 7 | Forks, side chats, visual replies, screen captures as evidence | Planned |
+| 8 | Remote access and phone | Later |
+
+Decisions and their reasons are in [docs/decisions](docs/decisions). To help,
+read [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Quick start
 

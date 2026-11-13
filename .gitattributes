@@ -1,0 +1,2 @@
+# Shipped skills are checked by digest, so Git must not change their line endings.
+design-library/skills/** -text

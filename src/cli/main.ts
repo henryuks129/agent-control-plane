@@ -1,13 +1,31 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { Orchestrator } from '../agents/orchestrator.js';
-import { startUi } from './ui.js';
 import type { Checkpoint, Task } from '../core/types.js';
-import { checkOciDeployment } from '../deployment/oci.js';
+import { loadConfig } from '../core/config.js';
+import { runMemoryCommand } from '../memory/cli.js';
+import { runDesignCommand } from '../design/cli.js';
+import { serve } from '../mcp/server.js';
+import { runRunsCommand } from '../providers/runs-cli.js';
+import { runAgentsCommand } from '../providers/cli.js';
+import { runCommand } from '../providers/detect.js';
 
 function usage(){console.log(`ACP v0.3.1
 
 Commands:
+  skills:list
+  skills:check [--files a,b] "<request>"
+  agents:list
+  agents:run <agent> [--edit] [--files a,b] [--model name] [--timeout minutes] "<request>"
+  runs:list
+  runs:clean
+  runs:remove <run> [--force]
+  design:check <files...>
+  memory:init
+  memory:show [--request "<text>"] <files...>
+  memory:sync [--check]
+  memory:proposals
+  memory:accept <name>
+  mcp
   doctor
   ui
   deployment:oci:check
@@ -54,7 +72,22 @@ Commands:
   artifact:preview <TASK-ID> <ARTIFACT-ID>
   design:candidate <name> <file.md>
 `)}
-const command=process.argv[2];const args=process.argv.slice(3);const acp=new Orchestrator();
+const command=process.argv[2];const args=process.argv.slice(3);
+// Memory commands only read and write files in this project, so they run before the
+// orchestrator starts and need no database and no model key.
+if(command?.startsWith('memory:')){const result=runMemoryCommand(command,args,{root:process.cwd(),dataDir:loadConfig().dataDir});console.log(result.output);process.exit(result.exitCode)}
+// Agent commands start the user's own tools; they also need no database and no model key.
+// Skill commands only read the shipped skills and this project's settings.
+if(command?.startsWith('skills:')||command==='design:check'){const result=runDesignCommand(command,args,{root:process.cwd()});console.log(result.output);process.exit(result.exitCode)}
+if(command?.startsWith('agents:')){const config=loadConfig();const result=await runAgentsCommand(command,args,{root:process.cwd(),worktreeDir:config.worktreeDir,dataDir:config.dataDir},{run:runCommand});console.log(result.output);process.exit(result.exitCode)}
+if(command?.startsWith('runs:')){const result=await runRunsCommand(command,args,{root:process.cwd()});console.log(result.output);process.exit(result.exitCode)}
+// The MCP server owns standard output: every line on it is a protocol message.
+if(command==='mcp'){await serve(process.stdin,process.stdout,{root:process.cwd(),dataDir:loadConfig().dataDir});process.exit(0)}
+// The commands above only read and write files, so they finish before the
+// database is loaded. That keeps them fast, and keeps Node's "SQLite is
+// experimental" warning out of their output.
+const [{ Orchestrator }, { startUi }, { checkOciDeployment }] = await Promise.all([import('../agents/orchestrator.js'), import('./ui.js'), import('../deployment/oci.js')]);
+const acp=new Orchestrator();
 try{
  if(!command||command==='help'){usage();process.exit(0)}
  if(command==='doctor'){console.log(JSON.stringify({version:'0.3.1',node:process.version,dataDir:acp.config.dataDir,artifactsDir:acp.config.artifactsDir,uiHost:acp.config.uiHost,nvidiaConfigured:Boolean(acp.config.nvidia.apiKey),nvidiaBaseUrl:acp.config.nvidia.baseUrl,maxConcurrency:acp.config.maxConcurrency,requestTimeoutMs:acp.config.requestTimeoutMs,modelCooldownMs:acp.config.modelCooldownMs,reviewerTimeoutMs:acp.config.reviewerTimeoutMs,researcherTimeoutMs:acp.config.researcherTimeoutMs,builderTimeoutMs:acp.config.builderTimeoutMs,models:acp.router.all(),budgets:acp.config.budgets,fallow:acp.config.fallowCommand,coderabbitEnabled:acp.config.coderabbitEnabled},null,2));process.exit(0)}

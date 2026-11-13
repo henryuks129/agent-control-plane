@@ -1,11 +1,11 @@
-# CI: the checks every pull request must pass before it can merge into main.
+# CI: the checks every pull request must pass before it can merge into dev or main.
 # Why each line exists is explained in docs/guides/ci-setup.md (step 1).
 name: CI
 
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, dev]
 
 # The workflow can read the code and nothing else.
 permissions:
@@ -31,6 +31,8 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
       - run: npm test
+      # AGENTS.md and CLAUDE.md must match .acp/ (and must not be edited by hand).
+      - run: node dist/src/cli/main.js memory:sync --check
 
   docker:
     name: Docker image starts and is healthy

@@ -28,5 +28,10 @@ placeholder everywhere it appears.
 | Memory scope | Decided: per project, in layers (user, project, path rules, task); narrower wins. See ADR-0008 §9g |
 | Write memory to `AGENTS.md`/`CLAUDE.md` | Decided: `.acp/` files in Git are the source; ACP writes a marked block. See ADR-0008 §9g |
 | Import memory from each harness | Proposed: ADR-0008 §9h |
+| Design skills | Decided: built in and attached to design tasks automatically; ship licensed third-party skills at pinned commits. See ADR-0008 §9k |
+| "watch" and "muse agent" skills | Open: need a link to each to check its licence (ADR-0008 §9k) |
+| Mistake guard | Proposed: rules matched to each task before it starts. See ADR-0008 §9l |
+| Clients | Decided: web app, desktop app and terminal on one server. See ADR-0008 §9m |
+| Name clash with Agent Client Protocol ("ACP") | Open: keep the name, say it in full on first mention |
 | Optional ACP account (Clerk) | Only when remote access or the phone app is built (ADR-0008 §9a) |
 | Product name | Keep "ACP — Agent Control Plane" (docs/product/naming.md) |

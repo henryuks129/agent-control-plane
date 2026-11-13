@@ -4,8 +4,8 @@
 the full name everywhere so it is not confused with the Agent Client Protocol.
 The options below stay here in case we rename before a public launch.
 
-**Why rename:** "ACP" is already the Agent Client Protocol, the standard T3
-Code, Zed and Google use to connect agents. ACP will support that protocol, so
+**Why rename:** "ACP" is already the Agent Client Protocol, the standard Zed,
+Google and others use to connect agents. ACP will support that protocol, so
 sharing its name would confuse users and search.
 
 Checked on 2026-11-10: npm package, GitHub user/org name, and a web search for

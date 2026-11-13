@@ -19,17 +19,35 @@ step-by-step setup is in `docs/guides/ci-setup.md`.
 
 ### 1. Only the maintainer can change `main`
 
+Branch flow (decided 2026-11-11):
+
+```text
+your branch → pull request → dev → pull request → main
+```
+
+- **`dev`** is where every change lands first, and it is the repository's
+  default branch, so new pull requests target it automatically. Changes are
+  tried on `dev` until they are known to be free of bugs.
+- **`main`** is the released code. It only accepts pull requests from `dev`
+  (the "Only dev merges into main" check fails anything else). The website
+  is published from `main`.
 - Contributors fork the repository or work on a branch and open a pull
-  request. Nobody pushes to `main` directly.
-- A GitHub ruleset on `main` requires: a pull request, all required checks
-  passing, one approval from a code owner (`.github/CODEOWNERS` names the
-  maintainer), a linear history, and no force pushes or deletions.
+  request into `dev`. Nobody pushes to `dev` or `main` directly.
+- Rulesets on both branches require: a pull request, all required checks
+  passing, review threads resolved, and no force pushes or deletions.
+  Nobody can bypass these, the maintainer included.
+- A second ruleset on each branch requires one approval from a code owner
+  (`.github/CODEOWNERS` names the maintainer). GitHub does not let anyone
+  approve their own pull request, so repository admins may bypass this one
+  rule, and only when merging a pull request.
+- Merge methods: pull requests into `dev` are squashed (one commit each, a
+  straight-line history). `dev` into `main` uses a merge commit, so the two
+  branches keep the same commits and never drift apart.
+- Branches are deleted automatically when their pull request is merged
+  (repository setting) or closed without merging (the "Branch flow"
+  workflow). `dev` and `main` are never deleted. A deleted branch can be
+  restored from its pull request page.
 - Only the maintainer can merge. Agents never merge; they open pull requests.
-- GitHub does not let anyone approve their own pull request, so with one
-  maintainer the ruleset lets repository admins bypass the approval, but only
-  when merging a pull request: the maintainer's own changes still go through
-  a pull request and must pass CI. Direct pushes are blocked for everyone.
-  Merges are squash-only, which keeps the history linear.
 
 ### 2. CI checks, and why each exists
 
@@ -78,7 +96,7 @@ Container Registry (`ghcr.io`) from `main` and for each pull request.
 
 - **Electron** for macOS, Windows and Linux. ACP is already Node and
   TypeScript, so Electron can run the ACP server inside the app and reuse
-  the web interface. T3 Code makes the same choice.
+  the web interface.
 - **Electron does not build iOS apps.** An iPhone or iPad app is a separate
   project (SwiftUI) and a later phase. The likely first version is a
   remote view of a desktop's tasks and approvals, not a full workspace.
@@ -123,9 +141,8 @@ Container Registry (`ghcr.io`) from `main` and for each pull request.
   `source:app`; `needs-triage`; `priority:p0` to `priority:p3`.
 - **Priority:** reporters say how bad the problem is ("I can't work", "a
   workaround exists", "it looks wrong"). That suggests a priority, and
-  triage sets the final one. Triage can be done by an ACP agent, following
-  the "automated issue flow" T3 Code uses, with the maintainer confirming
-  any `priority:p0`.
+  triage sets the final one. Triage can be done by an ACP agent, with the
+  maintainer confirming any `priority:p0`.
 
 ### 8. Git host view inside ACP
 
@@ -147,17 +164,12 @@ report (ADR-0007 §8a). The pull request template uses the same shape.
 
 ### 9a. Accounts: Clerk for the optional ACP account, not for agents
 
-Checked in T3 Code's repository on 2026-11-11 (`docs/internals/t3-connect.md`,
-`docs/operations/connect-setup.md`). T3 uses Clerk only for **T3 Connect**,
-an optional cloud account. It lets you reach your own machine from other
-devices and the phone app through a relay, and it is turned off in a fresh
-clone. Agents are not onboarded through Clerk: each provider signs in through
-its maker's own app or key.
+Clerk is a hosted sign-in service. Agents are never onboarded through it:
+each provider signs in through its maker's own app or key.
 
 For ACP:
 - ACP works with no account. If we add an account (for remote access, the
-  phone app or syncing settings), Clerk is a good fit, the same way T3 uses
-  it.
+  phone app or syncing settings), Clerk is a good fit.
 - Agents keep connecting through their makers' runtimes (ADR-0007).
   Clerk signs users in to *our* app. It can't hold a user's Claude or ChatGPT
   subscription login, and vendors don't allow passing those tokens through a
@@ -167,8 +179,8 @@ For ACP:
 
 ### 9b. Chat and coding in one thread, with no mode switch
 
-T3 Code is coding agents only; general chat is a separate product (T3
-Chat). Baton and agent-corral/coral run coding agents in worktrees and
+Most agent workspaces are for coding only, with general chat as a separate
+product. Baton and agent-corral/coral run coding agents in worktrees and
 have no plain chat. agentcairn and Commonplace are memory or knowledge
 layers that plug into those agents rather than apps.
 
@@ -189,19 +201,16 @@ review").
 - Stopping everything uses a stop button beside Send in the message box,
   shown only while agents are working, as in common chat apps.
 - A new request shows as working the moment it is sent, before the
-  orchestrator has split it into tasks (the same fix T3 shipped in commit
-  a0efdae).
+  orchestrator has split it into tasks.
 
 ### 9c. Where plan usage comes from
 
 ACP doesn't invent the numbers. Each harness reports them, and ACP turns
 them into one format:
 - Claude Code: the Claude Agent SDK's usage request and its rate-limit
-  events (5-hour and 7-day windows). T3 Code reads the same
-  (`apps/server/src/provider/claudeUsageLimits.ts`).
+  events (5-hour and 7-day windows).
 - Codex: rate-limit readings sent by the Codex app-server.
-- Antigravity: Google's quota service, using the user's own sign-in (T3
-  commit 047d492).
+- Antigravity: Google's quota service, using the user's own sign-in.
 - API and free models: no plan window. ACP counts its own requests and
   reads the provider's rate-limit replies, for example NVIDIA's about 40
   requests a minute, and labels these as estimates.
@@ -215,32 +224,6 @@ checkpoints as a short timeline, with `handoff.md` one click away.
 
 ### 9e. Tools, browser, sub-agents: borrow what the harness has, add one ACP server
 
-Checked in T3 Code's repository on 2026-11-11 (`docs/user/composer.md`,
-`docs/user/html-renders.md`, `docs/user/devices.md`,
-`docs/orchestration-v2/orchestrator-mcp-server.md`,
-`apps/server/src/mcp/toolkits/`).
-
-- **Skills, plugins and MCP servers:** T3 installs nothing itself. It lists
-  the skills and MCP servers already set up in each provider (for example
-  Claude's `~/.claude/skills` and `.claude/skills`) and lets the user pick
-  them with `$`. After a change, "Restart agent session" reloads them.
-- **One app-owned MCP server, injected into every session:** T3 runs its
-  own MCP server (`t3-code`) and adds it to each provider session's config
-  with a per-session token. Agents get T3's tools without the user installing
-  anything: an embedded preview browser (`preview_open`, `preview_act`,
-  `preview_snapshot`, recording), iOS/Android devices, HTML pages, threads,
-  worktrees and pull requests.
-- **Browser:** T3 has its own. The desktop app embeds an Electron browser
-  that the user sees and agents drive through those `preview_*` tools; a
-  small headless browser checks HTML pages. It is not the harness's browser.
-- **Computer use:** T3 does not control the desktop. Device control is
-  limited to simulators and emulators.
-- **Sub-agents:** T3 adds its own (`t3_thread` tools): a parent agent starts
-  a child thread on any provider, which receives only the task prompt. Where
-  a harness has native sub-agents (Claude's Task tool), they keep working
-  inside that harness.
-
-For ACP:
 - Agents keep their own skills, plugins, MCP servers, sub-agents, browser
   and computer-use tools. ACP lists and toggles them; it does not reinstall
   them.
@@ -251,7 +234,7 @@ For ACP:
   a tool instead of installing it" works because the ACP server is already
   attached to every session.
 - An embedded preview browser comes later, after the Electron app.
-- **Orchestrator hand-offs follow T3's sub-agent pattern:** an orchestrator
+- **Orchestrator hand-offs go through ACP's server:** an orchestrator
   starts a child task on any connected agent (for example Claude handing work
   to Codex or a free model) through the ACP server. The child receives the
   task, its scope and the relevant memory, not the parent's whole chat.
@@ -280,18 +263,15 @@ models alike, with two parts:
   next. Written automatically as work happens.
 
 When one agent stops, the next one reads the task's latest checkpoint and the
-relevant knowledge, not the whole chat, so the user writes no briefing. This
-matches T3's "portable handoffs" (a budgeted selection of recent messages,
-with a tool to read older ones), but ACP hands over a written state instead
-of raw messages.
+relevant knowledge, not the whole chat, so the user writes no briefing. ACP
+hands over a written state, not a selection of raw messages.
 
 ### 9g. Memory belongs to the project, in layers
 
 Decided 2026-11-11. Memory is per project, not per file. Rules can be
 narrowed to files or folders, the way Claude Code (`CLAUDE.md` in
 subfolders, `.claude/rules/` with paths) and Codex (nested `AGENTS.md`,
-closest file wins) already work. T3 Code has no memory of its own; each
-agent reads its own instruction files.
+closest file wins) already work.
 
 | Layer | Holds | Where |
 |---|---|---|
@@ -379,7 +359,7 @@ agent can use it:
 
 ### 9i. Preview captures as evidence (decided 2026-11-11)
 
-Same idea as T3 Code's browser captures:
+How captures work:
 - The preview browser can take screenshots and screen recordings. The user
   can take them, and agents can through ACP's server
   (`preview_screenshot`, `preview_recording_start`, `preview_recording_stop`).
@@ -396,12 +376,131 @@ Same idea as T3 Code's browser captures:
 The project is **Agent Control Plane**, shortened to **ACP**. Repository:
 `agent-control-plane`.
 
+### 9k. Design skills are built in, not something you call (decided 2026-11-12)
+
+Problem: AI front-end work is sloppy unless the user knows which skill to
+call and how to prompt. Most users do not. So for a design task, ACP attaches
+high-end front-end skills on its own.
+
+- **Detecting a design task:** the task's scope touches front-end files
+  (`*.css`, `*.html`, `*.tsx`, `*.jsx`, `*.vue`, `*.svelte`, Tailwind or theme
+  config), or the request asks for a page, screen, component or visual
+  design. The orchestrator may also mark a task as design work.
+- **Attaching:** ACP places the skills in the task's own worktree, in the
+  folders each agent already reads (`.claude/skills`, `.agents/skills`), and
+  lists them in `.git/info/exclude` so they are never committed. The user's
+  repository is not touched. Agents that do not read skill folders get the
+  skill's short instructions in the task context instead.
+- **Only when needed:** skills attach to design tasks only, so other tasks
+  keep their context small (non-negotiable 2).
+- **Checked afterwards:** the review step runs the design library's
+  anti-pattern rules on the patch, so poor output is caught, not only
+  discouraged.
+- **User control:** on by default. A project can turn it off, pick which
+  skills apply, or add its own. The design library's styles (ADR-0007) are
+  the same mechanism with a style chosen.
+- **We do not write our own pack.** ACP ships existing skills whose licence
+  allows it, each pinned to a reviewed commit. A skill is instructions an
+  agent follows with the user's permissions, so updates are reviewed like
+  code and never pulled automatically.
+
+Licences, read from each repository on 2026-11-12:
+
+| Skill | Repository | Licence | Decision |
+|---|---|---|---|
+| Impeccable | `pbakaus/impeccable` | Apache-2.0 | Ship as the default. Keep its `LICENSE` and `NOTICE` |
+| Huashu Design | `alchaincyf/huashu-design` | MIT (changed from a stricter licence in 2026) | Ship, for prototypes and motion. Pin the commit; re-check the licence on update |
+| Awwwards | `juliobsz/skills` | MIT | Ship the skill files only. Its installer sends usage data, so ACP does not run it |
+| Awwwards (other) | `tponscr-debug/claude-skill-awwwards` | No licence file | Cannot ship. Users may add it themselves |
+| Be ambitious | `az9713/be-ambitious-skill` | MIT | Optional: it rewrites a prompt to aim higher. Small enough to review fully |
+| 21st.dev Magic | `21st-dev/magic-mcp` | ISC | Not bundled. It is a hosted service that needs the user's own API key; offer it as a connector |
+| Open Generative AI | `Anil-matcha/Open-Generative-AI` | MIT | Not a design skill. It is an image and video studio; a later option for generated media |
+| "watch", "muse agent" | not identified | unknown | Need a link from the maintainer |
+
+Anthropic's own `frontend-design` skill, which Impeccable builds on, has no
+licence file at the top of `anthropics/skills`; check that skill's own folder
+before shipping it separately.
+
+### 9l. The mistake guard (proposed 2026-11-12)
+
+ACP already saves review findings and agent failures as lessons, turns them
+into candidate upgrades the user approves, and includes the approved index in
+every task (v0.3.1). What is missing is choosing the lessons that matter for
+*this* task. The guard adds that.
+
+- **A rule is small and specific:** what went wrong (with the evidence), the
+  fix, the paths it applies to, and the task it came from. Optionally a
+  `check:` command or pattern that can detect the mistake.
+- **Where rules live:** approved rules are path rules in `.acp/rules/`
+  (§9g), so they are in Git, reviewed like code, and shared by every agent
+  and teammate. Personal ones stay in the user layer.
+- **Before a task (the guard):** ACP matches the task's files and words
+  against the rules and gives the agent only the few that match, under
+  "Past mistakes here", inside a 2 KB budget. Matching is by path and
+  keyword, with no model call, so it is free and repeatable.
+- **After a task:** rules with a `check:` run in review as deterministic
+  evidence. A rule without one is advice to the agent, not enforcement, and
+  the interface says so.
+- **Writing a rule:** when a check fails or the user rejects a patch and a
+  fix follows, ACP drafts the rule. Nothing becomes a rule until the user
+  approves it.
+- **Keeping the list short:** ACP counts how often each rule was shown and
+  how often its check caught something. Rules that have not matched for a
+  long time are proposed for removal.
+
+### 9m. Clients: web app, desktop app and terminal on one server (decided 2026-11-12)
+
+- One ACP server runs on the user's machine and owns the agents, worktrees,
+  memory and Git. It is the only part that touches the project.
+- **Web app:** the interface, opened in a browser at `127.0.0.1`. Built once.
+- **Desktop app:** Electron, wrapping the same web app and starting the
+  server for the user (§5).
+- **Terminal:** the `acp` command, talking to the same server, so a thread
+  started in one client continues in another.
+- A hosted web address and a phone app need a relay and sign-in, so they come
+  later with the optional account (§9a).
+- ACP is built in this repository as its own codebase.
+
+### 9n. Thread and safety features (decided 2026-11-12)
+
+- **Permission modes** per thread: supervised, auto-accept edits, full
+  access. Supervised is ACP's default, because the human gate is the point.
+- **Fork a thread** and **side chat** (ask about a thread without adding to
+  it).
+- **Visual replies:** an agent may answer with a sandboxed HTML page shown in
+  the thread.
+- **Secret request card:** when an agent needs a credential, the user types
+  it into a private card; it never enters the chat, memory, checkpoints or
+  logs (non-negotiable 11).
+- **A cheap model for small text:** thread titles, commit messages and pull
+  request text.
+- **Scenarios:** a real-app test that fails before a fix and passes after,
+  kept as evidence.
+- **Outside agents:** ACP's MCP server lets agents ACP did not start (for example
+  Claude Code or Codex in a terminal) read and write ACP memory.
+- Later: scheduled tasks, remote access, more Git hosts than GitHub.
+
 ### 10. Order of work
 
-1. CI and Docker setup, step by step (`docs/guides/ci-setup.md`).
-2. A detailed `README.md` and `CONTRIBUTING.md`.
-3. Rebuild the website, desktop app and terminal designs from ADR-0007 and
-   this ADR.
+Done: CI, Docker, the public repository and the `dev` → `main` flow.
+
+Build order from 2026-11-12. Each milestone is usable on its own.
+
+1. **Memory core.** `.acp/` layered memory, path-rule matching, the mistake
+   guard's matcher, the `AGENTS.md` block with hash and size budget, CLI
+   commands, tests (§9g, §9l).
+2. **ACP MCP server.** Memory read and search, checkpoint write, hand a task
+   to another agent. Works from Claude Code and Codex straight away
+   (§9e, §9n).
+3. **Agent runtime.** Start Claude Code, Codex and OpenCode in worktrees;
+   threads made of tasks; permission modes (§9b, §9n).
+4. **Web app.** Rebuild the interface from the design canvas: thread, task
+   rows, review, usage. Design skills attach on their own (§9k).
+5. **Terminal.** The `acp` command with the same threads.
+6. **Desktop app.** Electron around the web app; signing.
+7. **Thread extras.** Forks, side chats, visual replies, preview captures,
+   secret request card (§9i, §9n).
+8. **Remote.** Optional account, hosted web address, phone.
 
 ## Consequences
 
@@ -422,13 +521,19 @@ The project is **Agent Control Plane**, shortened to **ACP**. Repository:
 6. [ ] Pull request size labels and context budget check.
 7. [ ] Website previews on Cloudflare Pages; Docker image per pull request.
 8. [ ] Issue forms, labels, website and app "Report a problem" form.
-9. [ ] `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `LICENSE`.
+9. [ ] `SECURITY.md`. (Done: `README.md`, `CONTRIBUTING.md`, `LICENSE`.)
 10. [ ] Electron desktop app; signing and notarisation.
 11. [ ] Download page with operating-system detection and install commands.
 12. [ ] Git host view in ACP.
 13. [ ] Rebuild the website, desktop app and terminal designs.
 14. [ ] Optional ACP account with Clerk (remote access, phone app), only when needed (§9a).
-15. [ ] Layered memory: user, project, path rules, task; sync to `AGENTS.md` and `CLAUDE.md` (§9g).
+15. [ ] Layered memory: folder-level `AGENTS.md` blocks and `.claude/rules/` files; proposing hand edits back into `.acp/`. (Done: the four layers, path rules, root `AGENTS.md` block, `CLAUDE.md` import, secret scan, CI check; see `docs/guides/memory.md`.)
+16. [ ] Mistake guard: run `check:` rules in review; draft rules from failed checks; count how often each rule matches. (Done: matching rules to a task before it starts.)
+17. [ ] Built-in design skills: block approval on findings in the review screen; pick a style. (Done: the anti-pattern check after a design run and `design:check`; a project's own skills in `.acp/skills/`; the three licensed skills at pinned commits, instruction files only; detecting design tasks; attaching to a run's worktree; see `docs/guides/design-skills.md`.)
+18. [ ] ACP MCP server: attach it automatically to agents ACP starts; hand-off, project activity and design-library tools. (Done: the server over stdio with memory read and search, rule proposals the user accepts, and checkpoints; see `docs/guides/mcp.md`.)
+21. [ ] Agent runtime: threads of tasks, live progress, approvals, usage. (Done: find Claude Code, Codex and OpenCode, read their sign-in, run one request in a worktree with memory, sent privately on standard input, with a time limit; list and clean up runs; see `docs/guides/agents.md`.)
+19. [ ] Web app, terminal and desktop clients on one server (§9m).
+20. [ ] Permission modes, forks, side chats, visual replies, secret request card (§9n).
 
 Design canvas (website Home, Download, Docs, Security, Report a problem;
 desktop app; terminal), updated 2026-11-11:
