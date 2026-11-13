@@ -17,6 +17,8 @@ ENV NODE_ENV=production \
     ACP_UI_PORT=4317
 COPY package.json ./
 COPY --from=build /app/dist ./dist
+# The shipped design skills are read at run time, next to the built code.
+COPY design-library/skills ./design-library/skills
 RUN mkdir -p /var/lib/acp/artifacts && chown -R node:node /app /var/lib/acp
 USER node
 EXPOSE 4317

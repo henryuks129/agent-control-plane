@@ -9,6 +9,8 @@
 
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { detectDesignTask } from '../design/detect.js';
+import { attachSkills, loadCatalog, loadDesignSetting, selectSkills, skillsNote } from '../design/skills.js';
 import { GitManager } from '../git/worktrees.js';
 import { renderBundle, resolveMemory } from '../memory/resolve.js';
 import { loadProjectMemory, loadUserMemory } from '../memory/store.js';
@@ -43,6 +45,8 @@ export interface RunResult {
   output: string;
   /** Files the agent added or changed, relative to the worktree. */
   changed: string[];
+  /** Design skills ACP placed in the worktree for this run. */
+  skills: string[];
   /** What to try next when the run failed. */
   hint?: string;
 }
@@ -88,7 +92,18 @@ export async function runAgent(input: RunInput, deps: { run: CommandRunner }): P
     files: input.files,
     request: input.request,
   }));
-  const prompt = composePrompt(input.request, memory);
+
+  // Design work gets the shipped design skills without the user asking
+  // (ADR-0008 §9k). Other work gets none, which keeps its context small.
+  const wanted = detectDesignTask({ files: input.files, request: input.request }).design
+    ? selectSkills(loadCatalog(), input.request, loadDesignSetting(input.root))
+    : [];
+  const { attached } = await attachSkills(worktree, wanted);
+  // Name only what was really attached: a skill the project already keeps
+  // under the same name is its own, and the agent finds it there anyway.
+  const note = skillsNote(wanted.filter(skill => attached.includes(skill.name)));
+
+  const prompt = composePrompt(input.request, [memory, note].filter(Boolean).join('\n'));
 
   const result = await deps.run(agent.binary, agent.runArgs(input.mode, prompt, worktree, input.model), {
     cwd: worktree,
@@ -111,5 +126,6 @@ export async function runAgent(input: RunInput, deps: { run: CommandRunner }): P
     exitCode: result.code,
     output: result.stdout,
     changed: await changedFiles(worktree),
+    skills: attached,
   };
 }

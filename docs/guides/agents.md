@@ -46,7 +46,9 @@ Every run:
    never touched.
 3. Gives the agent ACP's memory for those files, then your request
    (see [memory](memory.md)).
-4. Lists the files the agent changed. Nothing is merged; you review the
+4. If the request is design work, adds the built-in design skills
+   (see [design skills](design-skills.md)).
+5. Lists the files the agent changed. Nothing is merged; you review the
    branch and decide.
 
 ## How each agent is limited

@@ -529,7 +529,7 @@ Build order from 2026-11-12. Each milestone is usable on its own.
 14. [ ] Optional ACP account with Clerk (remote access, phone app), only when needed (§9a).
 15. [ ] Layered memory: folder-level `AGENTS.md` blocks and `.claude/rules/` files; proposing hand edits back into `.acp/`. (Done: the four layers, path rules, root `AGENTS.md` block, `CLAUDE.md` import, secret scan, CI check; see `docs/guides/memory.md`.)
 16. [ ] Mistake guard: run `check:` rules in review; draft rules from failed checks; count how often each rule matches. (Done: matching rules to a task before it starts.)
-17. [ ] Built-in design skills: vendor the licensed skills at pinned commits; attach to design tasks (§9k).
+17. [ ] Built-in design skills: run the anti-pattern rules in review; let a project add its own skills; pick a style. (Done: the three licensed skills at pinned commits, instruction files only; detecting design tasks; attaching to a run's worktree; see `docs/guides/design-skills.md`.)
 18. [ ] ACP MCP server for ACP-started and outside agents (§9e, §9n).
 21. [ ] Agent runtime: threads of tasks, live progress, approvals, usage. (Done: find Claude Code, Codex and OpenCode, read their sign-in, run one request in a worktree with memory; see `docs/guides/agents.md`.)
 19. [ ] Web app, terminal and desktop clients on one server (§9m).
