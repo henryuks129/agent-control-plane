@@ -11,9 +11,11 @@ until you approve it.
 Website: <https://henryuks129.github.io/agent-control-plane/> ·
 License: [MIT](LICENSE)
 
-> **Status: in development.** The local dashboard and patch review work today
-> and run in Docker. Layered memory is being built now; agent connections and
-> the web, desktop and terminal apps come next. See [Roadmap](#roadmap).
+> **Status: in development.** Working today, from the command line: shared
+> memory, running Claude Code, Codex and OpenCode in their own worktrees,
+> built-in design skills, and an MCP server. The local dashboard and patch
+> review run in Docker. The web, desktop and terminal apps come next. See
+> [Roadmap](#roadmap).
 
 ## How it works
 
@@ -55,9 +57,9 @@ License: [MIT](LICENSE)
 
 | # | Milestone | Status |
 |---|---|---|
-| 1 | Memory core: layers, folder rules, mistake guard, `AGENTS.md` summary | In progress |
-| 2 | ACP's MCP server, so any agent can read and write the memory | Next |
-| 3 | Agent runtime: start Claude Code, Codex and OpenCode in worktrees | Planned |
+| 1 | Memory core: layers, folder rules, mistake guard, `AGENTS.md` summary | Works |
+| 2 | ACP's MCP server, so any agent can read the memory, propose rules and leave checkpoints | Works |
+| 3 | Agent runtime: start Claude Code, Codex and OpenCode in worktrees | Single runs work; threads next |
 | 4 | Web app | Planned |
 | 5 | Terminal (`acp` command) | Planned |
 | 6 | Desktop app for macOS, Windows and Linux | Planned |

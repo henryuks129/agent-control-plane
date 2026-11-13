@@ -11,6 +11,8 @@ const FRONT_END_FILE = /\.(css|scss|sass|less|html?|tsx|jsx|vue|svelte|astro)$|(
 // APIs. Longer phrases come first so the reason names the most specific one.
 const DESIGN_WORDS = /\b(landing page|home ?page|web ?page|hero section|visual design|slide deck|dark mode|colou?r scheme|front-?end|redesign|restyle|website|dashboard|prototype|mock-?up|wireframe|typography|palette|animations?|animate|motion|layout|responsive|tailwind|css|ui|ux|page|screen|component)\b/i;
 
+export const isFrontEndFile = (file: string) => FRONT_END_FILE.test(file);
+
 export interface DesignDetection {
   design: boolean;
   /** Why, in words that can be shown to the user. Empty when it is not design work. */

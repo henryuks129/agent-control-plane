@@ -79,9 +79,57 @@ or name exactly the skills to use on every design task:
 { "designSkills": ["impeccable"] }
 ```
 
+## Add your own skills
+
+Put a folder with a `SKILL.md` in `.acp/skills/` in your project and commit
+it:
+
+```text
+.acp/skills/house-style/SKILL.md
+```
+
+```markdown
+---
+description: Our tokens, components and tone of voice.
+keywords: [email, newsletter]
+---
+Use the tokens in web/tokens.css. ...
+```
+
+- Without `keywords`, the skill is attached to every design task. With
+  them, only when the request mentions one.
+- A skill of yours with the same name as a shipped one replaces it.
+- `skills:list` shows yours as "this project".
+
+## The result is checked
+
+After a design run, ACP looks through the changed front-end files for known
+anti-patterns and prints what it finds with the file and line:
+
+```text
+Design check: 1 finding (pattern matches in the files, not opinions)
+  site/index.html:42  dead-link. Point the link somewhere, or make it a button that does something.
+```
+
+| Rule | Looks for |
+|---|---|
+| `placeholder-text` | "lorem ipsum" |
+| `dead-link` | `href="#"`, an empty link, or `javascript:` |
+| `image-without-alt` | an `<img>` with no `alt` |
+| `gradient-text` | `background-clip: text` |
+| `hard-offset-shadow` | a shadow with an offset and no blur |
+| `side-stripe-border` | a left or right border of 2px or more |
+| `focus-outline-removed` | `outline: none` in a file with no `:focus-visible` |
+| `motion-without-reduced-motion` | animation in a file that never mentions `prefers-reduced-motion` |
+
+These are pattern matches, so each can be confirmed by reading the line.
+They do not judge taste. To check files yourself:
+
+```bash
+node dist/src/cli/main.js design:check site/index.html
+```
+
 ## Not built yet
 
-- Checking the result against the design library's anti-pattern rules in
-  review.
-- Adding your own skills to the list.
+- Blocking approval of a patch on these findings in the review screen.
 - Choosing a design-library style for a task.

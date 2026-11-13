@@ -10,7 +10,8 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { detectDesignTask } from '../design/detect.js';
-import { attachSkills, loadCatalog, loadDesignSetting, selectSkills, skillsNote } from '../design/skills.js';
+import { checkFiles, type DesignFinding } from '../design/check.js';
+import { attachSkills, availableSkills, loadDesignSetting, selectSkills, skillsNote } from '../design/skills.js';
 import { GitManager } from '../git/worktrees.js';
 import { renderBundle, resolveMemory } from '../memory/resolve.js';
 import { loadProjectMemory, loadUserMemory } from '../memory/store.js';
@@ -35,6 +36,8 @@ export interface RunInput {
   runId: string;
   /** A specific model, in the agent's own naming. Optional. */
   model?: string;
+  /** Minutes before the run is stopped. Optional: see `defaultTimeoutMinutes`. */
+  timeoutMinutes?: number;
 }
 
 export interface RunResult {
@@ -42,17 +45,28 @@ export interface RunResult {
   worktree: string;
   branch: string;
   exitCode: number | null;
+  /** Set when ACP stopped the run for taking too long: how many minutes it was given. */
+  stoppedAfterMinutes?: number;
   output: string;
   /** Files the agent added or changed, relative to the worktree. */
   changed: string[];
   /** Design skills ACP placed in the worktree for this run. */
   skills: string[];
+  /** Anti-patterns found in the files a design run changed. Evidence, not opinion. */
+  designFindings: DesignFinding[];
   /** What to try next when the run failed. */
   hint?: string;
 }
 
-// An agent can work for a long time, but a run with nobody watching must end.
-const RUN_TIMEOUT_MS = 15 * 60 * 1000;
+/**
+ * An agent can work for a long time, but a run with nobody watching must
+ * end. A question is answered in minutes. An edit reads, writes and checks
+ * its own work, and a first real design run needed more than 15 minutes, so
+ * edits get twice as long.
+ */
+export function defaultTimeoutMinutes(mode: RunMode): number {
+  return mode === 'edit' ? 30 : 15;
+}
 
 // A tool can report "signed in" from a saved token that its service has since
 // refused. The status check cannot see that; only a real run does.
@@ -95,9 +109,8 @@ export async function runAgent(input: RunInput, deps: { run: CommandRunner }): P
 
   // Design work gets the shipped design skills without the user asking
   // (ADR-0008 §9k). Other work gets none, which keeps its context small.
-  const wanted = detectDesignTask({ files: input.files, request: input.request }).design
-    ? selectSkills(loadCatalog(), input.request, loadDesignSetting(input.root))
-    : [];
+  const isDesign = detectDesignTask({ files: input.files, request: input.request }).design;
+  const wanted = isDesign ? selectSkills(availableSkills(input.root), input.request, loadDesignSetting(input.root)) : [];
   const { attached } = await attachSkills(worktree, wanted);
   // Name only what was really attached: a skill the project already keeps
   // under the same name is its own, and the agent finds it there anyway.
@@ -105,18 +118,26 @@ export async function runAgent(input: RunInput, deps: { run: CommandRunner }): P
 
   const prompt = composePrompt(input.request, [memory, note].filter(Boolean).join('\n'));
 
-  const result = await deps.run(agent.binary, agent.runArgs(input.mode, prompt, worktree, input.model), {
+  const minutes = input.timeoutMinutes ?? defaultTimeoutMinutes(input.mode);
+  const result = await deps.run(agent.binary, agent.runArgs(input.mode, worktree, input.model), {
     cwd: worktree,
     stream: true, // show the agent's progress as it happens
-    timeoutMs: RUN_TIMEOUT_MS,
+    timeoutMs: minutes * 60_000,
+    input: prompt,
   });
 
   let hint: string | undefined;
-  if (result.code !== 0) {
+  if (result.timedOut) {
+    // Being stopped is not a failure of the model. Whatever the agent wrote
+    // before it was stopped is still in the worktree for the user to judge.
+    hint = `Its work so far is kept in the worktree. To give a run longer, add --timeout <minutes>.`;
+  } else if (result.code !== 0) {
     hint = SIGN_IN_REFUSED.test(`${result.stdout}\n${result.stderr}`)
       ? `${agent.name}'s sign-in was refused. Sign in again with: ${agent.signInCommand}`
       : 'If the model is not available on your plan, choose another with --model <name>.';
   }
+
+  const changed = await changedFiles(worktree);
 
   return {
     hint,
@@ -124,8 +145,12 @@ export async function runAgent(input: RunInput, deps: { run: CommandRunner }): P
     worktree,
     branch: `acp/${input.runId}`,
     exitCode: result.code,
+    stoppedAfterMinutes: result.timedOut ? minutes : undefined,
     output: result.stdout,
-    changed: await changedFiles(worktree),
+    changed,
     skills: attached,
+    // Checked whether or not skills were attached: a project may turn the
+    // skills off and still want to know what the result looks like.
+    designFindings: isDesign ? checkFiles(worktree, changed) : [],
   };
 }

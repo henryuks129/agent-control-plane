@@ -38,6 +38,7 @@ node dist/src/cli/main.js agents:run codex "Explain how memory rules are matched
 | `--edit` | The agent may change files, only inside the run's own worktree. |
 | `--files a,b` | The files the request is about. They decide which memory rules the agent receives. |
 | `--model <name>` | Use a specific model, in the agent's own naming. |
+| `--timeout <minutes>` | How long the run may take. Default: 15 for a question, 30 with `--edit`. |
 
 Every run:
 
@@ -67,8 +68,33 @@ These limits are enforced by each tool, not by ACP.
   service rejected the saved sign-in. Sign in again with the command shown.
 - **A model is not available on your plan or in your country:** choose
   another with `--model`. `opencode models` lists OpenCode's.
-- **No output for a long time:** some models or providers hang. A run is
-  stopped after 15 minutes.
+- **"was stopped after N minutes":** the run reached its time limit. The
+  work it did is kept in the worktree. Give the next run longer with
+  `--timeout <minutes>`.
+- **No output for a long time:** some models or providers hang, and the
+  time limit ends the run.
+- **"MCP tool call requires approval" in Codex's output:** Codex's own
+  browser or other tools need an approval that a run with nobody watching
+  cannot give. Codex carries on without them.
+
+## Clean up runs
+
+Every run keeps its worktree and branch so you can review it.
+
+```bash
+node dist/src/cli/main.js runs:list
+node dist/src/cli/main.js runs:clean
+node dist/src/cli/main.js runs:remove <run> --force
+```
+
+`runs:clean` removes only runs that changed nothing. A run that holds work
+is kept until you remove it by name with `--force`.
+
+## Your request stays private
+
+ACP sends the request to the agent on standard input, not as a
+command-line argument, so other users of the same computer cannot read it
+in the process list.
 
 ## Not built yet
 
@@ -76,7 +102,4 @@ These limits are enforced by each tool, not by ACP.
   individual actions while an agent works.
 - Orchestrators that hand tasks to other agents.
 - Plan usage and limits.
-- Sending the request to the tool privately instead of as a command-line
-  argument. Today the request is visible to other users of the same computer
-  in the process list while the agent runs.
 - Antigravity.
