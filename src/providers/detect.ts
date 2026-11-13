@@ -10,6 +10,8 @@ export interface CommandResult {
   stderr: string;
   /** True when the program is not installed (not found on PATH). */
   missing: boolean;
+  /** True when ACP stopped the program because it ran past its time limit. */
+  timedOut?: boolean;
 }
 
 /**
@@ -19,7 +21,7 @@ export interface CommandResult {
 export type CommandRunner = (
   binary: string,
   args: string[],
-  options?: { cwd?: string; stream?: boolean; timeoutMs?: number },
+  options?: { cwd?: string; stream?: boolean; timeoutMs?: number; input?: string },
 ) => Promise<CommandResult>;
 
 export interface AgentStatus {
@@ -38,17 +40,26 @@ export const runCommand: CommandRunner = (binary, args, options = {}) =>
   new Promise(resolve => {
     // No shell: the arguments go to the program exactly as given. A request
     // such as `fix it; rm -rf ~` is therefore just text, never a command.
-    const child = spawn(binary, args, { cwd: options.cwd, stdio: ['ignore', 'pipe', 'pipe'] });
+    // Standard input is opened only when there is something to send. A tool
+    // left with an open, empty input can wait on it forever.
+    const child = spawn(binary, args, { cwd: options.cwd, stdio: [options.input === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';
     let settled = false;
-    const finish = (result: CommandResult) => { if (!settled) { settled = true; clearTimeout(timer); resolve(result); } };
+    const finish = (result: CommandResult) => { if (!settled) { settled = true; clearTimeout(timer); resolve({ timedOut: false, ...result }); } };
 
     // A tool waiting for input would otherwise hang ACP forever.
-    const timer = setTimeout(() => { child.kill(); finish({ code: null, stdout, stderr: `${stderr}\nStopped after ${options.timeoutMs} ms.`, missing: false }); }, options.timeoutMs ?? 30_000);
+    const limit = options.timeoutMs ?? 30_000;
+    const timer = setTimeout(() => { child.kill(); finish({ code: null, stdout, stderr: `${stderr}\nStopped after ${limit} ms.`, missing: false, timedOut: true }); }, limit);
 
-    child.stdout.on('data', chunk => { stdout += chunk; if (options.stream) process.stdout.write(chunk); });
-    child.stderr.on('data', chunk => { stderr += chunk; if (options.stream) process.stderr.write(chunk); });
+    if (child.stdin) {
+      // A tool that exits before reading must not crash ACP with a broken pipe.
+      child.stdin.on('error', () => {});
+      child.stdin.end(options.input);
+    }
+
+    child.stdout!.on('data', chunk => { stdout += chunk; if (options.stream) process.stdout.write(chunk); });
+    child.stderr!.on('data', chunk => { stderr += chunk; if (options.stream) process.stderr.write(chunk); });
     child.on('error', error => finish({ code: null, stdout, stderr: String(error), missing: (error as NodeJS.ErrnoException).code === 'ENOENT' }));
     child.on('close', code => finish({ code, stdout, stderr, missing: false }));
   });

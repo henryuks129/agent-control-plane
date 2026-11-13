@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { AGENTS, agentById } from '../src/providers/registry.js';
-import { listAgents, type CommandResult, type CommandRunner } from '../src/providers/detect.js';
+import { listAgents, runCommand, type CommandResult, type CommandRunner } from '../src/providers/detect.js';
 
 // The agents are other companies' command-line tools. Tests stand in for them
 // with their real output, captured from each tool, so no account is needed.
@@ -84,15 +84,15 @@ import { composePrompt, runAgent } from '../src/providers/run.js';
 import { runAgentsCommand } from '../src/providers/cli.js';
 
 test('ask mode starts every agent in its read-only setting', () => {
-  assert.deepEqual(agentById('claude')!.runArgs('ask', 'P', '/w'), ['-p', 'P', '--permission-mode', 'plan']);
-  assert.deepEqual(agentById('codex')!.runArgs('ask', 'P', '/w'), ['exec', '--sandbox', 'read-only', '-C', '/w', 'P']);
-  assert.deepEqual(agentById('opencode')!.runArgs('ask', 'P', '/w'), ['run', '--agent', 'plan', 'P']);
+  assert.deepEqual(agentById('claude')!.runArgs('ask', '/w'), ['-p', '--permission-mode', 'plan']);
+  assert.deepEqual(agentById('codex')!.runArgs('ask', '/w'), ['exec', '--sandbox', 'read-only', '-C', '/w', '-']);
+  assert.deepEqual(agentById('opencode')!.runArgs('ask', '/w'), ['run', '--agent', 'plan']);
 });
 
 test('edit mode lets an agent write, and Codex is confined to the worktree folder', () => {
-  assert.deepEqual(agentById('claude')!.runArgs('edit', 'P', '/w'), ['-p', 'P', '--permission-mode', 'acceptEdits']);
-  assert.deepEqual(agentById('codex')!.runArgs('edit', 'P', '/w'), ['exec', '--sandbox', 'workspace-write', '-C', '/w', 'P']);
-  assert.deepEqual(agentById('opencode')!.runArgs('edit', 'P', '/w'), ['run', '--agent', 'build', '--auto', 'P']);
+  assert.deepEqual(agentById('claude')!.runArgs('edit', '/w'), ['-p', '--permission-mode', 'acceptEdits']);
+  assert.deepEqual(agentById('codex')!.runArgs('edit', '/w'), ['exec', '--sandbox', 'workspace-write', '-C', '/w', '-']);
+  assert.deepEqual(agentById('opencode')!.runArgs('edit', '/w'), ['run', '--agent', 'build', '--auto']);
 });
 
 test('the prompt gives memory first and the request last', () => {
@@ -115,12 +115,12 @@ function tempRepo(): string {
 }
 
 /** Stands in for Codex: signed in, and "edits" by writing one file where it is started. */
-function fakeCodex(calls: Array<{ args: string[]; cwd?: string }>, signedIn = true): CommandRunner {
+function fakeCodex(calls: Array<{ args: string[]; cwd?: string; input?: string; timeoutMs?: number }>, signedIn = true): CommandRunner {
   return async (binary, args, options) => {
     if (binary !== 'codex') return missing;
     if (args[0] === '--version') return ok('codex-cli 0.160.0\n');
     if (args[0] === 'login') return signedIn ? ok('Logged in using ChatGPT\n') : { code: 1, stdout: '', stderr: 'Not logged in\n', missing: false };
-    calls.push({ args, cwd: options?.cwd });
+    calls.push({ args, cwd: options?.cwd, input: options?.input, timeoutMs: options?.timeoutMs });
     fs.writeFileSync(path.join(options!.cwd!, 'notes.txt'), 'written by the agent\n');
     return ok('done\n');
   };
@@ -129,14 +129,14 @@ function fakeCodex(calls: Array<{ args: string[]; cwd?: string }>, signedIn = tr
 test('a run happens in its own worktree, with matching memory, and reports what changed', async () => {
   const root = tempRepo();
   const worktreeDir = path.join(root, 'worktrees');
-  const calls: Array<{ args: string[]; cwd?: string }> = [];
+  const calls: Array<{ args: string[]; cwd?: string; input?: string; timeoutMs?: number }> = [];
   const result = await runAgent(
     { root, worktreeDir, dataDir: path.join(root, '.data'), agentId: 'codex', request: 'Add an endpoint', mode: 'edit', files: ['src/api/a.ts'], runId: 'run-1' },
     { run: fakeCodex(calls) },
   );
   assert.equal(calls.length, 1);
   assert.equal(calls[0].cwd, path.join(worktreeDir, 'run-1'));
-  const prompt = calls[0].args.at(-1)!;
+  const prompt = calls[0].input!;
   assert.match(prompt, /Validate input\.[\s\S]*# Request\nAdd an endpoint$/);
   assert.deepEqual({ agent: result.agent, branch: result.branch, exitCode: result.exitCode, changed: result.changed }, { agent: 'Codex', branch: 'acp/run-1', exitCode: 0, changed: ['notes.txt'] });
   assert.equal(fs.existsSync(path.join(root, 'notes.txt')), false, 'the project itself is untouched');
@@ -144,7 +144,7 @@ test('a run happens in its own worktree, with matching memory, and reports what 
 
 test('an agent that is signed out is not started, and the message says how to sign in', async () => {
   const root = tempRepo();
-  const calls: Array<{ args: string[]; cwd?: string }> = [];
+  const calls: Array<{ args: string[]; cwd?: string; input?: string; timeoutMs?: number }> = [];
   await assert.rejects(
     runAgent({ root, worktreeDir: path.join(root, 'worktrees'), dataDir: root, agentId: 'codex', request: 'x', mode: 'ask', files: [], runId: 'run-2' }, { run: fakeCodex(calls, false) }),
     /Codex is not signed in\. Run: codex login/,
@@ -188,14 +188,14 @@ test('agents:run reports the worktree, the branch and the changed files', async 
 // ---- Choosing a model, and a sign-in that stopped working ----
 
 test('a chosen model is passed to each agent in its own way', () => {
-  assert.deepEqual(agentById('claude')!.runArgs('ask', 'P', '/w', 'sonnet'), ['-p', 'P', '--permission-mode', 'plan', '--model', 'sonnet']);
-  assert.deepEqual(agentById('codex')!.runArgs('ask', 'P', '/w', 'gpt-x'), ['exec', '--sandbox', 'read-only', '-C', '/w', '--model', 'gpt-x', 'P']);
-  assert.deepEqual(agentById('opencode')!.runArgs('ask', 'P', '/w', 'nvidia/some-model'), ['run', '--agent', 'plan', '--model', 'nvidia/some-model', 'P']);
+  assert.deepEqual(agentById('claude')!.runArgs('ask', '/w', 'sonnet'), ['-p', '--permission-mode', 'plan', '--model', 'sonnet']);
+  assert.deepEqual(agentById('codex')!.runArgs('ask', '/w', 'gpt-x'), ['exec', '--sandbox', 'read-only', '-C', '/w', '--model', 'gpt-x', '-']);
+  assert.deepEqual(agentById('opencode')!.runArgs('ask', '/w', 'nvidia/some-model'), ['run', '--agent', 'plan', '--model', 'nvidia/some-model']);
 });
 
 test('agents:run --model reaches the agent', async () => {
   const root = tempRepo();
-  const calls: Array<{ args: string[]; cwd?: string }> = [];
+  const calls: Array<{ args: string[]; cwd?: string; input?: string; timeoutMs?: number }> = [];
   await runAgentsCommand('agents:run', ['codex', '--model', 'gpt-x', 'Say hi'], { root, worktreeDir: path.join(root, 'worktrees'), dataDir: root }, { run: fakeCodex(calls) });
   assert.deepEqual(calls[0].args.slice(0, 7), ['exec', '--sandbox', 'read-only', '-C', calls[0].cwd, '--model', 'gpt-x']);
 });
@@ -229,7 +229,7 @@ test('an ordinary failure is not mistaken for a sign-in problem', async () => {
 test('a design request gets the design skills in its worktree and is told to follow them', async () => {
   const root = tempRepo();
   const worktreeDir = path.join(root, 'worktrees');
-  const calls: Array<{ args: string[]; cwd?: string }> = [];
+  const calls: Array<{ args: string[]; cwd?: string; input?: string; timeoutMs?: number }> = [];
   const result = await runAgent(
     { root, worktreeDir, dataDir: path.join(root, '.data'), agentId: 'codex', request: 'Build a landing page', mode: 'edit', files: [], runId: 'run-design' },
     { run: fakeCodex(calls) },
@@ -237,7 +237,7 @@ test('a design request gets the design skills in its worktree and is told to fol
   const worktree = path.join(worktreeDir, 'run-design');
   assert.ok(fs.existsSync(path.join(worktree, '.agents/skills/impeccable/SKILL.md')));
   assert.ok(fs.existsSync(path.join(worktree, '.claude/skills/awwwards/SKILL.md')));
-  assert.match(calls[0].args.at(-1)!, /# Design skills\n[\s\S]*- impeccable: [\s\S]*# Request\nBuild a landing page$/);
+  assert.match(calls[0].input!, /# Design skills\n[\s\S]*- impeccable: [\s\S]*# Request\nBuild a landing page$/);
   assert.deepEqual(result.skills, ['impeccable', 'awwwards']);
   assert.deepEqual(result.changed, ['notes.txt'], 'the skills are not reported as changes');
 });
@@ -245,13 +245,13 @@ test('a design request gets the design skills in its worktree and is told to fol
 test('a request that is not design work gets no design skills', async () => {
   const root = tempRepo();
   const worktreeDir = path.join(root, 'worktrees');
-  const calls: Array<{ args: string[]; cwd?: string }> = [];
+  const calls: Array<{ args: string[]; cwd?: string; input?: string; timeoutMs?: number }> = [];
   const result = await runAgent(
     { root, worktreeDir, dataDir: path.join(root, '.data'), agentId: 'codex', request: 'Add an endpoint', mode: 'edit', files: ['src/api/a.ts'], runId: 'run-plain' },
     { run: fakeCodex(calls) },
   );
   assert.equal(fs.existsSync(path.join(worktreeDir, 'run-plain', '.agents')), false);
-  assert.doesNotMatch(calls[0].args.at(-1)!, /Design skills/);
+  assert.doesNotMatch(calls[0].input!, /Design skills/);
   assert.deepEqual(result.skills, []);
 });
 
@@ -259,17 +259,90 @@ test('a project that turns design skills off gets none, even for design work', a
   const root = tempRepo();
   fs.writeFileSync(path.join(root, '.acp/settings.json'), JSON.stringify({ designSkills: false }));
   const worktreeDir = path.join(root, 'worktrees');
-  const calls: Array<{ args: string[]; cwd?: string }> = [];
+  const calls: Array<{ args: string[]; cwd?: string; input?: string; timeoutMs?: number }> = [];
   const result = await runAgent(
     { root, worktreeDir, dataDir: path.join(root, '.data'), agentId: 'codex', request: 'Build a landing page', mode: 'edit', files: [], runId: 'run-off' },
     { run: fakeCodex(calls) },
   );
   assert.deepEqual(result.skills, []);
-  assert.doesNotMatch(calls[0].args.at(-1)!, /Design skills/);
+  assert.doesNotMatch(calls[0].input!, /Design skills/);
 });
 
 test('agents:run says which design skills were attached', async () => {
   const root = tempRepo();
   const result = await runAgentsCommand('agents:run', ['codex', 'Build', 'a', 'landing', 'page'], { root, worktreeDir: path.join(root, 'worktrees'), dataDir: path.join(root, '.data') }, { run: fakeCodex([]) });
   assert.match(result.output, /Design skills: impeccable, awwwards/);
+});
+
+// ---- The request stays private, and a run that runs out of time says so ----
+
+test('the request is sent on standard input, never as a command-line argument', async () => {
+  const root = tempRepo();
+  const calls: Array<{ args: string[]; cwd?: string; input?: string; timeoutMs?: number }> = [];
+  await runAgent(
+    { root, worktreeDir: path.join(root, 'worktrees'), dataDir: root, agentId: 'codex', request: 'Rotate the billing token', mode: 'ask', files: [], runId: 'run-private' },
+    { run: fakeCodex(calls) },
+  );
+  // Arguments are visible to every user of the computer in the process list.
+  assert.equal(calls[0].args.some(arg => arg.includes('billing token')), false);
+  assert.match(calls[0].input!, /Rotate the billing token$/);
+});
+
+test('the real runner delivers standard input to the program', async () => {
+  const result = await runCommand(process.execPath, ['-e', "process.stdin.on('data', d => process.stdout.write(String(d).toUpperCase()))"], { input: 'hello' });
+  assert.equal(result.stdout, 'HELLO');
+  assert.equal(result.timedOut, false);
+});
+
+test('the real runner stops a program that takes too long and reports it as timed out', async () => {
+  const result = await runCommand(process.execPath, ['-e', 'setTimeout(() => {}, 60000)'], { timeoutMs: 200 });
+  assert.equal(result.timedOut, true);
+  assert.equal(result.code, null);
+});
+
+test('an edit gets longer than a question before it is stopped, and --timeout changes it', async () => {
+  const root = tempRepo();
+  const where = { root, worktreeDir: path.join(root, 'worktrees'), dataDir: root };
+  const calls: Array<{ args: string[]; cwd?: string; input?: string; timeoutMs?: number }> = [];
+  await runAgentsCommand('agents:run', ['codex', 'Say hi'], where, { run: fakeCodex(calls) });
+  await runAgentsCommand('agents:run', ['codex', '--edit', 'Say hi'], where, { run: fakeCodex(calls) });
+  await runAgentsCommand('agents:run', ['codex', '--timeout', '45', 'Say hi'], where, { run: fakeCodex(calls) });
+  assert.deepEqual(calls.map(call => call.timeoutMs), [15 * 60_000, 30 * 60_000, 45 * 60_000]);
+});
+
+test('a run that ran out of time says so, keeps its work, and does not blame the model', async () => {
+  const root = tempRepo();
+  const slow: CommandRunner = async (binary, args, options) => {
+    if (binary !== 'codex') return missing;
+    if (args[0] === '--version') return ok('codex-cli 0.160.0');
+    if (args[0] === 'login') return ok('Logged in using ChatGPT');
+    fs.writeFileSync(path.join(options!.cwd!, 'half.txt'), 'partly done\n');
+    return { code: null, stdout: '', stderr: '', missing: false, timedOut: true };
+  };
+  const result = await runAgentsCommand('agents:run', ['codex', '--edit', 'Build it'], { root, worktreeDir: path.join(root, 'worktrees'), dataDir: root }, { run: slow });
+  assert.equal(result.exitCode, 1);
+  assert.match(result.output, /Codex was stopped after 30 minutes/);
+  assert.match(result.output, /half\.txt/);
+  assert.match(result.output, /--timeout <minutes>/);
+  assert.doesNotMatch(result.output, /not available on your plan/);
+});
+
+test('after a design run, the changed files are checked and findings are reported as evidence', async () => {
+  const root = tempRepo();
+  const sloppy: CommandRunner = async (binary, args, options) => {
+    if (binary !== 'codex') return missing;
+    if (args[0] === '--version') return ok('codex-cli 0.160.0');
+    if (args[0] === 'login') return ok('Logged in using ChatGPT');
+    fs.writeFileSync(path.join(options!.cwd!, 'index.html'), '<h1>Hi</h1>\n<a href="#">Buy</a>\n');
+    return ok('done');
+  };
+  const result = await runAgentsCommand('agents:run', ['codex', '--edit', 'Build a landing page'], { root, worktreeDir: path.join(root, 'worktrees'), dataDir: root }, { run: sloppy });
+  assert.match(result.output, /Design check: 1 finding \(pattern matches in the files, not opinions\)/);
+  assert.match(result.output, /index\.html:2\s+dead-link/);
+});
+
+test('a run that is not design work is not design-checked', async () => {
+  const root = tempRepo();
+  const result = await runAgentsCommand('agents:run', ['codex', '--edit', 'Add an endpoint'], { root, worktreeDir: path.join(root, 'worktrees'), dataDir: root }, { run: fakeCodex([]) });
+  assert.doesNotMatch(result.output, /Design check/);
 });

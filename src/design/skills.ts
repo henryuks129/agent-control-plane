@@ -31,6 +31,8 @@ export interface DesignSkill {
   summary: string;
   /** `treeDigest` of the shipped folder at review time. */
   digest: string;
+  /** Where the files are, for a skill that is not one of the shipped ones. */
+  dir?: string;
 }
 
 /** `false` turns design skills off; a list names exactly the skills to use. */
@@ -58,6 +60,43 @@ export function catalogDir(): string {
 
 export function loadCatalog(dir = catalogDir()): DesignSkill[] {
   return (JSON.parse(fs.readFileSync(path.join(dir, 'skills.json'), 'utf8')) as { skills: DesignSkill[] }).skills;
+}
+
+/**
+ * A project's own skills: each folder in `.acp/skills/` that has a SKILL.md.
+ * They are the project's files, committed and reviewed by its own people, so
+ * ACP does not pin or digest them.
+ */
+export function loadProjectSkills(root: string): DesignSkill[] {
+  const base = path.join(root, '.acp', 'skills');
+  if (!fs.existsSync(base)) return [];
+  return fs.readdirSync(base, { withFileTypes: true })
+    .filter(entry => entry.isDirectory() && fs.existsSync(path.join(base, entry.name, 'SKILL.md')))
+    .map(entry => {
+      const header = /^---\r?\n([\s\S]*?)\r?\n---/.exec(fs.readFileSync(path.join(base, entry.name, 'SKILL.md'), 'utf8'))?.[1] ?? '';
+      const field = (name: string) => new RegExp(`^${name}:\\s*(.+)$`, 'm').exec(header)?.[1].trim().replace(/^["']|["']$/g, '') ?? '';
+      const keywords = field('keywords').replace(/^\[|\]$/g, '').split(',').map(word => word.trim().toLowerCase()).filter(Boolean);
+      return {
+        name: entry.name,
+        repository: 'this project',
+        commit: '',
+        source: `.acp/skills/${entry.name}`,
+        licence: '-',
+        // With no keywords the project wants it on every design task.
+        role: keywords.length ? 'on-request' as const : 'default' as const,
+        keywords,
+        summary: field('description') || 'a skill kept in this project.',
+        digest: '',
+        dir: path.join(base, entry.name),
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** Every skill a task in this project can get. The project's own come first and win on a shared name. */
+export function availableSkills(root: string, catalog = loadCatalog()): DesignSkill[] {
+  const own = loadProjectSkills(root);
+  return [...own, ...catalog.filter(skill => !own.some(mine => mine.name === skill.name))];
 }
 
 function filesUnder(dir: string, base = dir): string[] {
@@ -117,8 +156,8 @@ export async function attachSkills(worktree: string, skills: DesignSkill[], dir 
     }
     for (const target of targets) {
       fs.rmSync(target, { recursive: true, force: true });
-      fs.cpSync(path.join(dir, skill.name), target, { recursive: true });
-      fs.writeFileSync(path.join(target, MARKER), `${skill.repository}@${skill.commit}\n`);
+      fs.cpSync(skill.dir ?? path.join(dir, skill.name), target, { recursive: true });
+      fs.writeFileSync(path.join(target, MARKER), `${skill.repository}${skill.commit ? `@${skill.commit}` : ''}\n`);
     }
     ignore.push(...SKILL_FOLDERS.map(folder => `/${folder}/${skill.name}/`));
     attached.push(skill.name);
@@ -149,7 +188,7 @@ export function skillsNote(skills: DesignSkill[]): string {
     '# Design skills',
     `This is design work. Before changing anything, read and follow these skills. Each is a folder under ${SKILL_FOLDERS.join(' and ')} with a SKILL.md:`,
     ...skills.map(skill => `- ${skill.name}: ${skill.summary}`),
-    'Only the instructions are present. The helper scripts and programs the skills mention are not included: skip any step that needs one, and do not download them.',
+    'For the skills ACP ships, only the instructions are present. The helper scripts and programs they mention are not included: skip any step that needs one, and do not download them.',
     '',
   ].join('\n');
 }

@@ -37,8 +37,12 @@ export interface AgentDefinition {
   /**
    * Arguments for one non-interactive run in `cwd`.
    * `model` is optional: without it the tool uses its own default.
+   *
+   * The request is never among them. Arguments show in the process list to
+   * every user of the computer, so ACP sends the request on standard input,
+   * which each of these tools reads when no prompt argument is given.
    */
-  runArgs(mode: RunMode, prompt: string, cwd: string, model?: string): string[];
+  runArgs(mode: RunMode, cwd: string, model?: string): string[];
 }
 
 const stripColour = (text: string) => text.replace(/\u001b\[[0-9;]*m/g, '');
@@ -66,11 +70,11 @@ const claude: AgentDefinition = {
       return { signedIn, detail: signedIn ? 'Signed in' : 'Not signed in' };
     }
   },
-  runArgs(mode, prompt, _cwd, model) {
+  runArgs(mode, _cwd, model) {
     // `plan` lets Claude read and reason but not edit. `acceptEdits` allows
     // file edits; shell commands still need an approval that a
     // non-interactive run cannot give, so they are refused.
-    return ['-p', prompt, '--permission-mode', mode === 'edit' ? 'acceptEdits' : 'plan', ...(model ? ['--model', model] : [])];
+    return ['-p', '--permission-mode', mode === 'edit' ? 'acceptEdits' : 'plan', ...(model ? ['--model', model] : [])];
   },
 };
 
@@ -86,10 +90,10 @@ const codex: AgentDefinition = {
     if (/not logged in/i.test(output) || !using) return { signedIn: false, detail: 'Not signed in' };
     return { signedIn: true, detail: `Signed in with ${using[1].trim()}` };
   },
-  runArgs(mode, prompt, cwd, model) {
+  runArgs(mode, cwd, model) {
     // Codex enforces these with its own sandbox: `read-only` cannot write at
     // all, and `workspace-write` can write only inside the folder given by -C.
-    return ['exec', '--sandbox', mode === 'edit' ? 'workspace-write' : 'read-only', '-C', cwd, ...(model ? ['--model', model] : []), prompt];
+    return ['exec', '--sandbox', mode === 'edit' ? 'workspace-write' : 'read-only', '-C', cwd, ...(model ? ['--model', model] : []), '-']; // `-` tells Codex to read the prompt from standard input
   },
 };
 
@@ -109,11 +113,11 @@ const opencode: AgentDefinition = {
     if (providers.length === 0) return { signedIn: false, detail: 'No providers set up' };
     return { signedIn: true, detail: `${providers.length} provider${providers.length === 1 ? '' : 's'}: ${providers.join(', ')}` };
   },
-  runArgs(mode, prompt, _cwd, model) {
+  runArgs(mode, _cwd, model) {
     // OpenCode's built-in `plan` agent reads without editing; `build` edits.
     // `--auto` approves the edits a non-interactive run could not confirm.
     const choice = model ? ['--model', model] : [];
-    return mode === 'edit' ? ['run', '--agent', 'build', '--auto', ...choice, prompt] : ['run', '--agent', 'plan', ...choice, prompt];
+    return mode === 'edit' ? ['run', '--agent', 'build', '--auto', ...choice] : ['run', '--agent', 'plan', ...choice];
   },
 };
 
