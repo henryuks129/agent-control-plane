@@ -531,6 +531,7 @@ Build order from 2026-11-12. Each milestone is usable on its own.
 16. [ ] Mistake guard: run `check:` rules in review; draft rules from failed checks; count how often each rule matches. (Done: matching rules to a task before it starts.)
 17. [ ] Built-in design skills: vendor the licensed skills at pinned commits; attach to design tasks (§9k).
 18. [ ] ACP MCP server for ACP-started and outside agents (§9e, §9n).
+21. [ ] Agent runtime: threads of tasks, live progress, approvals, usage. (Done: find Claude Code, Codex and OpenCode, read their sign-in, run one request in a worktree with memory; see `docs/guides/agents.md`.)
 19. [ ] Web app, terminal and desktop clients on one server (§9m).
 20. [ ] Permission modes, forks, side chats, visual replies, secret request card (§9n).
 

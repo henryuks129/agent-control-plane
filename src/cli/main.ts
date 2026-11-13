@@ -6,10 +6,14 @@ import type { Checkpoint, Task } from '../core/types.js';
 import { checkOciDeployment } from '../deployment/oci.js';
 import { loadConfig } from '../core/config.js';
 import { runMemoryCommand } from '../memory/cli.js';
+import { runAgentsCommand } from '../providers/cli.js';
+import { runCommand } from '../providers/detect.js';
 
 function usage(){console.log(`ACP v0.3.1
 
 Commands:
+  agents:list
+  agents:run <agent> [--edit] [--files a,b] "<request>"
   memory:init
   memory:show [--request "<text>"] <files...>
   memory:sync [--check]
@@ -63,6 +67,8 @@ const command=process.argv[2];const args=process.argv.slice(3);
 // Memory commands only read and write files in this project, so they run before the
 // orchestrator starts and need no database and no model key.
 if(command?.startsWith('memory:')){const result=runMemoryCommand(command,args,{root:process.cwd(),dataDir:loadConfig().dataDir});console.log(result.output);process.exit(result.exitCode)}
+// Agent commands start the user's own tools; they also need no database and no model key.
+if(command?.startsWith('agents:')){const config=loadConfig();const result=await runAgentsCommand(command,args,{root:process.cwd(),worktreeDir:config.worktreeDir,dataDir:config.dataDir},{run:runCommand});console.log(result.output);process.exit(result.exitCode)}
 const acp=new Orchestrator();
 try{
  if(!command||command==='help'){usage();process.exit(0)}
