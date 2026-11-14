@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Runs · Agent Control Plane design candidate</title>
+<meta name="description" content="Every agent run still on this computer, what it holds, cleaning up empty ones and removing one that holds work.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+</head>
+<body>
+<svg width="0" height="0" class="visually-hidden" aria-hidden="true"><defs><symbol id="i-review" viewBox="0 0 16 16"><path d="M3 2.5h10v11H3z"/><path d="m5.5 8 1.8 1.8 3.2-3.6"/></symbol><symbol id="i-agents" viewBox="0 0 16 16"><path d="M4 4h8v8H4z"/><path d="M6.5 6.5h3v3h-3zM6 1.5V4M10 1.5V4M6 12v2.5M10 12v2.5M1.5 6H4M1.5 10H4M12 6h2.5M12 10h2.5"/></symbol><symbol id="i-memory" viewBox="0 0 16 16"><path d="M8 2 2 5l6 3 6-3z"/><path d="m2 8 6 3 6-3M2 11l6 3 6-3"/></symbol><symbol id="i-design" viewBox="0 0 16 16"><path d="M2.5 2.5H7V7H2.5zM9 2.5h4.5V7H9zM2.5 9H7v4.5H2.5z"/><circle cx="11.25" cy="11.25" r="2.25"/></symbol><symbol id="i-settings" viewBox="0 0 16 16"><path d="M2 4.5h7M12 4.5h2M2 11.5h2M7 11.5h7"/><circle cx="10.5" cy="4.5" r="1.5"/><circle cx="5.5" cy="11.5" r="1.5"/></symbol><symbol id="i-git" viewBox="0 0 16 16"><circle cx="4" cy="3.5" r="1.5"/><circle cx="4" cy="12.5" r="1.5"/><circle cx="12" cy="5.5" r="1.5"/><path d="M4 5v6M12 7c0 2.5-3 3-6.5 3.3"/></symbol><symbol id="i-runs" viewBox="0 0 16 16"><path d="M2.5 4.5h4L8 6h5.5v6.5h-11z"/></symbol><symbol id="i-usage" viewBox="0 0 16 16"><path d="M3 13V8M8 13V3M13 13V6"/></symbol><symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></symbol><symbol id="i-down" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></symbol><symbol id="i-check" viewBox="0 0 16 16"><path d="m3.5 8.5 3 3 6-7"/></symbol><symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5 14 13H2z"/><path d="M8 6.5v3M8 11.2v.1"/></symbol><symbol id="i-menu" viewBox="0 0 16 16"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/></symbol><symbol id="i-theme" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5v11M8 5l3.8-1M8 8h5.5M8 11l3.8 1"/></symbol><symbol id="i-flag" viewBox="0 0 16 16"><path d="M3.5 14V2.5M3.5 3h8L10 5.75l1.5 2.75h-8"/></symbol><symbol id="i-trash" viewBox="0 0 16 16"><path d="M3 4.5h10M6 4.5V3h4v1.5M4.5 4.5l.5 9h6l.5-9"/></symbol></defs></svg>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="app">
+<aside class="side" id="side" aria-label="Workspace">
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">A</span><span>ACP <small>Agent Control Plane</small></span></a>
+<a class="project-switch" href="onboarding.html#state-project"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-runs"/></svg><span class="name">agent-control-plane</span><span class="visually-hidden">Change project</span><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-down"/></svg></a>
+<nav aria-label="Threads">
+<p class="side-label">Threads</p>
+<ul class="side-group">
+<li><a class="side-link" href="thread.html#state-empty"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-plus"/></svg><span class="label-text">New thread</span></a></li>
+<li><a class="side-link" href="thread.html"><span class="state-dot is-working" aria-hidden="true"></span><span class="label-text">Run each rule's check in review</span><span class="visually-hidden">, 2 working, 2 ready to review</span></a></li>
+<li><a class="side-link" href="thread.html#state-stopped"><span class="state-dot" aria-hidden="true"></span><span class="label-text">Folder-level AGENTS.md blocks</span><span class="visually-hidden">, stopped</span></a></li>
+<li><a class="side-link" href="thread.html#state-ready"><span class="state-dot is-ready" aria-hidden="true"></span><span class="label-text">Docker image health check on /healthz</span><span class="visually-hidden">, ready to review</span></a></li>
+</ul>
+</nav>
+<div class="side-divider" role="presentation"></div>
+<nav aria-label="Workspace pages">
+<ul class="side-group">
+<li><a class="side-link" href="review.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-review"/></svg><span class="label-text">Review</span><span class="count">3<span class="visually-hidden"> changes waiting</span></span></a></li>
+<li><a class="side-link" href="agents.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-agents"/></svg><span class="label-text">Agents</span></a></li>
+<li><a class="side-link" href="memory.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-memory"/></svg><span class="label-text">Memory</span><span class="count">2<span class="visually-hidden"> proposed rules</span></span></a></li>
+<li><a class="side-link" href="design-library.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-design"/></svg><span class="label-text">Design library</span></a></li>
+<li><a class="side-link" href="settings.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-settings"/></svg><span class="label-text">Settings</span></a></li>
+</ul>
+</nav>
+<nav aria-label="Project">
+<p class="side-label">Project</p>
+<ul class="side-group">
+<li><a class="side-link" href="git.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-git"/></svg><span class="label-text">Git activity</span></a></li>
+<li><a class="side-link" href="runs.html" aria-current="page"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-runs"/></svg><span class="label-text">Runs</span></a></li>
+<li><a class="side-link" href="usage.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-usage"/></svg><span class="label-text">Usage</span></a></li>
+</ul>
+</nav>
+<div class="side-foot">
+<a class="side-link" href="report.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-flag"/></svg><span class="label-text">Report a problem</span></a>
+<button class="side-link" type="button" data-theme-toggle><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-theme"/></svg><span class="label-text">Switch theme</span></button>
+</div>
+</aside>
+<button class="scrim" type="button" data-nav-close aria-label="Close menu" tabindex="-1"></button>
+<div class="main">
+<div class="topbar"><a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">A</span><span>ACP</span></a><button class="btn icon-btn" type="button" data-nav-toggle aria-expanded="false" aria-controls="side" aria-label="Menu"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-menu"/></svg></button></div>
+<div class="proto"><span class="proto-label" id="proto-label">Prototype state</span><div class="proto-tabs" role="tablist" aria-labelledby="proto-label" data-state-group="page"><button type="button" role="tab" id="tab-list" data-state="list" aria-controls="state-list" aria-selected="true">Runs</button><button type="button" role="tab" id="tab-cleaned" data-state="cleaned" aria-controls="state-cleaned" aria-selected="false">After clean-up</button><button type="button" role="tab" id="tab-empty" data-state="empty" aria-controls="state-empty" aria-selected="false">Empty</button><button type="button" role="tab" id="tab-loading" data-state="loading" aria-controls="state-loading" aria-selected="false">Loading</button><button type="button" role="tab" id="tab-error" data-state="error" aria-controls="state-error" aria-selected="false">Could not list</button></div></div>
+<main id="main" class="page">
+<header class="page-head">
+<div><h1>Runs</h1><p class="lede">Every run keeps its own Git worktree and branch so you can review the work. A run that changed nothing is safe to remove. A run that holds work is never removed unless you name it and confirm.</p></div>
+<button type="button" class="btn" data-group="page" data-when="list" data-goto-tab="tab-cleaned"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-trash"/></svg>Clean up 3 empty runs</button>
+</header>
+
+<section id="state-list" role="tabpanel" aria-labelledby="tab-list">
+<div class="table-wrap">
+<table class="table">
+<caption class="visually-hidden">Agent runs on this computer</caption>
+<thead><tr><th scope="col">Run</th><th scope="col">Holds</th><th scope="col">From</th><th scope="col">Folder</th><th scope="col"><span class="visually-hidden">Remove</span></th></tr></thead>
+<tbody>
+<tr><th scope="row"><code>run-mwf3d693</code><p class="row-sub"><span class="pill is-working"><span class="dot"></span>Working</span></p></th><td>1 commit and 1 changed file, not committed</td><td>Codex<p class="row-sub"><a href="thread.html#state-opened">Run check: commands in the review engine</a></p></td><td><code>worktrees/run-mwf3d693</code></td><td class="actions"><button type="button" class="btn" disabled aria-describedby="r-busy">Remove</button><p class="row-sub" id="r-busy">In use by a working task</p></td></tr>
+<tr><th scope="row"><code>run-q2k8v1hc</code><p class="row-sub"><span class="pill is-ready"><span class="dot"></span>To review</span></p></th><td>3 changed files, not committed</td><td>Claude Code<p class="row-sub"><a href="review.html#state-failed">Show check results in the patch report</a></p></td><td><code>worktrees/run-q2k8v1hc</code></td><td class="actions"><button type="button" class="btn btn-danger" data-open-dialog="remove-run">Remove</button></td></tr>
+<tr><th scope="row"><code>run-t7n4x0pa</code><p class="row-sub"><span class="pill is-ready"><span class="dot"></span>To review</span></p></th><td>1 commit</td><td>OpenCode · llama3.1<p class="row-sub"><a href="review.html#state-patch">Tests for rules with and without a check</a></p></td><td><code>worktrees/run-t7n4x0pa</code></td><td class="actions"><button type="button" class="btn btn-danger" data-open-dialog="remove-run">Remove</button></td></tr>
+<tr><th scope="row"><code>run-b5j9e3ru</code><p class="row-sub"><span class="pill is-ready"><span class="dot"></span>To review</span></p></th><td>1 commit</td><td>OpenCode · Nemotron<p class="row-sub"><a href="review.html#state-queue">Describe check: in the memory guide</a></p></td><td><code>worktrees/run-b5j9e3ru</code></td><td class="actions"><button type="button" class="btn btn-danger" data-open-dialog="remove-run">Remove</button></td></tr>
+<tr><th scope="row"><code>run-k4s2m9fe</code><p class="row-sub"><span class="pill is-ready"><span class="dot"></span>To review</span></p></th><td>2 commits</td><td>Claude Code<p class="row-sub"><a href="review.html#state-design">Add a Report a problem page to the website</a></p></td><td><code>worktrees/run-k4s2m9fe</code></td><td class="actions"><button type="button" class="btn btn-danger" data-open-dialog="remove-run">Remove</button></td></tr>
+<tr><th scope="row"><code>run-a8p1n5vd</code><p class="row-sub"><span class="pill"><span class="dot"></span>Safe to remove</span></p></th><td class="muted">No changes</td><td>Claude Code<p class="row-sub"><a href="thread.html#state-question">A question, answered</a></p></td><td><code>worktrees/run-a8p1n5vd</code></td><td class="actions"><button type="button" class="btn">Remove</button></td></tr>
+<tr><th scope="row"><code>run-c0y7g2lt</code><p class="row-sub"><span class="pill"><span class="dot"></span>Safe to remove</span></p></th><td class="muted">No changes</td><td>Codex<p class="row-sub">Stopped after 15 minutes, before any edit</p></td><td><code>worktrees/run-c0y7g2lt</code></td><td class="actions"><button type="button" class="btn">Remove</button></td></tr>
+<tr><th scope="row"><code>run-e6u3j8wb</code><p class="row-sub"><span class="pill"><span class="dot"></span>Safe to remove</span></p></th><td class="muted">No changes</td><td>OpenCode · llama3.1</td><td class="muted">Folder already deleted; only the branch is left</td><td class="actions"><button type="button" class="btn">Remove</button></td></tr>
+</tbody>
+</table>
+</div>
+<p class="muted small section-tight">8 runs · 5 hold work · 3 hold nothing. Only branches that start with <code>acp/run-</code> are listed; your own branches and worktrees are never touched. The same list: <code>acp /runs list</code>. Clean up with <code>acp /runs clean</code>; remove one that holds work with <code>acp /runs remove &lt;run&gt; --force</code>.</p>
+</section>
+
+<section id="state-cleaned" role="tabpanel" aria-labelledby="tab-cleaned" hidden>
+<div class="notice is-ok" role="status"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg><div><p class="notice-title">Removed 3 runs with no changes</p><p><code>run-a8p1n5vd</code>, <code>run-c0y7g2lt</code>, <code>run-e6u3j8wb</code>. Kept 5 runs that hold work.</p></div></div>
+<div class="table-wrap section-tight">
+<table class="table">
+<thead><tr><th scope="col">Run</th><th scope="col">Holds</th><th scope="col">From</th><th scope="col"><span class="visually-hidden">Remove</span></th></tr></thead>
+<tbody>
+<tr><th scope="row"><code>run-mwf3d693</code></th><td>1 commit and 1 changed file, not committed</td><td>Codex</td><td class="actions"><button type="button" class="btn" disabled>Remove</button></td></tr>
+<tr><th scope="row"><code>run-q2k8v1hc</code></th><td>3 changed files, not committed</td><td>Claude Code</td><td class="actions"><button type="button" class="btn btn-danger" data-open-dialog="remove-run">Remove</button></td></tr>
+<tr><th scope="row"><code>run-t7n4x0pa</code></th><td>1 commit</td><td>OpenCode · llama3.1</td><td class="actions"><button type="button" class="btn btn-danger" data-open-dialog="remove-run">Remove</button></td></tr>
+<tr><th scope="row"><code>run-b5j9e3ru</code></th><td>1 commit</td><td>OpenCode · Nemotron</td><td class="actions"><button type="button" class="btn btn-danger" data-open-dialog="remove-run">Remove</button></td></tr>
+<tr><th scope="row"><code>run-k4s2m9fe</code></th><td>2 commits</td><td>Claude Code</td><td class="actions"><button type="button" class="btn btn-danger" data-open-dialog="remove-run">Remove</button></td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section id="state-empty" role="tabpanel" aria-labelledby="tab-empty" hidden>
+<div class="empty">
+<h2>No runs</h2>
+<p>When an agent works on a request, its worktree and branch are listed here with what they hold: no changes, changed files, or commits. Nothing from a run reaches your project until you approve it in Review.</p>
+<a class="btn btn-primary" href="thread.html#state-empty">Start a thread</a>
+</div>
+</section>
+
+<section id="state-loading" role="tabpanel" aria-labelledby="tab-loading" hidden>
+<div aria-busy="true">
+<p class="visually-hidden" role="status">Listing runs and counting what each holds</p>
+<div class="panel">
+<div class="sk-row"><div class="sk"></div><div class="skeleton"><div class="sk sk-w70"></div></div><div class="sk sk-btn"></div></div>
+<div class="sk-row"><div class="sk"></div><div class="skeleton"><div class="sk sk-w50"></div></div><div class="sk sk-btn"></div></div>
+<div class="sk-row"><div class="sk"></div><div class="skeleton"><div class="sk sk-w90"></div></div><div class="sk sk-btn"></div></div>
+<div class="sk-row"><div class="sk"></div><div class="skeleton"><div class="sk sk-w30"></div></div><div class="sk sk-btn"></div></div>
+</div>
+</div>
+</section>
+
+<section id="state-error" role="tabpanel" aria-labelledby="tab-error" hidden>
+<div class="notice is-err" role="alert"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-alert"/></svg><div><p class="notice-title">Could not list runs</p><p>Git did not answer in <code>/Users/you/code/agent-control-plane</code>: the folder is not a Git repository any more, or Git is not installed. Nothing was removed. Check the project folder in Settings, then try again.</p></div><div class="row-actions"><button type="button" class="btn" data-goto-tab="tab-list">Try again</button><a class="btn btn-quiet" href="settings.html#general">Settings</a></div></div>
+</section>
+
+<dialog class="dialog" id="remove-run" aria-labelledby="remove-run-title">
+<div class="dialog-body">
+<h2 id="remove-run-title">Remove <code>run-q2k8v1hc</code> and its work?</h2>
+<p>This run holds work that exists nowhere else. Removing it deletes:</p>
+<ul class="loss">
+<li>3 changed files, not committed: <code>src/reviews/report.ts</code>, <code>src/reviews/engine.ts</code>, <code>tests/core.test.ts</code></li>
+<li>The worktree folder <code>worktrees/run-q2k8v1hc</code> and the branch <code>acp/run-q2k8v1hc</code></li>
+<li>Its change in Review, <a href="review.html#state-failed">Show check results in the patch report</a></li>
+</ul>
+<p>This cannot be undone. The task's checkpoints are kept.</p>
+</div>
+<div class="dialog-foot"><button type="button" class="btn" data-close-dialog autofocus>Keep the run</button><button type="button" class="btn btn-danger-solid" data-close-dialog>Remove run and its work</button></div>
+</dialog>
+</main>
+<footer class="candidate-note"><span>Design candidate. This app is not built yet, and every name, number and message on this page is sample content.</span><a href="index.html">All pages and states</a></footer>
+</div>
+</div>
+</body>
+</html>

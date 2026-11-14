@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Report a problem · Agent Control Plane design candidate</title>
+<meta name="description" content="Report a problem without an account on the project host: say how bad it is, preview any logs with secrets removed, and send.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+</head>
+<body>
+<svg width="0" height="0" class="visually-hidden" aria-hidden="true"><defs><symbol id="i-review" viewBox="0 0 16 16"><path d="M3 2.5h10v11H3z"/><path d="m5.5 8 1.8 1.8 3.2-3.6"/></symbol><symbol id="i-agents" viewBox="0 0 16 16"><path d="M4 4h8v8H4z"/><path d="M6.5 6.5h3v3h-3zM6 1.5V4M10 1.5V4M6 12v2.5M10 12v2.5M1.5 6H4M1.5 10H4M12 6h2.5M12 10h2.5"/></symbol><symbol id="i-memory" viewBox="0 0 16 16"><path d="M8 2 2 5l6 3 6-3z"/><path d="m2 8 6 3 6-3M2 11l6 3 6-3"/></symbol><symbol id="i-design" viewBox="0 0 16 16"><path d="M2.5 2.5H7V7H2.5zM9 2.5h4.5V7H9zM2.5 9H7v4.5H2.5z"/><circle cx="11.25" cy="11.25" r="2.25"/></symbol><symbol id="i-settings" viewBox="0 0 16 16"><path d="M2 4.5h7M12 4.5h2M2 11.5h2M7 11.5h7"/><circle cx="10.5" cy="4.5" r="1.5"/><circle cx="5.5" cy="11.5" r="1.5"/></symbol><symbol id="i-git" viewBox="0 0 16 16"><circle cx="4" cy="3.5" r="1.5"/><circle cx="4" cy="12.5" r="1.5"/><circle cx="12" cy="5.5" r="1.5"/><path d="M4 5v6M12 7c0 2.5-3 3-6.5 3.3"/></symbol><symbol id="i-runs" viewBox="0 0 16 16"><path d="M2.5 4.5h4L8 6h5.5v6.5h-11z"/></symbol><symbol id="i-usage" viewBox="0 0 16 16"><path d="M3 13V8M8 13V3M13 13V6"/></symbol><symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></symbol><symbol id="i-down" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></symbol><symbol id="i-check" viewBox="0 0 16 16"><path d="m3.5 8.5 3 3 6-7"/></symbol><symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5 14 13H2z"/><path d="M8 6.5v3M8 11.2v.1"/></symbol><symbol id="i-lock" viewBox="0 0 16 16"><path d="M4 7.5h8v6H4z"/><path d="M5.5 7.5V5a2.5 2.5 0 0 1 5 0v2.5"/></symbol><symbol id="i-menu" viewBox="0 0 16 16"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/></symbol><symbol id="i-theme" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5v11M8 5l3.8-1M8 8h5.5M8 11l3.8 1"/></symbol><symbol id="i-flag" viewBox="0 0 16 16"><path d="M3.5 14V2.5M3.5 3h8L10 5.75l1.5 2.75h-8"/></symbol></defs></svg>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="app">
+<aside class="side" id="side" aria-label="Workspace">
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">A</span><span>ACP <small>Agent Control Plane</small></span></a>
+<a class="project-switch" href="onboarding.html#state-project"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-runs"/></svg><span class="name">agent-control-plane</span><span class="visually-hidden">Change project</span><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-down"/></svg></a>
+<nav aria-label="Threads">
+<p class="side-label">Threads</p>
+<ul class="side-group">
+<li><a class="side-link" href="thread.html#state-empty"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-plus"/></svg><span class="label-text">New thread</span></a></li>
+<li><a class="side-link" href="thread.html"><span class="state-dot is-working" aria-hidden="true"></span><span class="label-text">Run each rule's check in review</span><span class="visually-hidden">, 2 working, 2 ready to review</span></a></li>
+<li><a class="side-link" href="thread.html#state-stopped"><span class="state-dot" aria-hidden="true"></span><span class="label-text">Folder-level AGENTS.md blocks</span><span class="visually-hidden">, stopped</span></a></li>
+<li><a class="side-link" href="thread.html#state-ready"><span class="state-dot is-ready" aria-hidden="true"></span><span class="label-text">Docker image health check on /healthz</span><span class="visually-hidden">, ready to review</span></a></li>
+</ul>
+</nav>
+<div class="side-divider" role="presentation"></div>
+<nav aria-label="Workspace pages">
+<ul class="side-group">
+<li><a class="side-link" href="review.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-review"/></svg><span class="label-text">Review</span><span class="count">3<span class="visually-hidden"> changes waiting</span></span></a></li>
+<li><a class="side-link" href="agents.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-agents"/></svg><span class="label-text">Agents</span></a></li>
+<li><a class="side-link" href="memory.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-memory"/></svg><span class="label-text">Memory</span><span class="count">2<span class="visually-hidden"> proposed rules</span></span></a></li>
+<li><a class="side-link" href="design-library.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-design"/></svg><span class="label-text">Design library</span></a></li>
+<li><a class="side-link" href="settings.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-settings"/></svg><span class="label-text">Settings</span></a></li>
+</ul>
+</nav>
+<nav aria-label="Project">
+<p class="side-label">Project</p>
+<ul class="side-group">
+<li><a class="side-link" href="git.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-git"/></svg><span class="label-text">Git activity</span></a></li>
+<li><a class="side-link" href="runs.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-runs"/></svg><span class="label-text">Runs</span></a></li>
+<li><a class="side-link" href="usage.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-usage"/></svg><span class="label-text">Usage</span></a></li>
+</ul>
+</nav>
+<div class="side-foot">
+<a class="side-link" href="report.html" aria-current="page"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-flag"/></svg><span class="label-text">Report a problem</span></a>
+<button class="side-link" type="button" data-theme-toggle><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-theme"/></svg><span class="label-text">Switch theme</span></button>
+</div>
+</aside>
+<button class="scrim" type="button" data-nav-close aria-label="Close menu" tabindex="-1"></button>
+<div class="main">
+<div class="topbar"><a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">A</span><span>ACP</span></a><button class="btn icon-btn" type="button" data-nav-toggle aria-expanded="false" aria-controls="side" aria-label="Menu"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-menu"/></svg></button></div>
+<div class="proto"><span class="proto-label" id="proto-label">Prototype state</span><div class="proto-tabs" role="tablist" aria-labelledby="proto-label" data-state-group="page"><button type="button" role="tab" id="tab-form" data-state="form" aria-controls="state-form" aria-selected="true">Form</button><button type="button" role="tab" id="tab-invalid" data-state="invalid" aria-controls="state-invalid" aria-selected="false">Missing details</button><button type="button" role="tab" id="tab-preview" data-state="preview" aria-controls="state-preview" aria-selected="false">Log preview</button><button type="button" role="tab" id="tab-sent" data-state="sent" aria-controls="state-sent" aria-selected="false">Sent</button><button type="button" role="tab" id="tab-failed" data-state="failed" aria-controls="state-failed" aria-selected="false">Could not send</button><button type="button" role="tab" id="tab-sending" data-state="sending" aria-controls="state-sending" aria-selected="false">Sending</button></div></div>
+<main id="main" class="page page-narrow">
+<header class="page-head">
+<div><h1>Report a problem</h1><p class="lede">Tell the maintainers what went wrong. You do not need an account anywhere. Your report becomes a public issue on the project, so write nothing private in it.</p></div>
+</header>
+
+<section id="state-form" role="tabpanel" aria-labelledby="tab-form">
+<form class="stack">
+<div class="field"><label for="r-what">What happened?</label><textarea class="textarea" id="r-what" rows="4" aria-describedby="r-what-hint">After I approved a change in Review, the Review page went blank. The change was applied; I can see it in Git. Reloading fixed it.</textarea><p class="hint" id="r-what-hint">What you did, what you expected, and what you saw instead.</p></div>
+<div class="field"><span class="label" id="r-bad">How bad is it?</span>
+<div class="seg" data-single role="group" aria-labelledby="r-bad"><button type="button" aria-pressed="false">I can't work</button><button type="button" aria-pressed="true">A workaround exists</button><button type="button" aria-pressed="false">It looks wrong</button></div>
+<p class="hint">This suggests a priority. A maintainer sets the final one.</p></div>
+<div class="field"><label for="r-area">Where?</label><select class="select" id="r-area"><option>The app</option><option>The terminal command</option><option>Agents and orchestration</option><option>Memory</option><option>Connections</option><option>The website</option><option>Not sure</option></select></div>
+<div class="panel">
+<div class="setting"><div><p class="setting-label"><label for="r-logs">Attach logs from the last 10 minutes</label></p><p class="setting-desc">Off unless you turn it on. You see exactly what would be sent first, with secrets already removed.</p></div><div class="setting-control"><input type="checkbox" class="switch" id="r-logs" checked><button type="button" class="btn" data-goto-tab="tab-preview">Preview logs</button></div></div>
+<div class="setting"><div><p class="setting-label">Sent with every report</p><p class="setting-desc">ACP version <span class="mono">0.3.1</span>, your operating system and its version, and which agents are connected (names and versions only).</p></div><span class="tag">Always shown here</span></div>
+<div class="setting"><div><p class="setting-label">Never sent</p><p class="setting-desc">Your code, diffs, memory, chat, credentials, name or email.</p></div><span class="tag"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-lock"/></svg>Private</span></div>
+</div>
+<div class="field"><label for="r-contact">A way to reach you (optional)</label><input class="input" id="r-contact" type="text" autocomplete="off" aria-describedby="r-contact-hint"><p class="hint" id="r-contact-hint">Only if you want a reply. It is visible in the public issue. Leave it empty to stay anonymous.</p></div>
+<div class="step-foot"><span class="muted small">A spam check runs when you send. Have an account on the project host? You can open an issue there instead.</span><button type="submit" class="btn btn-primary btn-lg" data-goto-tab="tab-sending">Send report</button></div>
+</form>
+</section>
+
+<section id="state-invalid" role="tabpanel" aria-labelledby="tab-invalid" hidden>
+<div class="notice is-err" role="alert"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-alert"/></svg><div><p class="notice-title">The report was not sent</p><p>One thing is missing. Nothing has left this computer.</p></div></div>
+<form class="stack section-tight">
+<div class="field"><label for="v-what">What happened?</label><textarea class="textarea" id="v-what" rows="4" aria-invalid="true" aria-describedby="v-what-err"></textarea><p class="field-error" id="v-what-err"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-alert"/></svg><span>Describe the problem in a sentence or two, so a maintainer can find it.</span></p></div>
+<div class="field"><span class="label" id="v-bad">How bad is it?</span>
+<div class="seg" data-single role="group" aria-labelledby="v-bad"><button type="button" aria-pressed="false">I can't work</button><button type="button" aria-pressed="false">A workaround exists</button><button type="button" aria-pressed="true">It looks wrong</button></div></div>
+<div class="step-foot"><button type="button" class="btn btn-quiet" data-goto-tab="tab-form">Back to the full form</button><button type="submit" class="btn btn-primary btn-lg" data-goto-tab="tab-sending">Send report</button></div>
+</form>
+</section>
+
+<section id="state-preview" role="tabpanel" aria-labelledby="tab-preview" hidden>
+<div class="section-head"><h2>Exactly what would be attached</h2><p>214 lines · 18 KB · 3 values removed</p></div>
+<div class="block" tabindex="0" role="region" aria-label="Log preview">[review] apply change run-t7n4x0pa: start
+[review] check "npm test": passed, 148 of 148, 41.2 s
+[review] check "secret scan": passed
+[git]    merge acp/run-t7n4x0pa into feat/rule-checks: ok
+[agents] env NVIDIA_API_KEY=<mark>[removed: looks like a key]</mark>
+[ui]     GET /api/review/queue 200
+[ui]     render review: TypeError: cannot read properties of undefined (reading 'report')
+[ui]         at renderPatch (/Users/<mark>[removed: your user name]</mark>/code/agent-control-plane/dist/src/cli/ui.js:412:27)
+[ui]         at renderQueue (/Users/<mark>[removed: your user name]</mark>/code/agent-control-plane/dist/src/cli/ui.js:377:12)
+[ui]     GET /api/review/queue 200
+[review] queue: 2 changes waiting</div>
+<p class="muted small section-tight">Removed before you saw it: anything shaped like a key, password or token, and your user name in paths. File contents and diffs are never written to the log in the first place. Read it once more yourself; a tool can miss something.</p>
+<div class="step-foot"><button type="button" class="btn btn-danger" data-goto-tab="tab-form">Do not attach logs</button><button type="button" class="btn btn-primary btn-lg" data-goto-tab="tab-form">Attach these logs</button></div>
+</section>
+
+<section id="state-sending" role="tabpanel" aria-labelledby="tab-sending" hidden>
+<div aria-busy="true" class="stack">
+<p class="muted" role="status">Sending your report. This usually takes a few seconds.</p>
+<div class="skeleton"><div class="sk sk-w90"></div><div class="sk sk-w70"></div><div class="sk sk-w50"></div></div>
+<div><button type="button" class="btn btn-primary btn-lg is-busy" disabled><span class="spinner" aria-hidden="true"></span>Sending</button></div>
+</div>
+</section>
+
+<section id="state-sent" role="tabpanel" aria-labelledby="tab-sent" hidden>
+<div class="notice is-ok" role="status"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg><div><p class="notice-title">Report sent. Thank you.</p><p>It is now issue 15 on the project, labelled <span class="tag">type:bug</span> <span class="tag">source:app</span> <span class="tag tag-warn">needs-triage</span>. A maintainer will set its priority.</p></div></div>
+<dl class="panel panel-pad kv section-tight">
+<dt>Sent</dt><dd>Your description, "A workaround exists", the area "The app", ACP <span class="mono">0.3.1</span>, operating system, agent names and versions, 214 log lines</dd>
+<dt>Not sent</dt><dd>Code, diffs, memory, chat, credentials, your name or email</dd>
+<dt>Follow it</dt><dd>Issue 15 appears in <a href="git.html#panel-issues">Git activity</a> when the host is reachable</dd>
+</dl>
+<div class="step-foot"><button type="button" class="btn btn-quiet" data-goto-tab="tab-form">Report something else</button><a class="btn btn-primary" href="thread.html">Back to the thread</a></div>
+</section>
+
+<section id="state-failed" role="tabpanel" aria-labelledby="tab-failed" hidden>
+<div class="notice is-err" role="alert"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-alert"/></svg><div><p class="notice-title">The report could not be sent</p><p>The report service did not answer, most likely because this computer is offline. Your report is kept here as a draft; nothing was sent and nothing is lost.</p></div><div class="row-actions"><button type="button" class="btn" data-goto-tab="tab-sending">Try again</button></div></div>
+<div class="panel section-tight">
+<div class="panel-head"><div><h2>Your draft</h2><p>Saved on this computer only</p></div><button type="button" class="btn" data-goto-tab="tab-form">Edit</button></div>
+<div class="panel-pad stack-sm">
+<p>After I approved a change in Review, the Review page went blank. The change was applied; I can see it in Git. Reloading fixed it.</p>
+<p class="muted small">A workaround exists · The app · logs attached, 214 lines</p>
+</div>
+<p class="panel-foot">Or copy the text and open an issue on the project host yourself, when you are back online. <a href="error.html#state-offline">What works offline</a></p>
+</div>
+</section>
+</main>
+<footer class="candidate-note"><span>Design candidate. This app is not built yet, and every name, number and message on this page is sample content.</span><a href="index.html">All pages and states</a></footer>
+</div>
+</div>
+</body>
+</html>

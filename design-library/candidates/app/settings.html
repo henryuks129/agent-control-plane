@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Settings · Agent Control Plane design candidate</title>
+<meta name="description" content="Every setting on one page, in eleven sections with a section nav: general, agents and models, permissions, memory, design skills, connections, notifications, shortcuts, privacy, advanced and about.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+</head>
+<body>
+<svg width="0" height="0" class="visually-hidden" aria-hidden="true"><defs><symbol id="i-review" viewBox="0 0 16 16"><path d="M3 2.5h10v11H3z"/><path d="m5.5 8 1.8 1.8 3.2-3.6"/></symbol><symbol id="i-agents" viewBox="0 0 16 16"><path d="M4 4h8v8H4z"/><path d="M6.5 6.5h3v3h-3zM6 1.5V4M10 1.5V4M6 12v2.5M10 12v2.5M1.5 6H4M1.5 10H4M12 6h2.5M12 10h2.5"/></symbol><symbol id="i-memory" viewBox="0 0 16 16"><path d="M8 2 2 5l6 3 6-3z"/><path d="m2 8 6 3 6-3M2 11l6 3 6-3"/></symbol><symbol id="i-design" viewBox="0 0 16 16"><path d="M2.5 2.5H7V7H2.5zM9 2.5h4.5V7H9zM2.5 9H7v4.5H2.5z"/><circle cx="11.25" cy="11.25" r="2.25"/></symbol><symbol id="i-settings" viewBox="0 0 16 16"><path d="M2 4.5h7M12 4.5h2M2 11.5h2M7 11.5h7"/><circle cx="10.5" cy="4.5" r="1.5"/><circle cx="5.5" cy="11.5" r="1.5"/></symbol><symbol id="i-git" viewBox="0 0 16 16"><circle cx="4" cy="3.5" r="1.5"/><circle cx="4" cy="12.5" r="1.5"/><circle cx="12" cy="5.5" r="1.5"/><path d="M4 5v6M12 7c0 2.5-3 3-6.5 3.3"/></symbol><symbol id="i-runs" viewBox="0 0 16 16"><path d="M2.5 4.5h4L8 6h5.5v6.5h-11z"/></symbol><symbol id="i-usage" viewBox="0 0 16 16"><path d="M3 13V8M8 13V3M13 13V6"/></symbol><symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></symbol><symbol id="i-down" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></symbol><symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5 14 13H2z"/><path d="M8 6.5v3M8 11.2v.1"/></symbol><symbol id="i-star" viewBox="0 0 16 16"><path d="m8 2 1.8 3.8 4.2.5-3.1 2.9.8 4.1L8 11.3l-3.7 2 .8-4.1L2 6.3l4.2-.5z"/></symbol><symbol id="i-menu" viewBox="0 0 16 16"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/></symbol><symbol id="i-theme" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5v11M8 5l3.8-1M8 8h5.5M8 11l3.8 1"/></symbol><symbol id="i-flag" viewBox="0 0 16 16"><path d="M3.5 14V2.5M3.5 3h8L10 5.75l1.5 2.75h-8"/></symbol></defs></svg>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="app">
+<aside class="side" id="side" aria-label="Workspace">
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">A</span><span>ACP <small>Agent Control Plane</small></span></a>
+<a class="project-switch" href="onboarding.html#state-project"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-runs"/></svg><span class="name">agent-control-plane</span><span class="visually-hidden">Change project</span><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-down"/></svg></a>
+<nav aria-label="Threads">
+<p class="side-label">Threads</p>
+<ul class="side-group">
+<li><a class="side-link" href="thread.html#state-empty"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-plus"/></svg><span class="label-text">New thread</span></a></li>
+<li><a class="side-link" href="thread.html"><span class="state-dot is-working" aria-hidden="true"></span><span class="label-text">Run each rule's check in review</span><span class="visually-hidden">, 2 working, 2 ready to review</span></a></li>
+<li><a class="side-link" href="thread.html#state-stopped"><span class="state-dot" aria-hidden="true"></span><span class="label-text">Folder-level AGENTS.md blocks</span><span class="visually-hidden">, stopped</span></a></li>
+<li><a class="side-link" href="thread.html#state-ready"><span class="state-dot is-ready" aria-hidden="true"></span><span class="label-text">Docker image health check on /healthz</span><span class="visually-hidden">, ready to review</span></a></li>
+</ul>
+</nav>
+<div class="side-divider" role="presentation"></div>
+<nav aria-label="Workspace pages">
+<ul class="side-group">
+<li><a class="side-link" href="review.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-review"/></svg><span class="label-text">Review</span><span class="count">3<span class="visually-hidden"> changes waiting</span></span></a></li>
+<li><a class="side-link" href="agents.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-agents"/></svg><span class="label-text">Agents</span></a></li>
+<li><a class="side-link" href="memory.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-memory"/></svg><span class="label-text">Memory</span><span class="count">2<span class="visually-hidden"> proposed rules</span></span></a></li>
+<li><a class="side-link" href="design-library.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-design"/></svg><span class="label-text">Design library</span></a></li>
+<li><a class="side-link" href="settings.html" aria-current="page"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-settings"/></svg><span class="label-text">Settings</span></a></li>
+</ul>
+</nav>
+<nav aria-label="Project">
+<p class="side-label">Project</p>
+<ul class="side-group">
+<li><a class="side-link" href="git.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-git"/></svg><span class="label-text">Git activity</span></a></li>
+<li><a class="side-link" href="runs.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-runs"/></svg><span class="label-text">Runs</span></a></li>
+<li><a class="side-link" href="usage.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-usage"/></svg><span class="label-text">Usage</span></a></li>
+</ul>
+</nav>
+<div class="side-foot">
+<a class="side-link" href="report.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-flag"/></svg><span class="label-text">Report a problem</span></a>
+<button class="side-link" type="button" data-theme-toggle><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-theme"/></svg><span class="label-text">Switch theme</span></button>
+</div>
+</aside>
+<button class="scrim" type="button" data-nav-close aria-label="Close menu" tabindex="-1"></button>
+<div class="main">
+<div class="topbar"><a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">A</span><span>ACP</span></a><button class="btn icon-btn" type="button" data-nav-toggle aria-expanded="false" aria-controls="side" aria-label="Menu"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-menu"/></svg></button></div>
+<div class="proto"><span class="proto-label" id="proto-label">Prototype state</span><div class="proto-tabs" role="tablist" aria-labelledby="proto-label" data-state-group="page"><button type="button" role="tab" id="tab-ready" data-state="ready" aria-controls="state-ready" aria-selected="true">Settings</button><button type="button" role="tab" id="tab-invalid" data-state="invalid" aria-controls="state-invalid" aria-selected="false">A value refused</button><button type="button" role="tab" id="tab-loading" data-state="loading" aria-controls="state-loading" aria-selected="false">Loading</button><button type="button" role="tab" id="tab-error" data-state="error" aria-controls="state-error" aria-selected="false">Could not read</button></div></div>
+<main id="main" class="page">
+<header class="page-head">
+<div><h1>Settings</h1><p class="lede">Settings are saved as you change them, in a plain file in ACP's data folder. No setting holds a password, key or token.</p></div>
+</header>
+
+<section id="state-ready" role="tabpanel" aria-labelledby="tab-ready">
+<div class="settings">
+<nav class="section-nav" aria-label="Settings sections">
+<a href="#general">General</a>
+<a href="#agents-models">Agents &amp; models</a>
+<a href="#permissions">Permissions</a>
+<a href="#memory">Memory</a>
+<a href="#design-skills">Design skills</a>
+<a href="#connections">Connections</a>
+<a href="#notifications">Notifications</a>
+<a href="#shortcuts">Keyboard shortcuts</a>
+<a href="#privacy">Privacy &amp; data</a>
+<a href="#advanced">Advanced</a>
+<a href="#about">About</a>
+</nav>
+
+<div>
+<section class="settings-section" id="general" aria-labelledby="h-general">
+<h2 id="h-general">General</h2>
+<p class="intro">The project ACP works in, where ACP keeps its own files, and how it looks.</p>
+<div class="panel">
+<div class="setting"><div><p class="setting-label">Project</p><p class="setting-desc"><code>/Users/you/code/agent-control-plane</code> · branch <code>dev</code>. ACP works only inside this folder.</p></div><div class="setting-control"><a class="btn" href="onboarding.html#state-project">Change project</a></div></div>
+<div class="setting"><div><p class="setting-label"><label for="s-data">Data folder</label></p><p class="setting-desc">Your own preferences, settings and encrypted task credentials. Outside every project, never in Git.</p></div><div class="setting-control"><input class="input mono" id="s-data" value="~/.acp" spellcheck="false" autocomplete="off"></div></div>
+<div class="setting"><div><p class="setting-label" id="s-theme">Theme</p><p class="setting-desc">System follows your computer's light or dark setting.</p></div><div class="setting-control"><div class="seg" role="group" aria-labelledby="s-theme"><button type="button" data-theme-set="system" aria-pressed="true">System</button><button type="button" data-theme-set="dark" aria-pressed="false">Dark</button><button type="button" data-theme-set="light" aria-pressed="false">Light</button></div></div></div>
+<div class="setting"><div><p class="setting-label"><label for="s-density">Reduce motion</label></p><p class="setting-desc">Turns off the pulse on working tasks and every transition. Already off when your computer asks for reduced motion.</p></div><div class="setting-control"><input type="checkbox" class="switch" id="s-density"></div></div>
+</div>
+</section>
+
+<section class="settings-section" id="agents-models" aria-labelledby="h-agents">
+<h2 id="h-agents">Agents &amp; models</h2>
+<p class="intro">Which agent does what. Sign-in is not here: you sign in to each agent in its maker's own tool. <a href="agents.html">Agents</a> shows status and usage.</p>
+<div class="panel">
+<div class="setting"><div><p class="setting-label">Orchestrators</p><p class="setting-desc">Starred agents plan a request and hand out tasks. One or two; with none, you talk to one agent directly.</p></div><div class="setting-control"><span class="tag"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-star"/></svg>Claude Code</span><span class="tag"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-star"/></svg>Codex</span><a class="btn" href="agents.html">Change stars</a></div></div>
+<div class="setting"><div><p class="setting-label"><label for="s-near">Stop giving an agent new tasks at</label></p><p class="setting-desc">Share of its 5-hour or weekly window. Above this, it finishes its working task and new tasks go elsewhere.</p></div><div class="setting-control"><select class="select select-sm" id="s-near"><option>80%</option><option selected>90%</option><option>95%</option><option>Only at the limit</option></select></div></div>
+<div class="setting"><div><p class="setting-label"><label for="s-free">Use free and local models</label></p><p class="setting-desc">Through OpenCode. Their limits are estimates. Local models keep everything on this computer.</p></div><div class="setting-control"><input type="checkbox" class="switch" id="s-free" checked></div></div>
+<div class="setting"><div><p class="setting-label"><label for="s-cheap">Model for small text</label></p><p class="setting-desc">Thread titles, commit messages and pull request text. Never used to write or review code.</p></div><div class="setting-control"><select class="select select-sm" id="s-cheap"><option>OpenCode · llama3.1 (local)</option><option>OpenCode · Nemotron (free)</option><option>The agent that did the task</option></select></div></div>
+<div class="setting setting-wide"><div><p class="setting-label">Where each agent is found</p><p class="setting-desc">Looked up on your PATH. Set a path only if an agent is installed somewhere else.</p></div>
+<div class="table-wrap">
+<table class="table">
+<thead><tr><th scope="col">Agent</th><th scope="col">Command</th><th scope="col">Found at</th></tr></thead>
+<tbody>
+<tr><th scope="row">Claude Code</th><td><code>claude</code></td><td><code>/usr/local/bin/claude</code></td></tr>
+<tr><th scope="row">Codex</th><td><code>codex</code></td><td><code>/usr/local/bin/codex</code></td></tr>
+<tr><th scope="row">OpenCode</th><td><code>opencode</code></td><td><code>~/.npm-global/bin/opencode</code></td></tr>
+</tbody>
+</table>
+</div></div>
+</div>
+</section>
+
+<section class="settings-section" id="permissions" aria-labelledby="h-permissions">
+<h2 id="h-permissions">Permissions</h2>
+<p class="intro">How much an agent may do before asking. This is the default for new threads; each thread can choose its own in the message box. In every mode, nothing reaches your project until you approve it in Review.</p>
+<fieldset class="stack-sm fieldset-plain">
+<legend class="visually-hidden">Default permission mode</legend>
+<label class="choice"><input type="radio" class="radio" name="mode" checked><span><span class="choice-title">Supervised <span class="tag">Default</span></span><span class="row-sub">The agent asks before each edit and each command, inside its own worktree.</span></span></label>
+<label class="choice"><input type="radio" class="radio" name="mode"><span><span class="choice-title">Auto-accept edits</span><span class="row-sub">The agent edits files in its worktree without asking. It still asks before running a command.</span></span></label>
+<label class="choice"><input type="radio" class="radio" name="mode"><span><span class="choice-title">Full access</span><span class="row-sub">The agent edits and runs commands in its worktree without asking. Use it for work you will read closely in Review.</span></span></label>
+</fieldset>
+<div class="table-wrap section-tight">
+<table class="table">
+<caption class="visually-hidden">What each mode allows</caption>
+<thead><tr><th scope="col">The agent may</th><th scope="col">Supervised</th><th scope="col">Auto-accept edits</th><th scope="col">Full access</th></tr></thead>
+<tbody>
+<tr><th scope="row">Read files in its worktree</th><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+<tr><th scope="row">Edit files in its worktree</th><td>Asks each time</td><td>Yes</td><td>Yes</td></tr>
+<tr><th scope="row">Run commands in its worktree</th><td>Asks each time</td><td>Asks each time</td><td>Yes</td></tr>
+<tr><th scope="row">Use the network</th><td>Asks each time</td><td>Asks each time</td><td>Yes</td></tr>
+<tr><th scope="row">Change your project folder or branch</th><td>Never. Only you, by approving in Review</td><td>Never</td><td>Never</td></tr>
+<tr><th scope="row">Push, merge or open a pull request</th><td>Never without your approval</td><td>Never without your approval</td><td>Never without your approval</td></tr>
+<tr><th scope="row">Read a credential you gave a task</th><td>Never. Commands receive it; the agent cannot read it back</td><td>Never</td><td>Never</td></tr>
+<tr><th scope="row">Change memory</th><td>Proposes only</td><td>Proposes only</td><td>Proposes only</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section class="settings-section" id="memory" aria-labelledby="h-memory">
+<h2 id="h-memory">Memory</h2>
+<p class="intro">How much memory an agent receives and how the summary files stay current. The memory itself is in <a href="memory.html">Memory</a>.</p>
+<div class="panel">
+<div class="setting"><div><p class="setting-label"><label for="s-rule-budget">Folder-rule budget for one task</label></p><p class="setting-desc">Matching rules are added whole, most specific first, until this is full. A rule is never cut; one that does not fit is named so the agent can open it.</p></div><div class="setting-control"><select class="select select-sm" id="s-rule-budget"><option>1 KB</option><option selected>2 KB</option><option>4 KB</option></select></div></div>
+<div class="setting"><div><p class="setting-label"><label for="s-block-budget">Largest block in <code>AGENTS.md</code></label></p><p class="setting-desc">The knowledge and one line per rule. Over this, sync stops and tells you what to shorten.</p></div><div class="setting-control"><select class="select select-sm" id="s-block-budget"><option>4 KB</option><option selected>8 KB</option><option>16 KB</option></select></div></div>
+<div class="setting"><div><p class="setting-label">Largest checkpoint</p><p class="setting-desc">Fixed at 4 KB. A checkpoint is a short note of what is done and what is next, not a transcript.</p></div><div class="setting-control"><span class="mono small">4 KB</span></div></div>
+<div class="setting"><div><p class="setting-label"><label for="s-sync">Sync <code>AGENTS.md</code> when memory changes</label></p><p class="setting-desc">Off: ACP tells you the file is out of date and you run <code>acp /memory sync</code>. On: ACP rewrites its own marked block, never your text, and leaves the commit to you.</p></div><div class="setting-control"><input type="checkbox" class="switch" id="s-sync"></div></div>
+<div class="setting"><div><p class="setting-label"><label for="s-import">Look for memory in other tools</label></p><p class="setting-desc">Reads what your agents remember and turns it into proposals. Nothing is imported until you accept it, and the original files are never changed.</p></div><div class="setting-control"><input type="checkbox" class="switch" id="s-import" checked><a class="btn" href="memory.html#panel-import">5 proposals</a></div></div>
+<div class="setting"><div><p class="setting-label"><label for="s-stale">Propose removing a rule that has not matched in</label></p><p class="setting-desc">The rule is not removed. You get a proposal to accept or reject.</p></div><div class="setting-control"><select class="select select-sm" id="s-stale"><option>30 tasks</option><option selected>60 tasks</option><option>Never</option></select></div></div>
+</div>
+</section>
+
+<section class="settings-section" id="design-skills" aria-labelledby="h-design">
+<h2 id="h-design">Design skills</h2>
+<p class="intro">Instruction files attached to a task when the request is about an interface. Sources, pinned commits and licences are in <a href="design-library.html">Design library</a>.</p>
+<div class="panel">
+<div class="setting"><div><p class="setting-label"><label for="s-skills">Attach design skills in this project</label></p><p class="setting-desc">Off: no skill is attached here, and the design check still runs in Review.</p></div><div class="setting-control"><input type="checkbox" class="switch" id="s-skills" checked></div></div>
+<div class="setting"><div><p class="setting-label"><label for="s-sk-1"><code>impeccable</code></label></p><p class="setting-desc">Every design task · Apache-2.0</p></div><div class="setting-control"><input type="checkbox" class="switch" id="s-sk-1" checked></div></div>
+<div class="setting"><div><p class="setting-label"><label for="s-sk-2"><code>huashu-design</code></label></p><p class="setting-desc">Prototypes, slides, motion · MIT</p></div><div class="setting-control"><input type="checkbox" class="switch" id="s-sk-2" checked></div></div>
+<div class="setting"><div><p class="setting-label"><label for="s-sk-3"><code>awwwards</code></label></p><p class="setting-desc">Whole websites · MIT</p></div><div class="setting-control"><input type="checkbox" class="switch" id="s-sk-3" checked></div></div>
+<div class="setting"><div><p class="setting-label"><label for="s-check">Run the design check in Review</label></p><p class="setting-desc">A tool, not an opinion: its findings are evidence with a file and line. The same as <code>acp /design check &lt;files&gt;</code>.</p></div><div class="setting-control"><input type="checkbox" class="switch" id="s-check" checked></div></div>
+</div>
+<p class="muted small section-tight">In a terminal: <code>acp /skills list</code> shows what is attached, and <code>acp /skills check</code> confirms each shipped skill still matches its pinned commit.</p>
+</section>
+
+<section class="settings-section" id="connections" aria-labelledby="h-connections">
+<h2 id="h-connections">Connections</h2>
+<p class="intro">ACP has one MCP server of its own. It gives an agent this project's memory and checkpoints. Agents that ACP starts get it without setup; add it once to an agent you start yourself.</p>
+<div class="panel">
+<div class="panel-head"><div><h3>ACP's MCP server</h3><p>Runs only while an agent uses it, on this computer, for the folder the agent was started in</p></div><span class="pill is-ok"><span class="dot"></span>Ready</span></div>
+<div class="panel-pad stack-sm">
+<p class="label">Add it to Claude Code</p>
+<div class="cmd"><code>claude mcp add acp -- acp /mcp</code><button type="button" data-copy>Copy</button></div>
+<p class="label">Add it to Codex</p>
+<div class="cmd"><code>codex mcp add acp -- acp /mcp</code><button type="button" data-copy>Copy</button></div>
+<p class="hint">Run the command in your project folder. OpenCode reads MCP servers from its own config file; that setup has not been tried yet.</p>
+</div>
+<div class="table-wrap table-flush">
+<table class="table">
+<caption class="visually-hidden">What an agent can do through ACP's server</caption>
+<thead><tr><th scope="col">Tool</th><th scope="col">What it does</th></tr></thead>
+<tbody>
+<tr><th scope="row" class="nowrap"><code>memory_get</code></th><td>Reads the memory for the files and request at hand</td></tr>
+<tr><th scope="row" class="nowrap"><code>memory_search</code></th><td>Finds a word or phrase in memory, with file and line</td></tr>
+<tr><th scope="row" class="nowrap"><code>memory_propose_rule</code></th><td>Suggests a rule. It does not apply until you accept it</td></tr>
+<tr><th scope="row" class="nowrap"><code>checkpoint_write</code></th><td>Saves where a task stands, up to 4 KB</td></tr>
+<tr><th scope="row" class="nowrap"><code>checkpoint_read</code></th><td>Reads a task's latest checkpoint</td></tr>
+</tbody>
+</table>
+</div>
+<p class="panel-foot">An agent cannot change <code>.acp/knowledge.md</code> or <code>.acp/rules/</code> through this server, and a write that looks like a key, password or token is refused.</p>
+</div>
+
+<h3 class="section">Other MCP servers</h3>
+<p class="muted small section-tight">These belong to your agents. ACP lists them and can turn one off for the agents it starts; it does not install, update or sign in to them.</p>
+<div class="table-wrap section-tight">
+<table class="table">
+<thead><tr><th scope="col">Server</th><th scope="col">Configured in</th><th scope="col">Runs</th><th scope="col"><span class="visually-hidden">On or off</span></th></tr></thead>
+<tbody>
+<tr><th scope="row"><code>filesystem</code></th><td>Claude Code, Codex</td><td>On this computer</td><td class="actions"><input type="checkbox" class="switch" checked aria-label="filesystem server"></td></tr>
+<tr><th scope="row"><code>browser-preview</code></th><td>Claude Code</td><td>On this computer</td><td class="actions"><input type="checkbox" class="switch" checked aria-label="browser-preview server"></td></tr>
+<tr><th scope="row"><code>project-database</code><p class="row-sub"><span class="tag tag-warn">Can reach the network</span></p></th><td>Codex</td><td>A remote address set in Codex</td><td class="actions"><input type="checkbox" class="switch" aria-label="project-database server"></td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section class="settings-section" id="notifications" aria-labelledby="h-notifications">
+<h2 id="h-notifications">Notifications</h2>
+<p class="intro">Shown by your computer, and only while ACP is running. Nothing is sent to a phone or by email.</p>
+<div class="panel">
+<div class="setting"><div><p class="setting-label"><label for="n-ready">A task is ready to review</label></p></div><div class="setting-control"><input type="checkbox" class="switch" id="n-ready" checked></div></div>
+<div class="setting"><div><p class="setting-label"><label for="n-ask">An agent asks for permission or a credential</label></p><p class="setting-desc">The notification never shows the credential's value, only its name.</p></div><div class="setting-control"><input type="checkbox" class="switch" id="n-ask" checked></div></div>
+<div class="setting"><div><p class="setting-label"><label for="n-stop">A task stopped or was handed to another agent</label></p></div><div class="setting-control"><input type="checkbox" class="switch" id="n-stop" checked></div></div>
+<div class="setting"><div><p class="setting-label"><label for="n-limit">An agent is near its plan limit</label></p></div><div class="setting-control"><input type="checkbox" class="switch" id="n-limit"></div></div>
+<div class="setting"><div><p class="setting-label"><label for="n-ci">CI failed on a pull request linked to a task</label></p></div><div class="setting-control"><input type="checkbox" class="switch" id="n-ci" checked></div></div>
+<div class="setting"><div><p class="setting-label"><label for="n-sound">Play a sound</label></p></div><div class="setting-control"><input type="checkbox" class="switch" id="n-sound"></div></div>
+<div class="setting"><div><p class="setting-label"><label for="n-focus">Only when ACP is not the window in front</label></p></div><div class="setting-control"><input type="checkbox" class="switch" id="n-focus" checked></div></div>
+</div>
+</section>
+
+<section class="settings-section" id="shortcuts" aria-labelledby="h-shortcuts">
+<h2 id="h-shortcuts">Keyboard shortcuts</h2>
+<p class="intro">Shown for macOS. On Windows and Linux, <kbd>Ctrl</kbd> replaces <kbd>⌘</kbd>.</p>
+<dl class="panel shortcuts">
+<div><dt>New thread</dt><dd><kbd>⌘</kbd> <kbd>N</kbd></dd></div>
+<div><dt>Send the request</dt><dd><kbd>⌘</kbd> <kbd>Enter</kbd></dd></div>
+<div><dt>New line in the message box</dt><dd><kbd>Enter</kbd></dd></div>
+<div><dt>Run a command from the message box</dt><dd><kbd>/</kbd></dd></div>
+<div><dt>Pin a task to one agent</dt><dd><kbd>@</kbd></dd></div>
+<div><dt>Stop all working tasks in this thread</dt><dd><kbd>⌘</kbd> <kbd>.</kbd></dd></div>
+<div><dt>Open Review</dt><dd><kbd>⌘</kbd> <kbd>R</kbd></dd></div>
+<div><dt>Next and previous change in Review</dt><dd><kbd>J</kbd> <kbd>K</kbd></dd></div>
+<div><dt>Go to a page or thread</dt><dd><kbd>⌘</kbd> <kbd>K</kbd></dd></div>
+<div><dt>Open Settings</dt><dd><kbd>⌘</kbd> <kbd>,</kbd></dd></div>
+<div><dt>Switch theme</dt><dd><kbd>⌘</kbd> <kbd>Shift</kbd> <kbd>L</kbd></dd></div>
+<div><dt>Close a dialog or the menu</dt><dd><kbd>Esc</kbd></dd></div>
+</dl>
+<p class="muted small section-tight">Approve has no shortcut on purpose: applying a change is always a deliberate click.</p>
+</section>
+
+<section class="settings-section" id="privacy" aria-labelledby="h-privacy">
+<h2 id="h-privacy">Privacy &amp; data</h2>
+<p class="intro">ACP runs on this computer and has no server of its own to send your work to. What leaves the computer is what each agent sends to its own provider.</p>
+<h3>Stays on this computer</h3>
+<ul class="panel rows section-tight">
+<li class="row"><div><p class="row-title">Your project, its worktrees and every diff</p><p class="row-sub">In the project folder and <code>worktrees/</code></p></div></li>
+<li class="row"><div><p class="row-title">Memory</p><p class="row-sub"><code>.acp/knowledge.md</code> and <code>.acp/rules/</code> in the repository; your own preferences in the data folder</p></div></li>
+<li class="row"><div><p class="row-title">Checkpoints, <code>handoff.md</code> and proposals</p><p class="row-sub"><code>.acp/local/</code>, which Git ignores</p></div></li>
+<li class="row"><div><p class="row-title">Credentials you gave a task</p><p class="row-sub">Encrypted in the data folder; removed when the task ends; never in chat, memory, checkpoints or logs</p></div></li>
+<li class="row"><div><p class="row-title">Settings and logs</p><p class="row-sub">The data folder. Logs are scanned and secrets removed before they are written</p></div></li>
+</ul>
+<h3 class="section">What each provider receives</h3>
+<div class="table-wrap section-tight">
+<table class="table">
+<thead><tr><th scope="col">When you use</th><th scope="col">Its provider receives</th><th scope="col">Under</th></tr></thead>
+<tbody>
+<tr><th scope="row">Claude Code</th><td>The task, the memory for its files, and the files and command output the agent reads</td><td>Your own plan and that provider's terms</td></tr>
+<tr><th scope="row">Codex</th><td>The same, for the tasks it is given</td><td>Your own plan and that provider's terms</td></tr>
+<tr><th scope="row">OpenCode with a hosted model</th><td>The same, sent to the provider you connected inside OpenCode</td><td>That provider's terms. Free tiers may keep requests to improve their models</td></tr>
+<tr><th scope="row">OpenCode with a local model</th><td>Nothing. The model runs through Ollama on this computer</td><td class="muted">Not sent</td></tr>
+<tr><th scope="row">Report a problem</th><td>Only what you write, and logs only after you preview them</td><td><a href="report.html">See the form</a></td></tr>
+</tbody>
+</table>
+</div>
+<p class="muted small section-tight">A child task receives its own scope and the memory for its files, not the parent's whole chat. ACP collects no usage statistics.</p>
+<div class="panel section-tight">
+<div class="setting"><div><p class="setting-label">Delete ACP's local data for this project</p><p class="setting-desc">Removes checkpoints, proposals and logs in <code>.acp/local/</code>. Your repository, memory files and runs are not touched.</p></div><div class="setting-control"><button type="button" class="btn btn-danger" data-open-dialog="delete-local">Delete local data</button></div></div>
+</div>
+</section>
+
+<section class="settings-section" id="advanced" aria-labelledby="h-advanced">
+<h2 id="h-advanced">Advanced</h2>
+<p class="intro">Limits that keep a run from going on for ever, and where runs live.</p>
+<div class="panel">
+<div class="setting"><div><p class="setting-label"><label for="a-ask">Time limit for a question</label></p><p class="setting-desc">A run that changes nothing. Stopped at a checkpoint when the time is up.</p></div><div class="setting-control"><select class="select select-sm" id="a-ask"><option>5 minutes</option><option selected>15 minutes</option><option>30 minutes</option></select></div></div>
+<div class="setting"><div><p class="setting-label"><label for="a-edit">Time limit for a change</label></p><p class="setting-desc">A run that may edit files in its worktree.</p></div><div class="setting-control"><select class="select select-sm" id="a-edit"><option>15 minutes</option><option selected>30 minutes</option><option>60 minutes</option></select></div></div>
+<div class="setting"><div><p class="setting-label"><label for="a-check">Time limit for one check in Review</label></p><p class="setting-desc">A command that runs longer is reported as failed, with the time it ran.</p></div><div class="setting-control"><select class="select select-sm" id="a-check"><option>2 minutes</option><option selected>10 minutes</option><option>30 minutes</option></select></div></div>
+<div class="setting"><div><p class="setting-label"><label for="a-parallel">Tasks working at once</label></p><p class="setting-desc">Each has its own worktree. More tasks use more of this computer and of each plan.</p></div><div class="setting-control"><select class="select select-sm" id="a-parallel"><option>2</option><option selected>4</option><option>8</option></select></div></div>
+<div class="setting"><div><p class="setting-label"><label for="a-worktrees">Worktree folder</label></p><p class="setting-desc">Where each run's copy of the project is created. Inside the project and ignored by Git, or any folder on the same disk.</p></div><div class="setting-control"><input class="input mono" id="a-worktrees" value="worktrees" spellcheck="false" autocomplete="off"></div></div>
+<div class="setting"><div><p class="setting-label"><label for="a-clean">Remove runs that hold no changes when a thread closes</label></p><p class="setting-desc">The same as <code>acp /runs clean</code>. A run that holds work is never removed without your confirmation.</p></div><div class="setting-control"><input type="checkbox" class="switch" id="a-clean" checked><a class="btn" href="runs.html">Runs</a></div></div>
+<div class="setting"><div><p class="setting-label"><label for="a-port">Port for the app</label></p><p class="setting-desc">The app is served at <code>127.0.0.1</code> only, so other computers cannot open it.</p></div><div class="setting-control"><input class="input mono" id="a-port" value="4317" inputmode="numeric" autocomplete="off"></div></div>
+</div>
+</section>
+
+<section class="settings-section" id="about" aria-labelledby="h-about">
+<h2 id="h-about">About</h2>
+<p class="intro">Agent Control Plane is free and open source.</p>
+<div class="panel">
+<dl class="panel-pad kv">
+<dt>Version</dt><dd><span class="mono">0.3.1</span> · up to date</dd>
+<dt>Licence</dt><dd>MIT. The full text is in <code>LICENSE</code>.</dd>
+<dt>Shipped skills</dt><dd><code>impeccable</code> (Apache-2.0), <code>huashu-design</code> (MIT), <code>awwwards</code> (MIT). Their licence files are kept beside them.</dd>
+<dt>Runs on</dt><dd>Node 22.5 or newer · this computer only</dd>
+<dt>Decisions</dt><dd>The reason for each design decision is in <code>docs/decisions/</code>.</dd>
+</dl>
+<div class="panel-foot cluster"><a class="btn" href="report.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-flag"/></svg>Report a problem</a><button type="button" class="btn btn-quiet">Check for a new version</button></div>
+</div>
+</section>
+</div>
+</div>
+</section>
+
+<section id="state-invalid" role="tabpanel" aria-labelledby="tab-invalid" hidden>
+<div class="notice is-err" role="alert"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-alert"/></svg><div><p class="notice-title">One setting was not saved</p><p>The other settings are saved. Fix the value below, or put the old one back.</p></div></div>
+<div class="panel section-tight">
+<div class="setting"><div><p class="setting-label"><label for="v-worktrees">Worktree folder</label></p><p class="setting-desc">Where each run's copy of the project is created.</p><p class="field-error" id="v-worktrees-err"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-alert"/></svg><span>ACP cannot write to <code>/Volumes/Backup/worktrees</code>: the disk is read-only. Still using <code>worktrees</code>.</span></p></div><div class="setting-control"><input class="input mono" id="v-worktrees" value="/Volumes/Backup/worktrees" aria-invalid="true" aria-describedby="v-worktrees-err" spellcheck="false" autocomplete="off"><button type="button" class="btn" data-goto-tab="tab-ready">Put back <span class="mono">worktrees</span></button></div></div>
+<div class="setting"><div><p class="setting-label"><label for="v-key">Data folder</label></p><p class="setting-desc">Outside every project, never in Git.</p><p class="field-error" id="v-key-err"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-alert"/></svg><span>This looks like a key or token, not a folder, so it was refused and not saved anywhere. Settings never hold secrets.</span></p></div><div class="setting-control"><input class="input mono" id="v-key" value="" aria-invalid="true" aria-describedby="v-key-err" spellcheck="false" autocomplete="off"><button type="button" class="btn" data-goto-tab="tab-ready">Put back <span class="mono">~/.acp</span></button></div></div>
+</div>
+</section>
+
+<section id="state-loading" role="tabpanel" aria-labelledby="tab-loading" hidden>
+<div aria-busy="true">
+<p class="visually-hidden" role="status">Reading settings</p>
+<div class="panel">
+<div class="sk-row"><div class="sk"></div><div class="skeleton"><div class="sk sk-w70"></div><div class="sk sk-w50"></div></div><div class="sk sk-btn"></div></div>
+<div class="sk-row"><div class="sk"></div><div class="skeleton"><div class="sk sk-w50"></div><div class="sk sk-w90"></div></div><div class="sk sk-btn"></div></div>
+<div class="sk-row"><div class="sk"></div><div class="skeleton"><div class="sk sk-w90"></div><div class="sk sk-w30"></div></div><div class="sk sk-btn"></div></div>
+<div class="sk-row"><div class="sk"></div><div class="skeleton"><div class="sk sk-w70"></div><div class="sk sk-w50"></div></div><div class="sk sk-btn"></div></div>
+</div>
+</div>
+</section>
+
+<section id="state-error" role="tabpanel" aria-labelledby="tab-error" hidden>
+<div class="notice is-err" role="alert"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-alert"/></svg><div><p class="notice-title">The settings file could not be read</p><p><code>~/.acp/settings.json</code> is not valid JSON at line 14. ACP is running with its defaults and has not changed the file, so nothing you set is lost. Fix the file in an editor, or start again from the defaults.</p></div><div class="row-actions"><button type="button" class="btn" data-goto-tab="tab-ready">Read again</button><button type="button" class="btn btn-danger" data-open-dialog="reset-settings">Use defaults</button></div></div>
+<div class="block section-tight">12    "defaultMode": "supervised",
+13    "nearLimit": 90,
+<mark>14    "worktreeFolder": "worktrees"</mark>
+15    "parallelTasks": 4</div>
+<p class="muted small section-tight">A comma is missing at the end of line 14. While the defaults are in use, every thread is supervised.</p>
+</section>
+
+<dialog class="dialog" id="delete-local" aria-labelledby="delete-local-title">
+<div class="dialog-body">
+<h2 id="delete-local-title">Delete ACP's local data for this project?</h2>
+<p>This removes, from <code>.acp/local/</code>:</p>
+<ul class="loss">
+<li>Checkpoints and <code>handoff.md</code> for 4 tasks. A stopped task can no longer be resumed.</li>
+<li>2 proposed rules you have not decided on</li>
+<li>Logs for this project</li>
+</ul>
+<p>Your repository, <code>.acp/knowledge.md</code>, <code>.acp/rules/</code> and runs are not touched. This cannot be undone.</p>
+</div>
+<div class="dialog-foot"><button type="button" class="btn" data-close-dialog autofocus>Keep the data</button><button type="button" class="btn btn-danger-solid" data-close-dialog>Delete local data</button></div>
+</dialog>
+
+<dialog class="dialog" id="reset-settings" aria-labelledby="reset-settings-title">
+<div class="dialog-body">
+<h2 id="reset-settings-title">Replace the settings file with the defaults?</h2>
+<p>The broken file is kept beside the new one as <code>settings.json.broken</code>, so you can copy your values back. Memory, runs and your project are not touched.</p>
+</div>
+<div class="dialog-foot"><button type="button" class="btn" data-close-dialog autofocus>Cancel</button><button type="button" class="btn btn-danger-solid" data-close-dialog data-goto-tab="tab-ready">Use defaults</button></div>
+</dialog>
+</main>
+<footer class="candidate-note"><span>Design candidate. This app is not built yet, and every name, number and message on this page is sample content.</span><a href="index.html">All pages and states</a></footer>
+</div>
+</div>
+</body>
+</html>

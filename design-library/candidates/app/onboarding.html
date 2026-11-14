@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>First run · Agent Control Plane design candidate</title>
+<meta name="description" content="First run: connect the agents already on this computer, pick a project, and use the memory that is there or set it up.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+</head>
+<body>
+<svg width="0" height="0" class="visually-hidden" aria-hidden="true"><defs><symbol id="i-check" viewBox="0 0 16 16"><path d="m3.5 8.5 3 3 6-7"/></symbol><symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5 14 13H2z"/><path d="M8 6.5v3M8 11.2v.1"/></symbol><symbol id="i-info" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 7.2v3.6M8 5v.1"/></symbol><symbol id="i-lock" viewBox="0 0 16 16"><path d="M4 7.5h8v6H4z"/><path d="M5.5 7.5V5a2.5 2.5 0 0 1 5 0v2.5"/></symbol></defs></svg>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="solo">
+<header class="solo-top"><a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">A</span><span>ACP <small>Agent Control Plane</small></span></a><a class="btn btn-quiet" href="index.html">All pages and states</a></header>
+<div class="proto"><span class="proto-label" id="proto-label">Prototype state</span><div class="proto-tabs" role="tablist" aria-labelledby="proto-label" data-state-group="page"><button type="button" role="tab" id="tab-agents" data-state="agents" aria-controls="state-agents" aria-selected="true">1 · Agents</button><button type="button" role="tab" id="tab-checking" data-state="checking" aria-controls="state-checking" aria-selected="false">Checking</button><button type="button" role="tab" id="tab-none" data-state="none" aria-controls="state-none" aria-selected="false">No agent found</button><button type="button" role="tab" id="tab-project" data-state="project" aria-controls="state-project" aria-selected="false">2 · Project</button><button type="button" role="tab" id="tab-notgit" data-state="notgit" aria-controls="state-notgit" aria-selected="false">Not a Git folder</button><button type="button" role="tab" id="tab-memory" data-state="memory" aria-controls="state-memory" aria-selected="false">3 · Memory found</button><button type="button" role="tab" id="tab-init" data-state="init" aria-controls="state-init" aria-selected="false">3 · No memory yet</button><button type="button" role="tab" id="tab-done" data-state="done" aria-controls="state-done" aria-selected="false">Ready</button></div></div>
+<main id="main" class="solo-main">
+<h1>Set up Agent Control Plane</h1>
+<p class="lede muted">Three steps. ACP uses the coding agents you already have, works inside one project folder, and changes nothing in it until you approve.</p>
+
+<section id="state-agents" role="tabpanel" aria-labelledby="tab-agents">
+<ol class="steps" aria-label="Setup steps">
+<li aria-current="step"><span class="n">1</span><span class="name">Agents</span></li>
+<li><span class="n">2</span><span class="name">Project</span></li>
+<li><span class="n">3</span><span class="name">Memory</span></li>
+</ol>
+<div class="section-head"><h2>Agents on this computer</h2><p>2 of 3 ready</p></div>
+<ul class="panel rows">
+<li class="row row-with-status"><span class="pill is-ok"><span class="dot"></span>Ready</span>
+<div><p class="row-title">Claude Code</p><p class="row-sub">Installed, version <span class="mono">2.1.190</span> · signed in · Claude Pro plan</p></div>
+<span class="muted small">Nothing to do</span></li>
+<li class="row row-with-status"><span class="pill is-ready"><span class="dot"></span>Signed out</span>
+<div class="stack-sm"><div><p class="row-title">Codex</p><p class="row-sub">Installed, version <span class="mono">0.160.0</span>. Sign in with Codex's own command, in a terminal. It opens Codex's sign-in, not ACP's.</p></div>
+<div class="cmd"><code>codex login</code><button type="button" data-copy>Copy</button></div></div>
+<span class="row-actions"><button type="button" class="btn" data-goto-tab="tab-checking">Check again</button></span></li>
+<li class="row row-with-status"><span class="pill is-ok"><span class="dot"></span>Ready</span>
+<div><p class="row-title">OpenCode</p><p class="row-sub">Installed, version <span class="mono">1.4.3</span> · providers: Ollama, NVIDIA · runs free and local models</p></div>
+<span class="muted small">Nothing to do</span></li>
+<li class="row row-with-status"><span class="pill is-planned"><span class="dot"></span>Planned</span>
+<div><p class="row-title muted">Antigravity</p><p class="row-sub">Not available in ACP yet.</p></div>
+<span></span></li>
+</ul>
+<p class="notice section-tight"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-lock"/></svg><span>ACP never asks for a password or token for an agent. Each maker keeps your sign-in in its own tool; ACP only asks that tool whether you are signed in. The same check in a terminal: <code>acp /agents list</code></span></p>
+<div class="step-foot"><span class="muted small">One ready agent is enough. You can connect the others later in <a href="agents.html">Agents</a>.</span><button type="button" class="btn btn-primary btn-lg" data-goto-tab="tab-project">Continue with 2 agents</button></div>
+</section>
+
+<section id="state-checking" role="tabpanel" aria-labelledby="tab-checking" hidden>
+<ol class="steps" aria-label="Setup steps">
+<li aria-current="step"><span class="n">1</span><span class="name">Agents</span></li>
+<li><span class="n">2</span><span class="name">Project</span></li>
+<li><span class="n">3</span><span class="name">Memory</span></li>
+</ol>
+<div aria-busy="true">
+<p class="muted small" role="status">Asking each tool for its version and sign-in state. Nothing is sent anywhere.</p>
+<div class="panel section-tight">
+<div class="sk-row"><div class="sk sk-pill"></div><div class="skeleton"><div class="sk sk-w50"></div><div class="sk sk-w70"></div></div><div class="sk"></div></div>
+<div class="sk-row"><div class="sk sk-pill"></div><div class="skeleton"><div class="sk sk-w30"></div><div class="sk sk-w90"></div></div><div class="sk"></div></div>
+<div class="sk-row"><div class="sk sk-pill"></div><div class="skeleton"><div class="sk sk-w50"></div><div class="sk sk-w50"></div></div><div class="sk"></div></div>
+</div>
+</div>
+<div class="step-foot"><span class="muted small">This takes a few seconds for each tool.</span><button type="button" class="btn btn-primary btn-lg is-busy" disabled><span class="spinner" aria-hidden="true"></span>Checking</button></div>
+</section>
+
+<section id="state-none" role="tabpanel" aria-labelledby="tab-none" hidden>
+<ol class="steps" aria-label="Setup steps">
+<li aria-current="step"><span class="n">1</span><span class="name">Agents</span></li>
+<li><span class="n">2</span><span class="name">Project</span></li>
+<li><span class="n">3</span><span class="name">Memory</span></li>
+</ol>
+<div class="notice is-warn" role="status"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-alert"/></svg><div><p class="notice-title">No coding agent was found on this computer</p><p>ACP does not include a model of its own. Install one agent below, sign in with its own command, then check again. The free path needs no paid plan.</p></div><div class="row-actions"><button type="button" class="btn" data-goto-tab="tab-checking">Check again</button></div></div>
+<ul class="panel rows section-tight">
+<li class="row row-with-status"><span class="pill"><span class="dot"></span>Not installed</span>
+<div class="stack-sm"><div><p class="row-title">OpenCode <span class="tag">Free path</span></p><p class="row-sub">Runs local models through Ollama and free hosted models. Install it, then connect a provider inside OpenCode.</p></div>
+<div class="cmd"><code>npm install -g opencode-ai</code><button type="button" data-copy>Copy</button></div>
+<div class="cmd"><code>opencode auth login</code><button type="button" data-copy>Copy</button></div></div><span></span></li>
+<li class="row row-with-status"><span class="pill"><span class="dot"></span>Not installed</span>
+<div><p class="row-title">Claude Code</p><p class="row-sub">Uses your existing Claude plan. Install it from its maker, then run <code>claude auth login</code>.</p></div><span></span></li>
+<li class="row row-with-status"><span class="pill"><span class="dot"></span>Not installed</span>
+<div><p class="row-title">Codex</p><p class="row-sub">Uses your existing ChatGPT plan. Install it from its maker, then run <code>codex login</code>.</p></div><span></span></li>
+</ul>
+<p class="muted small section-tight">Looked for <code>claude</code>, <code>codex</code> and <code>opencode</code> on your PATH. If one is installed somewhere else, set its path in <a href="settings.html#agents-models">Settings</a>. <code>docs/guides/free-models.md</code> explains the free path.</p>
+<div class="step-foot"><span class="muted small">You can look around without an agent, but no request can run.</span><button type="button" class="btn btn-lg" data-goto-tab="tab-project">Continue without an agent</button></div>
+</section>
+
+<section id="state-project" role="tabpanel" aria-labelledby="tab-project" hidden>
+<ol class="steps" aria-label="Setup steps">
+<li class="is-done"><span class="n"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg></span><span class="name">Agents</span></li>
+<li aria-current="step"><span class="n">2</span><span class="name">Project</span></li>
+<li><span class="n">3</span><span class="name">Memory</span></li>
+</ol>
+<form class="stack">
+<div class="section-head"><h2>Pick a project</h2><p>A folder that is a Git repository</p></div>
+<fieldset class="stack-sm fieldset-plain">
+<legend class="label">Recent Git folders</legend>
+<label class="choice"><input type="radio" class="radio" name="project" checked><span><span class="choice-title mono">agent-control-plane</span><span class="row-sub"><code>/Users/you/code/agent-control-plane</code> · branch <code>dev</code> · clean</span></span></label>
+<label class="choice"><input type="radio" class="radio" name="project"><span><span class="choice-title mono">acp-website</span><span class="row-sub"><code>/Users/you/code/acp-website</code> · branch <code>main</code> · 2 files changed, not committed</span></span></label>
+<label class="choice"><input type="radio" class="radio" name="project"><span><span class="choice-title mono">a-folder-with-a-very-long-name-that-someone-cloned-twice-by-accident-copy-2</span><span class="row-sub"><code>/Users/you/code/archive/2019/experiments/a-folder-with-a-very-long-name-that-someone-cloned-twice-by-accident-copy-2</code> · branch <code>main</code> · clean</span></span></label>
+</fieldset>
+<div class="field"><label for="p-path">Or type a folder path</label><input class="input mono" id="p-path" autocomplete="off" spellcheck="false" aria-describedby="p-path-hint"><p class="hint" id="p-path-hint">ACP works only inside this folder. Agents edit copies of it (Git worktrees), never the folder itself.</p></div>
+<div class="step-foot"><button type="button" class="btn btn-quiet" data-goto-tab="tab-agents">Back</button><button type="button" class="btn btn-primary btn-lg" data-goto-tab="tab-memory">Use this project</button></div>
+</form>
+</section>
+
+<section id="state-notgit" role="tabpanel" aria-labelledby="tab-notgit" hidden>
+<ol class="steps" aria-label="Setup steps">
+<li class="is-done"><span class="n"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg></span><span class="name">Agents</span></li>
+<li aria-current="step"><span class="n">2</span><span class="name">Project</span></li>
+<li><span class="n">3</span><span class="name">Memory</span></li>
+</ol>
+<form class="stack">
+<div class="section-head"><h2>Pick a project</h2><p>A folder that is a Git repository</p></div>
+<div class="field"><label for="p-path-bad">Folder path</label><input class="input mono" id="p-path-bad" value="/Users/you/Documents/notes" autocomplete="off" spellcheck="false" aria-invalid="true" aria-describedby="p-path-err">
+<p class="field-error" id="p-path-err"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-alert"/></svg><span>This folder is not a Git repository. ACP needs Git to give each agent its own worktree and to show you what changed.</span></p></div>
+<div class="panel panel-pad stack-sm">
+<p class="small">To use this folder, make it a repository first. This adds a hidden <code>.git</code> folder and changes none of your files.</p>
+<div class="cmd"><code>git -C /Users/you/Documents/notes init</code><button type="button" data-copy>Copy</button></div>
+<p class="muted small">ACP does not run this for you: creating a repository is your decision.</p>
+</div>
+<div class="step-foot"><button type="button" class="btn btn-quiet" data-goto-tab="tab-project">Pick another folder</button><button type="button" class="btn btn-primary btn-lg" disabled>Use this project</button></div>
+</form>
+</section>
+
+<section id="state-memory" role="tabpanel" aria-labelledby="tab-memory" hidden>
+<ol class="steps" aria-label="Setup steps">
+<li class="is-done"><span class="n"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg></span><span class="name">Agents</span></li>
+<li class="is-done"><span class="n"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg></span><span class="name">Project</span></li>
+<li aria-current="step"><span class="n">3</span><span class="name">Memory</span></li>
+</ol>
+<div class="notice is-ok" role="status"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg><div><p class="notice-title">This project already has memory</p><p>Someone set it up and committed it. Every agent you start here will read it; nothing needs to be created.</p></div></div>
+<ul class="panel rows section-tight">
+<li class="row"><div><p class="row-title"><code>.acp/knowledge.md</code></p><p class="row-sub">Goals, rules and decisions · 1.2 KB · in Git</p></div><span class="tag">Project</span></li>
+<li class="row"><div><p class="row-title"><code>.acp/rules/docker-env.md</code></p><p class="row-sub">Applies to <code>compose.yaml</code>, <code>Dockerfile</code>, <code>docs/guides/docker.md</code> · learned from a past mistake</p></div><span class="tag tag-evidence">Folder rule</span></li>
+<li class="row"><div><p class="row-title"><code>.acp/rules/memory-module.md</code></p><p class="row-sub">Applies to <code>src/memory/**</code>, <code>tests/memory.test.ts</code></p></div><span class="tag tag-evidence">Folder rule</span></li>
+<li class="row"><div><p class="row-title"><code>AGENTS.md</code></p><p class="row-sub">ACP's marked block matches memory, so agents started outside ACP read the same summary</p></div><span class="pill is-ok"><span class="dot"></span>In sync</span></li>
+</ul>
+<p class="muted small section-tight">Your own preferences for every project are kept outside the repository, in ACP's data folder, and are empty for now. <a href="memory.html">How the four layers work</a></p>
+<div class="step-foot"><button type="button" class="btn btn-quiet" data-goto-tab="tab-project">Back</button><button type="button" class="btn btn-primary btn-lg" data-goto-tab="tab-done">Finish</button></div>
+</section>
+
+<section id="state-init" role="tabpanel" aria-labelledby="tab-init" hidden>
+<ol class="steps" aria-label="Setup steps">
+<li class="is-done"><span class="n"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg></span><span class="name">Agents</span></li>
+<li class="is-done"><span class="n"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg></span><span class="name">Project</span></li>
+<li aria-current="step"><span class="n">3</span><span class="name">Memory</span></li>
+</ol>
+<div class="section-head"><h2>This project has no memory yet</h2><p>Optional, and you can do it later</p></div>
+<div class="panel panel-pad stack">
+<p>Memory is a few plain files in the project that every agent reads before it works. Setting it up will:</p>
+<ul class="msg-text">
+<li>create <code>.acp/knowledge.md</code> with empty Goals, Rules and Decisions headings</li>
+<li>create the folder <code>.acp/rules/</code> for rules that apply to some files only</li>
+<li>add <code>.acp/local/</code> to <code>.gitignore</code>, where checkpoints and proposals stay on this computer</li>
+</ul>
+<p class="muted small">It never overwrites a file you already have, and it commits nothing. You review and commit the new files like any other change.</p>
+<div class="cluster"><button type="button" class="btn btn-primary" data-goto-tab="tab-done">Set up memory</button><span class="muted small">or run it yourself:</span></div>
+<div class="cmd"><code>acp /memory init</code><button type="button" data-copy>Copy</button></div>
+</div>
+<p class="notice section-tight"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-info"/></svg><span>Found <code>AGENTS.md</code> and <code>CLAUDE.md</code> in this project. After setup their contents are offered as import proposals for you to accept or reject; the files themselves are left as they are.</span></p>
+<div class="step-foot"><button type="button" class="btn btn-quiet" data-goto-tab="tab-project">Back</button><button type="button" class="btn btn-lg" data-goto-tab="tab-done">Skip for now</button></div>
+</section>
+
+<section id="state-done" role="tabpanel" aria-labelledby="tab-done" hidden>
+<ol class="steps" aria-label="Setup steps">
+<li class="is-done"><span class="n"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg></span><span class="name">Agents</span></li>
+<li class="is-done"><span class="n"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg></span><span class="name">Project</span></li>
+<li class="is-done"><span class="n"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg></span><span class="name">Memory</span></li>
+</ol>
+<div class="section-head"><h2>Ready</h2><p>Nothing has been changed in your project</p></div>
+<dl class="panel panel-pad kv">
+<dt>Agents</dt><dd>Claude Code and OpenCode are ready. Codex is signed out.</dd>
+<dt>Project</dt><dd><code>/Users/you/code/agent-control-plane</code> on branch <code>dev</code></dd>
+<dt>Memory</dt><dd><code>.acp/knowledge.md</code> and 2 folder rules</dd>
+<dt>Permission mode</dt><dd>Supervised: agents edit only their own worktree, and you approve each change. <a href="settings.html#permissions">Change the default</a></dd>
+</dl>
+<div class="step-foot"><a class="btn btn-quiet" href="agents.html">Star an orchestrator first</a><a class="btn btn-primary btn-lg" href="thread.html#state-empty">Start the first thread</a></div>
+</section>
+</main>
+<footer class="candidate-note"><span>Design candidate. This app is not built yet, and every name, number and message on this page is sample content.</span><a href="index.html">All pages and states</a></footer>
+</div>
+</body>
+</html>

@@ -236,6 +236,10 @@ button { cursor: pointer; }
 .choice:has(input:checked) { border-color: var(--text); background: var(--panel); }
 .choice input { margin-top: 0.2rem; }
 .choice-title { font-weight: 500; }
+.choice > span { min-width: 0; }
+.choice .choice-title, .choice .row-sub { display: block; overflow-wrap: anywhere; }
+.fieldset-plain { min-width: 0; margin: 0; padding: 0; border: 0; }
+.fieldset-plain > legend { padding: 0; margin-bottom: var(--s2); }
 
 .seg { display: inline-flex; padding: 2px; border: 1px solid var(--line-2); border-radius: var(--r-md); background: var(--panel); }
 .seg button { min-height: 1.625rem; padding: 0 var(--s3); border: 0; border-radius: var(--r-sm); background: transparent; color: var(--muted); font-size: var(--t-sm); font-weight: 500; }
@@ -254,8 +258,9 @@ button { cursor: pointer; }
 .brand small { color: var(--muted); font-weight: 400; font-size: var(--t-xs); }
 .project-switch {
   display: flex; align-items: center; gap: var(--s2); width: 100%; min-height: 2.25rem; padding: 0 var(--s2);
-  border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel); text-align: start;
+  border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel); text-align: start; text-decoration: none;
 }
+.project-switch .i { color: var(--muted); }
 .project-switch:hover { border-color: var(--line-3); }
 .project-switch .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 var(--t-sm)/1.2 var(--font-mono); }
 .side-group { display: grid; gap: 1px; }
@@ -265,6 +270,8 @@ button { cursor: pointer; }
   border-radius: var(--r-md); color: var(--soft); text-decoration: none; font-size: var(--t-sm);
   transition: background-color 150ms var(--ease), color 150ms var(--ease);
 }
+button.side-link { width: 100%; border: 0; background: transparent; text-align: start; }
+.scrim { display: none; }
 .side-link:hover { background: var(--panel); color: var(--text); }
 .side-link[aria-current="page"] { background: var(--line); color: var(--text); font-weight: 500; }
 .side-link .label-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -286,6 +293,8 @@ button { cursor: pointer; }
 .section > h2, .section-head { margin-bottom: var(--s3); }
 .section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--s2) var(--s4); }
 .section-head p { color: var(--muted); font-size: var(--t-sm); }
+/* A block that follows a related one closely, where a full section gap would separate them. */
+.section-tight { margin-top: var(--s3); }
 
 .candidate-note {
   padding: var(--s3) var(--s6); border-top: 1px solid var(--line);
@@ -338,6 +347,9 @@ a.row-link:hover .row-title { text-decoration: underline; text-underline-offset:
 .table td.actions { text-align: end; white-space: nowrap; }
 .table .nowrap { white-space: nowrap; }
 .table tr.is-winner > * { background: var(--raised); }
+.table tfoot th, .table tfoot td { border-top: 1px solid var(--line); border-bottom: 0; font-weight: 500; color: var(--text); }
+/* A table inside a panel: the panel already draws the frame. */
+.table-flush { border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; }
 
 .kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--s2) var(--s4); font-size: var(--t-sm); }
 .kv dt { color: var(--muted); }
@@ -473,6 +485,8 @@ a.row-link:hover .row-title { text-decoration: underline; text-underline-offset:
 .composer-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); padding: var(--s2); }
 .composer-bar .select { background-color: transparent; border-color: transparent; color: var(--soft); max-width: 100%; }
 .composer-bar .select:hover { border-color: var(--line-2); }
+/* Slash commands: opened from the Commands button, listed above the message box. */
+.slash-menu { margin-bottom: var(--s2); max-height: 40vh; overflow-y: auto; }
 .composer-hint { margin-top: var(--s2); color: var(--muted); font-size: var(--t-xs); }
 
 /* ---------- Secret request card ---------- */
@@ -610,6 +624,16 @@ dialog.dialog::backdrop { background: var(--scrim); }
 .dialog-foot { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--s2); padding: var(--s3) var(--s5); border-top: 1px solid var(--line); }
 .loss { display: grid; gap: var(--s1); padding: var(--s3); border: 1px solid var(--line-2); border-radius: var(--r-md); background: var(--ground); font-size: var(--t-sm); }
 
+/* ---------- Overflow guards ---------- */
+/* A one-column grid sizes its column to the widest child unless told not
+   to, so a long command or title would push the page wider than the screen. */
+.stack, .stack-sm, .stack-lg, .thread-body-inner, .msg, .task-detail, .secret-body, .review-aside,
+.finding, .empty, .meter, .dialog-body, .loss, .skeleton { grid-template-columns: minmax(0, 1fr); }
+.empty > * { max-width: 100%; }
+/* Scrolling regions are positioned so that visually hidden text inside them
+   is clipped with them and cannot widen the page. */
+.table-wrap, .tabs, .proto-tabs, .diff-body { position: relative; }
+
 /* ---------- Motion ---------- */
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
@@ -633,11 +657,11 @@ dialog.dialog::backdrop { background: var(--scrim); }
      stays in the page above the content so every link is still reachable. */
   .js .side { position: fixed; inset: 0 auto 0 0; z-index: 40; width: min(18rem, 86vw); height: 100dvh; border-inline-end: 1px solid var(--line-2); border-bottom: 0; transform: translateX(-100%); visibility: hidden; transition: transform 200ms var(--ease), visibility 200ms; }
   .js .nav-open .side { transform: none; visibility: visible; box-shadow: var(--shadow); }
-  .js .nav-open .scrim { position: fixed; inset: 0; z-index: 30; background: var(--scrim); border: 0; }
+  .js .nav-open .scrim { display: block; position: fixed; inset: 0; z-index: 30; background: var(--scrim); border: 0; }
   .page { padding: var(--s4) var(--s4) var(--s6); }
   .proto, .thread-head, .thread-body, .composer, .candidate-note, .solo-top { padding-inline: var(--s4); }
   .settings { grid-template-columns: minmax(0, 1fr); gap: var(--s4); }
-  .section-nav { position: static; display: flex; overflow-x: auto; gap: var(--s1); padding-bottom: var(--s2); border-bottom: 1px solid var(--line); scrollbar-width: none; }
+  .section-nav { position: relative; display: flex; overflow-x: auto; gap: var(--s1); padding-bottom: var(--s2); border-bottom: 1px solid var(--line); scrollbar-width: none; }
   .section-nav a { flex: none; white-space: nowrap; }
 }
 @media (max-width: 40rem) {

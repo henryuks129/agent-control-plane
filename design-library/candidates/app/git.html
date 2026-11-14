@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Git activity · Agent Control Plane design candidate</title>
+<meta name="description" content="Commits, pull requests, CI runs and issues from the project's own host, read-only by default and linked to ACP tasks.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+</head>
+<body>
+<svg width="0" height="0" class="visually-hidden" aria-hidden="true"><defs><symbol id="i-review" viewBox="0 0 16 16"><path d="M3 2.5h10v11H3z"/><path d="m5.5 8 1.8 1.8 3.2-3.6"/></symbol><symbol id="i-agents" viewBox="0 0 16 16"><path d="M4 4h8v8H4z"/><path d="M6.5 6.5h3v3h-3zM6 1.5V4M10 1.5V4M6 12v2.5M10 12v2.5M1.5 6H4M1.5 10H4M12 6h2.5M12 10h2.5"/></symbol><symbol id="i-memory" viewBox="0 0 16 16"><path d="M8 2 2 5l6 3 6-3z"/><path d="m2 8 6 3 6-3M2 11l6 3 6-3"/></symbol><symbol id="i-design" viewBox="0 0 16 16"><path d="M2.5 2.5H7V7H2.5zM9 2.5h4.5V7H9zM2.5 9H7v4.5H2.5z"/><circle cx="11.25" cy="11.25" r="2.25"/></symbol><symbol id="i-settings" viewBox="0 0 16 16"><path d="M2 4.5h7M12 4.5h2M2 11.5h2M7 11.5h7"/><circle cx="10.5" cy="4.5" r="1.5"/><circle cx="5.5" cy="11.5" r="1.5"/></symbol><symbol id="i-git" viewBox="0 0 16 16"><circle cx="4" cy="3.5" r="1.5"/><circle cx="4" cy="12.5" r="1.5"/><circle cx="12" cy="5.5" r="1.5"/><path d="M4 5v6M12 7c0 2.5-3 3-6.5 3.3"/></symbol><symbol id="i-runs" viewBox="0 0 16 16"><path d="M2.5 4.5h4L8 6h5.5v6.5h-11z"/></symbol><symbol id="i-usage" viewBox="0 0 16 16"><path d="M3 13V8M8 13V3M13 13V6"/></symbol><symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></symbol><symbol id="i-down" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></symbol><symbol id="i-check" viewBox="0 0 16 16"><path d="m3.5 8.5 3 3 6-7"/></symbol><symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5 14 13H2z"/><path d="M8 6.5v3M8 11.2v.1"/></symbol><symbol id="i-info" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 7.2v3.6M8 5v.1"/></symbol><symbol id="i-lock" viewBox="0 0 16 16"><path d="M4 7.5h8v6H4z"/><path d="M5.5 7.5V5a2.5 2.5 0 0 1 5 0v2.5"/></symbol><symbol id="i-menu" viewBox="0 0 16 16"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/></symbol><symbol id="i-theme" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5v11M8 5l3.8-1M8 8h5.5M8 11l3.8 1"/></symbol><symbol id="i-flag" viewBox="0 0 16 16"><path d="M3.5 14V2.5M3.5 3h8L10 5.75l1.5 2.75h-8"/></symbol><symbol id="i-refresh" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.5"/><path d="M13 2.5v3h-3"/></symbol></defs></svg>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="app">
+<aside class="side" id="side" aria-label="Workspace">
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">A</span><span>ACP <small>Agent Control Plane</small></span></a>
+<a class="project-switch" href="onboarding.html#state-project"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-runs"/></svg><span class="name">agent-control-plane</span><span class="visually-hidden">Change project</span><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-down"/></svg></a>
+<nav aria-label="Threads">
+<p class="side-label">Threads</p>
+<ul class="side-group">
+<li><a class="side-link" href="thread.html#state-empty"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-plus"/></svg><span class="label-text">New thread</span></a></li>
+<li><a class="side-link" href="thread.html"><span class="state-dot is-working" aria-hidden="true"></span><span class="label-text">Run each rule's check in review</span><span class="visually-hidden">, 2 working, 2 ready to review</span></a></li>
+<li><a class="side-link" href="thread.html#state-stopped"><span class="state-dot" aria-hidden="true"></span><span class="label-text">Folder-level AGENTS.md blocks</span><span class="visually-hidden">, stopped</span></a></li>
+<li><a class="side-link" href="thread.html#state-ready"><span class="state-dot is-ready" aria-hidden="true"></span><span class="label-text">Docker image health check on /healthz</span><span class="visually-hidden">, ready to review</span></a></li>
+</ul>
+</nav>
+<div class="side-divider" role="presentation"></div>
+<nav aria-label="Workspace pages">
+<ul class="side-group">
+<li><a class="side-link" href="review.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-review"/></svg><span class="label-text">Review</span><span class="count">3<span class="visually-hidden"> changes waiting</span></span></a></li>
+<li><a class="side-link" href="agents.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-agents"/></svg><span class="label-text">Agents</span></a></li>
+<li><a class="side-link" href="memory.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-memory"/></svg><span class="label-text">Memory</span><span class="count">2<span class="visually-hidden"> proposed rules</span></span></a></li>
+<li><a class="side-link" href="design-library.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-design"/></svg><span class="label-text">Design library</span></a></li>
+<li><a class="side-link" href="settings.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-settings"/></svg><span class="label-text">Settings</span></a></li>
+</ul>
+</nav>
+<nav aria-label="Project">
+<p class="side-label">Project</p>
+<ul class="side-group">
+<li><a class="side-link" href="git.html" aria-current="page"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-git"/></svg><span class="label-text">Git activity</span></a></li>
+<li><a class="side-link" href="runs.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-runs"/></svg><span class="label-text">Runs</span></a></li>
+<li><a class="side-link" href="usage.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-usage"/></svg><span class="label-text">Usage</span></a></li>
+</ul>
+</nav>
+<div class="side-foot">
+<a class="side-link" href="report.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-flag"/></svg><span class="label-text">Report a problem</span></a>
+<button class="side-link" type="button" data-theme-toggle><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-theme"/></svg><span class="label-text">Switch theme</span></button>
+</div>
+</aside>
+<button class="scrim" type="button" data-nav-close aria-label="Close menu" tabindex="-1"></button>
+<div class="main">
+<div class="topbar"><a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">A</span><span>ACP</span></a><button class="btn icon-btn" type="button" data-nav-toggle aria-expanded="false" aria-controls="side" aria-label="Menu"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-menu"/></svg></button></div>
+<div class="proto"><span class="proto-label" id="proto-label">Prototype state</span><div class="proto-tabs" role="tablist" aria-labelledby="proto-label" data-state-group="page"><button type="button" role="tab" id="tab-ready" data-state="ready" aria-controls="state-ready" aria-selected="true">Activity</button><button type="button" role="tab" id="tab-approve" data-state="approve" aria-controls="state-approve" aria-selected="false">Write needs approval</button><button type="button" role="tab" id="tab-nohost" data-state="nohost" aria-controls="state-nohost" aria-selected="false">Not signed in to host</button><button type="button" role="tab" id="tab-empty" data-state="empty" aria-controls="state-empty" aria-selected="false">No remote</button><button type="button" role="tab" id="tab-loading" data-state="loading" aria-controls="state-loading" aria-selected="false">Loading</button><button type="button" role="tab" id="tab-error" data-state="error" aria-controls="state-error" aria-selected="false">Host unreachable</button></div></div>
+<main id="main" class="page">
+<header class="page-head">
+<div><h1>Git activity</h1><p class="lede">What is happening on this project's own host: commits, pull requests, CI and issues, linked to the tasks that caused them. ACP reads with the Git and <code>gh</code> sign-in you already have, and writes nothing without your approval.</p></div>
+<span class="cluster"><span class="tag"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-lock"/></svg>Read-only</span><button type="button" class="btn" data-goto-tab="tab-loading"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-refresh"/></svg>Refresh</button></span>
+</header>
+
+<section id="state-ready" role="tabpanel" aria-labelledby="tab-ready">
+<div class="tabs" role="tablist" aria-label="Git activity">
+<button type="button" role="tab" id="tab-commits" aria-controls="panel-commits" aria-selected="true">Commits</button>
+<button type="button" role="tab" id="tab-pulls" aria-controls="panel-pulls" aria-selected="false">Pull requests<span class="count">2</span></button>
+<button type="button" role="tab" id="tab-ci" aria-controls="panel-ci" aria-selected="false">CI<span class="count">1 failing</span></button>
+<button type="button" role="tab" id="tab-issues" aria-controls="panel-issues" aria-selected="false">Issues<span class="count">3</span></button>
+</div>
+
+<div class="tab-panel" id="panel-commits" role="tabpanel" aria-labelledby="tab-commits">
+<div class="spread"><p class="muted small">Branch <code>dev</code> · up to date with <code>origin/dev</code> · read 20 seconds ago</p>
+<div class="field"><label class="visually-hidden" for="g-branch">Branch</label><select class="select select-sm" id="g-branch"><option>dev</option><option>main</option><option>feat/app-page-designs</option></select></div></div>
+<div class="table-wrap section-tight">
+<table class="table">
+<caption class="visually-hidden">Recent commits on dev</caption>
+<thead><tr><th scope="col">Commit</th><th scope="col">Message</th><th scope="col">ACP task</th><th scope="col">CI</th></tr></thead>
+<tbody>
+<tr><th scope="row"><code>4a3c8e1</code></th><td>feat: MCP server, private requests, run clean-up and a design check<p class="row-sub">Merged pull request 10 · 2 days ago</p></td><td><a href="review.html#state-applied">Applied from Review</a></td><td><span class="pill is-ok"><span class="dot"></span>Passed</span></td></tr>
+<tr><th scope="row"><code>8a34c38</code></th><td>feat(design): attach built-in design skills to design tasks<p class="row-sub">Merged pull request 8 · 3 days ago</p></td><td class="muted">Made outside ACP</td><td><span class="pill is-ok"><span class="dot"></span>Passed</span></td></tr>
+<tr><th scope="row"><code>cd24768</code></th><td>feat(agents): find signed-in agents and run a request in a worktree with memory<p class="row-sub">Merged pull request 7 · 4 days ago</p></td><td class="muted">Made outside ACP</td><td><span class="pill is-ok"><span class="dot"></span>Passed</span></td></tr>
+<tr><th scope="row"><code>7afd572</code></th><td>feat(memory): layered project memory, mistake guard and AGENTS.md summary<p class="row-sub">Merged pull request 6 · 5 days ago</p></td><td class="muted">Made outside ACP</td><td><span class="pill is-ok"><span class="dot"></span>Passed</span></td></tr>
+</tbody>
+</table>
+</div>
+<p class="muted small section-tight">Commits come from Git on this computer, so this list works without the host. The CI column needs the host.</p>
+</div>
+
+<div class="tab-panel" id="panel-pulls" role="tabpanel" aria-labelledby="tab-pulls" hidden>
+<div class="table-wrap">
+<table class="table">
+<caption class="visually-hidden">Open pull requests</caption>
+<thead><tr><th scope="col">Pull request</th><th scope="col">Branches</th><th scope="col">Checks</th><th scope="col">ACP task</th></tr></thead>
+<tbody>
+<tr><th scope="row">12 · Run each rule's check in review<p class="row-sub">Draft · 2 commits · opened by you</p></th><td><code>feat/rule-checks</code> into <code>dev</code></td><td><span class="pill is-failed"><span class="dot"></span>1 of 3 failing</span><p class="row-sub"><code>ci.yml</code> failed at <code>npm test</code></p></td><td><a href="thread.html">Run each rule's check in review</a></td></tr>
+<tr><th scope="row">11 · App page design candidates<p class="row-sub">Open · 1 commit · opened by you</p></th><td><code>feat/app-page-designs</code> into <code>dev</code></td><td><span class="pill is-ok"><span class="dot"></span>3 of 3 passed</span><p class="row-sub">Preview built by <code>pages.yml</code></p></td><td class="muted">Made outside ACP</td></tr>
+</tbody>
+</table>
+</div>
+<p class="muted small section-tight">This project's rule: changes go branch, pull request, <code>dev</code>, pull request, <code>main</code>, and the maintainer merges. ACP never merges and never pushes to <code>dev</code> or <code>main</code>. <code>branch-flow.yml</code> checks the same rule on the host.</p>
+<div class="panel section-tight">
+<div class="row"><div><p class="row-title">Open a pull request for an applied change</p><p class="row-sub">ACP can prepare one from a change you approved in Review. You see the title, text and branch first, and nothing is sent until you approve.</p></div><div class="row-actions"><button type="button" class="btn" data-goto-tab="tab-approve">Prepare a pull request</button></div></div>
+</div>
+</div>
+
+<div class="tab-panel" id="panel-ci" role="tabpanel" aria-labelledby="tab-ci" hidden>
+<div class="notice is-warn" id="ci-proposal"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-alert"/></svg><div><p class="notice-title">Proposed task: fix the failing test on pull request 12</p><p><code>ci.yml</code> failed at <code>npm test</code>: <span class="loc">tests/core.test.ts:412</span>, "expected 6 checks, got 5". ACP proposes a task; it starts only if you say so.</p></div><div class="row-actions"><button type="button" class="btn btn-primary" data-hide="ci-proposal" data-show="ci-accepted">Create task</button><button type="button" class="btn btn-quiet" data-hide="ci-proposal" data-show="ci-dismissed">Dismiss</button></div></div>
+<p class="notice is-ok" id="ci-accepted" hidden><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg><span>Task created in <a href="thread.html#state-sent">Run each rule's check in review</a>. It shows as working now.</span></p>
+<p class="notice" id="ci-dismissed" hidden><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-info"/></svg><span>Dismissed. The run stays in the list below, and no task was created.</span></p>
+<div class="table-wrap section-tight">
+<table class="table">
+<caption class="visually-hidden">Recent CI runs</caption>
+<thead><tr><th scope="col">Workflow</th><th scope="col">On</th><th scope="col">Result</th><th scope="col" class="num">Took</th></tr></thead>
+<tbody>
+<tr><th scope="row"><code>ci.yml</code><p class="row-sub">typecheck, build, test, secret scan</p></th><td>Pull request 12 · <code>feat/rule-checks</code></td><td><span class="pill is-failed"><span class="dot"></span>Failed</span><p class="row-sub">Step <code>npm test</code>, 1 of 148 tests</p></td><td class="num">2 min 41 s</td></tr>
+<tr><th scope="row"><code>branch-flow.yml</code><p class="row-sub">a pull request into <code>main</code> must come from <code>dev</code></p></th><td>Pull request 12 · <code>feat/rule-checks</code></td><td><span class="pill is-ok"><span class="dot"></span>Passed</span></td><td class="num">9 s</td></tr>
+<tr><th scope="row"><code>ci.yml</code></th><td>Pull request 11 · <code>feat/app-page-designs</code></td><td><span class="pill is-ok"><span class="dot"></span>Passed</span></td><td class="num">2 min 37 s</td></tr>
+<tr><th scope="row"><code>pages.yml</code><p class="row-sub">builds the preview for a pull request</p></th><td>Pull request 11 · <code>feat/app-page-designs</code></td><td><span class="pill is-working"><span class="dot"></span>Running</span></td><td class="num">48 s so far</td></tr>
+<tr><th scope="row"><code>ci.yml</code></th><td><code>dev</code> · <code>4a3c8e1</code></td><td><span class="pill is-ok"><span class="dot"></span>Passed</span></td><td class="num">2 min 35 s</td></tr>
+</tbody>
+</table>
+</div>
+<p class="muted small section-tight">A CI result is evidence: it appears under Verification in the patch report of the change it tested.</p>
+</div>
+
+<div class="tab-panel" id="panel-issues" role="tabpanel" aria-labelledby="tab-issues" hidden>
+<div class="table-wrap">
+<table class="table">
+<caption class="visually-hidden">Open issues</caption>
+<thead><tr><th scope="col">Issue</th><th scope="col">Labels</th><th scope="col">ACP task</th><th scope="col"><span class="visually-hidden">Action</span></th></tr></thead>
+<tbody>
+<tr><th scope="row">14 · Dashboard shows a blank page when the port is already in use<p class="row-sub">Opened yesterday through Report a problem · "I can't work"</p></th><td><span class="cluster"><span class="tag">type:bug</span><span class="tag">area:desktop</span><span class="tag">source:app</span><span class="tag tag-warn">needs-triage</span></span></td><td class="muted">None yet</td><td class="actions"><a class="btn" href="thread.html#state-sent">Create task</a></td></tr>
+<tr><th scope="row">13 · Explain what a rule's <code>check:</code> field accepts<p class="row-sub">Opened 3 days ago on the host</p></th><td><span class="cluster"><span class="tag">type:docs</span><span class="tag">area:memory</span><span class="tag">source:github</span><span class="tag">priority:p2</span></span></td><td><a href="review.html#state-queue">Describe check: in the memory guide</a><p class="row-sub">Ready to review</p></td><td class="actions"></td></tr>
+<tr><th scope="row">9 · A very long issue title that someone pasted a whole error message into: Error: ENOENT: no such file or directory, open '/Users/you/code/agent-control-plane/.acp/local/checkpoints/task-0193/latest.json' at Object.openSync<p class="row-sub">Opened 6 days ago on the host</p></th><td><span class="cluster"><span class="tag">type:bug</span><span class="tag">area:orchestrator</span><span class="tag">source:github</span><span class="tag">priority:p1</span></span></td><td class="muted">None yet</td><td class="actions"><a class="btn" href="thread.html#state-sent">Create task</a></td></tr>
+</tbody>
+</table>
+</div>
+<p class="muted small section-tight">When a pull request that closes an issue is merged, ACP marks the linked task as done. Posting a comment or closing an issue from here needs your approval each time.</p>
+</div>
+</section>
+
+<section id="state-approve" role="tabpanel" aria-labelledby="tab-approve" hidden>
+<div class="notice is-warn" role="status"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-lock"/></svg><div><p class="notice-title">This would write to your host. Read it before you approve.</p><p>ACP is read-only by default. Approving sends exactly what is shown below, once, with your own <code>gh</code> sign-in.</p></div></div>
+<div class="panel section-tight">
+<div class="panel-head"><div><h2>Open a pull request</h2><p>From the change <a href="review.html#state-applied">Tests for rules with and without a check</a>, applied to <code>feat/rule-checks</code></p></div><span class="tag tag-warn">Needs approval</span></div>
+<dl class="report">
+<div><dt>Branches</dt><dd><code>feat/rule-checks</code> into <code>dev</code>. Never into <code>main</code>: this project's rule sends every change through <code>dev</code>.</dd></div>
+<div><dt>Title</dt><dd>test: rules with and without a check</dd></div>
+<div><dt>Text</dt><dd><p><b>Problem.</b> Nothing tested that a rule without a <code>check:</code> field is treated as advice.</p><p><b>Change.</b> Adds two cases to <code>tests/memory.test.ts</code>.</p><p><b>Scope.</b> 1 file, +86 −0. No source file changed.</p><p><b>Verification.</b> <code>npm test</code> passed, 148 of 148.</p></dd></div>
+<div><dt>Also sent</dt><dd>1 commit, pushed to <code>origin/feat/rule-checks</code>. No dates, no tool attribution and no other product names in the text, as <code>.acp/knowledge.md</code> requires.</dd></div>
+</dl>
+<div class="panel-foot cluster"><button type="button" class="btn btn-primary" data-open-dialog="confirm-pr">Approve and open</button><button type="button" class="btn">Edit text</button><button type="button" class="btn btn-quiet" data-goto-tab="tab-ready">Cancel</button></div>
+</div>
+<p class="muted small section-tight">The title and text were drafted by the cheap model set in <a href="settings.html#agents-models">Settings</a>. They are a draft, not evidence.</p>
+</section>
+
+<section id="state-nohost" role="tabpanel" aria-labelledby="tab-nohost" hidden>
+<div class="notice is-warn" role="status"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-alert"/></svg><div><p class="notice-title">Signed out of the project host</p><p>Commits below come from Git on this computer. Pull requests, CI and issues need the host's own command-line tool to be signed in. ACP has no sign-in of its own for the host and never asks for a token.</p></div><div class="row-actions"><button type="button" class="btn" data-goto-tab="tab-ready">Check again</button></div></div>
+<div class="cmd section-tight"><code>gh auth login</code><button type="button" data-copy>Copy</button></div>
+<div class="table-wrap section-tight">
+<table class="table">
+<caption class="visually-hidden">Recent commits on dev, from local Git</caption>
+<thead><tr><th scope="col">Commit</th><th scope="col">Message</th><th scope="col">CI</th></tr></thead>
+<tbody>
+<tr><th scope="row"><code>4a3c8e1</code></th><td>feat: MCP server, private requests, run clean-up and a design check</td><td class="muted">Needs the host</td></tr>
+<tr><th scope="row"><code>8a34c38</code></th><td>feat(design): attach built-in design skills to design tasks</td><td class="muted">Needs the host</td></tr>
+<tr><th scope="row"><code>cd24768</code></th><td>feat(agents): find signed-in agents and run a request in a worktree with memory</td><td class="muted">Needs the host</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<section id="state-empty" role="tabpanel" aria-labelledby="tab-empty" hidden>
+<div class="empty">
+<h2>This project has no remote</h2>
+<p>Git works on this computer, so agents can still work in worktrees and you can review and apply changes. Pull requests, CI and issues appear here once the repository has a remote on a host. GitHub is supported first.</p>
+<div class="cmd"><code>git remote add origin &lt;address of your repository&gt;</code><button type="button" data-copy>Copy</button></div>
+<a class="btn" href="runs.html">See runs on this computer</a>
+</div>
+</section>
+
+<section id="state-loading" role="tabpanel" aria-labelledby="tab-loading" hidden>
+<div aria-busy="true">
+<p class="visually-hidden" role="status">Reading commits, pull requests, CI runs and issues</p>
+<div class="skeleton"><div class="sk sk-w50"></div></div>
+<div class="panel section">
+<div class="sk-row"><div class="sk"></div><div class="skeleton"><div class="sk sk-w90"></div><div class="sk sk-w30"></div></div><div class="sk sk-pill"></div></div>
+<div class="sk-row"><div class="sk"></div><div class="skeleton"><div class="sk sk-w70"></div><div class="sk sk-w30"></div></div><div class="sk sk-pill"></div></div>
+<div class="sk-row"><div class="sk"></div><div class="skeleton"><div class="sk sk-w90"></div><div class="sk sk-w50"></div></div><div class="sk sk-pill"></div></div>
+<div class="sk-row"><div class="sk"></div><div class="skeleton"><div class="sk sk-w50"></div><div class="sk sk-w30"></div></div><div class="sk sk-pill"></div></div>
+</div>
+</div>
+</section>
+
+<section id="state-error" role="tabpanel" aria-labelledby="tab-error" hidden>
+<div class="notice is-err" role="alert"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-alert"/></svg><div><p class="notice-title">The host did not answer</p><p><code>gh</code> timed out after 20 seconds. This is usually the network. Agents and Review keep working, because they need only this computer. The last reading, from 14 minutes ago, is kept and marked as old.</p></div><div class="row-actions"><button type="button" class="btn" data-goto-tab="tab-ready">Try again</button><a class="btn btn-quiet" href="error.html#state-offline">Working offline</a></div></div>
+<div class="table-wrap section-tight">
+<table class="table">
+<caption class="visually-hidden">Last known pull requests</caption>
+<thead><tr><th scope="col">Pull request</th><th scope="col">Checks</th><th scope="col">Read</th></tr></thead>
+<tbody>
+<tr><th scope="row">12 · Run each rule's check in review</th><td><span class="pill is-failed"><span class="dot"></span>1 of 3 failing</span></td><td><span class="tag tag-warn">14 min ago</span></td></tr>
+<tr><th scope="row">11 · App page design candidates</th><td><span class="pill is-ok"><span class="dot"></span>3 of 3 passed</span></td><td><span class="tag tag-warn">14 min ago</span></td></tr>
+</tbody>
+</table>
+</div>
+</section>
+
+<dialog class="dialog" id="confirm-pr" aria-labelledby="confirm-pr-title">
+<div class="dialog-body">
+<h2 id="confirm-pr-title">Open this pull request on the host?</h2>
+<p>ACP will push 1 commit to <code>origin/feat/rule-checks</code> and open a pull request into <code>dev</code> with the title and text you just read.</p>
+<p>Other people can see it as soon as it is open. You can close it on the host afterwards, but the push stays in the branch's history.</p>
+</div>
+<div class="dialog-foot"><button type="button" class="btn" data-close-dialog autofocus>Not now</button><button type="button" class="btn btn-primary" data-close-dialog data-goto-tab="tab-ready">Push and open pull request</button></div>
+</dialog>
+</main>
+<footer class="candidate-note"><span>Design candidate. This app is not built yet, and every name, number and message on this page is sample content.</span><a href="index.html">All pages and states</a></footer>
+</div>
+</div>
+</body>
+</html>

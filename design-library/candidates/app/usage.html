@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Usage · Agent Control Plane design candidate</title>
+<meta name="description" content="Plan usage per agent, with 5-hour and weekly windows, estimates for free and API models, and usage per thread.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+</head>
+<body>
+<svg width="0" height="0" class="visually-hidden" aria-hidden="true"><defs><symbol id="i-review" viewBox="0 0 16 16"><path d="M3 2.5h10v11H3z"/><path d="m5.5 8 1.8 1.8 3.2-3.6"/></symbol><symbol id="i-agents" viewBox="0 0 16 16"><path d="M4 4h8v8H4z"/><path d="M6.5 6.5h3v3h-3zM6 1.5V4M10 1.5V4M6 12v2.5M10 12v2.5M1.5 6H4M1.5 10H4M12 6h2.5M12 10h2.5"/></symbol><symbol id="i-memory" viewBox="0 0 16 16"><path d="M8 2 2 5l6 3 6-3z"/><path d="m2 8 6 3 6-3M2 11l6 3 6-3"/></symbol><symbol id="i-design" viewBox="0 0 16 16"><path d="M2.5 2.5H7V7H2.5zM9 2.5h4.5V7H9zM2.5 9H7v4.5H2.5z"/><circle cx="11.25" cy="11.25" r="2.25"/></symbol><symbol id="i-settings" viewBox="0 0 16 16"><path d="M2 4.5h7M12 4.5h2M2 11.5h2M7 11.5h7"/><circle cx="10.5" cy="4.5" r="1.5"/><circle cx="5.5" cy="11.5" r="1.5"/></symbol><symbol id="i-git" viewBox="0 0 16 16"><circle cx="4" cy="3.5" r="1.5"/><circle cx="4" cy="12.5" r="1.5"/><circle cx="12" cy="5.5" r="1.5"/><path d="M4 5v6M12 7c0 2.5-3 3-6.5 3.3"/></symbol><symbol id="i-runs" viewBox="0 0 16 16"><path d="M2.5 4.5h4L8 6h5.5v6.5h-11z"/></symbol><symbol id="i-usage" viewBox="0 0 16 16"><path d="M3 13V8M8 13V3M13 13V6"/></symbol><symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></symbol><symbol id="i-down" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></symbol><symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5 14 13H2z"/><path d="M8 6.5v3M8 11.2v.1"/></symbol><symbol id="i-menu" viewBox="0 0 16 16"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/></symbol><symbol id="i-theme" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5v11M8 5l3.8-1M8 8h5.5M8 11l3.8 1"/></symbol><symbol id="i-flag" viewBox="0 0 16 16"><path d="M3.5 14V2.5M3.5 3h8L10 5.75l1.5 2.75h-8"/></symbol><symbol id="i-refresh" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.5"/><path d="M13 2.5v3h-3"/></symbol></defs></svg>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="app">
+<aside class="side" id="side" aria-label="Workspace">
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">A</span><span>ACP <small>Agent Control Plane</small></span></a>
+<a class="project-switch" href="onboarding.html#state-project"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-runs"/></svg><span class="name">agent-control-plane</span><span class="visually-hidden">Change project</span><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-down"/></svg></a>
+<nav aria-label="Threads">
+<p class="side-label">Threads</p>
+<ul class="side-group">
+<li><a class="side-link" href="thread.html#state-empty"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-plus"/></svg><span class="label-text">New thread</span></a></li>
+<li><a class="side-link" href="thread.html"><span class="state-dot is-working" aria-hidden="true"></span><span class="label-text">Run each rule's check in review</span><span class="visually-hidden">, 2 working, 2 ready to review</span></a></li>
+<li><a class="side-link" href="thread.html#state-stopped"><span class="state-dot" aria-hidden="true"></span><span class="label-text">Folder-level AGENTS.md blocks</span><span class="visually-hidden">, stopped</span></a></li>
+<li><a class="side-link" href="thread.html#state-ready"><span class="state-dot is-ready" aria-hidden="true"></span><span class="label-text">Docker image health check on /healthz</span><span class="visually-hidden">, ready to review</span></a></li>
+</ul>
+</nav>
+<div class="side-divider" role="presentation"></div>
+<nav aria-label="Workspace pages">
+<ul class="side-group">
+<li><a class="side-link" href="review.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-review"/></svg><span class="label-text">Review</span><span class="count">3<span class="visually-hidden"> changes waiting</span></span></a></li>
+<li><a class="side-link" href="agents.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-agents"/></svg><span class="label-text">Agents</span></a></li>
+<li><a class="side-link" href="memory.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-memory"/></svg><span class="label-text">Memory</span><span class="count">2<span class="visually-hidden"> proposed rules</span></span></a></li>
+<li><a class="side-link" href="design-library.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-design"/></svg><span class="label-text">Design library</span></a></li>
+<li><a class="side-link" href="settings.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-settings"/></svg><span class="label-text">Settings</span></a></li>
+</ul>
+</nav>
+<nav aria-label="Project">
+<p class="side-label">Project</p>
+<ul class="side-group">
+<li><a class="side-link" href="git.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-git"/></svg><span class="label-text">Git activity</span></a></li>
+<li><a class="side-link" href="runs.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-runs"/></svg><span class="label-text">Runs</span></a></li>
+<li><a class="side-link" href="usage.html" aria-current="page"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-usage"/></svg><span class="label-text">Usage</span></a></li>
+</ul>
+</nav>
+<div class="side-foot">
+<a class="side-link" href="report.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-flag"/></svg><span class="label-text">Report a problem</span></a>
+<button class="side-link" type="button" data-theme-toggle><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-theme"/></svg><span class="label-text">Switch theme</span></button>
+</div>
+</aside>
+<button class="scrim" type="button" data-nav-close aria-label="Close menu" tabindex="-1"></button>
+<div class="main">
+<div class="topbar"><a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">A</span><span>ACP</span></a><button class="btn icon-btn" type="button" data-nav-toggle aria-expanded="false" aria-controls="side" aria-label="Menu"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-menu"/></svg></button></div>
+<div class="proto"><span class="proto-label" id="proto-label">Prototype state</span><div class="proto-tabs" role="tablist" aria-labelledby="proto-label" data-state-group="page"><button type="button" role="tab" id="tab-ready" data-state="ready" aria-controls="state-ready" aria-selected="true">Usage</button><button type="button" role="tab" id="tab-limit" data-state="limit" aria-controls="state-limit" aria-selected="false">Limit reached</button><button type="button" role="tab" id="tab-partial" data-state="partial" aria-controls="state-partial" aria-selected="false">One agent silent</button><button type="button" role="tab" id="tab-empty" data-state="empty" aria-controls="state-empty" aria-selected="false">Nothing used</button><button type="button" role="tab" id="tab-loading" data-state="loading" aria-controls="state-loading" aria-selected="false">Loading</button></div></div>
+<main id="main" class="page">
+<header class="page-head">
+<div><h1>Usage</h1><p class="lede">How much of each plan your agents have used. The numbers come from each agent's own tool. Where a model has no plan, ACP counts its own requests and labels the result as an estimate.</p></div>
+<button type="button" class="btn" data-goto-tab="tab-loading"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-refresh"/></svg>Read again</button>
+</header>
+
+<section id="state-ready" role="tabpanel" aria-labelledby="tab-ready">
+<div class="tabs" role="tablist" aria-label="Usage">
+<button type="button" role="tab" id="tab-by-agent" aria-controls="panel-by-agent" aria-selected="true">By agent</button>
+<button type="button" role="tab" id="tab-by-thread" aria-controls="panel-by-thread" aria-selected="false">By thread</button>
+</div>
+
+<div class="tab-panel" id="panel-by-agent" role="tabpanel" aria-labelledby="tab-by-agent">
+<div class="panel">
+<article class="agent-card" aria-labelledby="u-claude">
+<div><h2 class="agent-name" id="u-claude">Claude Code</h2><ul class="agent-facts"><li>Claude Pro plan</li><li>Read 40 seconds ago</li><li>3 tasks in this window</li></ul></div>
+<div class="agent-usage meters">
+<div class="meter"><p class="meter-top"><span class="name">5-hour window</span><span class="value">62%</span></p><progress max="100" value="62" aria-label="Claude Code 5-hour window, 62 percent used"></progress><p class="meter-foot">Resets in 1 h 48 min</p></div>
+<div class="meter"><p class="meter-top"><span class="name">Weekly window</span><span class="value">31%</span></p><progress max="100" value="31" aria-label="Claude Code weekly window, 31 percent used"></progress><p class="meter-foot">Resets in 4 days</p></div>
+</div>
+<span class="pill is-ok"><span class="dot"></span>Taking tasks</span>
+</article>
+<article class="agent-card" aria-labelledby="u-codex">
+<div><h2 class="agent-name" id="u-codex">Codex</h2><ul class="agent-facts"><li>ChatGPT Plus plan</li><li>Read 40 seconds ago</li><li>5 tasks in this window</li></ul></div>
+<div class="agent-usage stack-sm">
+<div class="meters">
+<div class="meter is-high"><p class="meter-top"><span class="name">5-hour window</span><span class="value">94%</span></p><progress max="100" value="94" aria-label="Codex 5-hour window, 94 percent used"></progress><p class="meter-foot">Resets in 37 min</p></div>
+<div class="meter"><p class="meter-top"><span class="name">Weekly window</span><span class="value">48%</span></p><progress max="100" value="48" aria-label="Codex weekly window, 48 percent used"></progress><p class="meter-foot">Resets in 2 days</p></div>
+</div>
+<p class="small"><span class="tag tag-warn">Near limit</span> New tasks go to other agents until the 5-hour window resets. Its working task continues.</p>
+</div>
+<span class="pill is-ready"><span class="dot"></span>Finishing only</span>
+</article>
+<article class="agent-card" aria-labelledby="u-opencode">
+<div><h2 class="agent-name" id="u-opencode">OpenCode</h2><ul class="agent-facts"><li>No plan: free and local models</li><li>Counted by ACP</li><li>4 tasks today</li></ul></div>
+<div class="agent-usage meters">
+<div class="meter is-estimate"><p class="meter-top"><span class="name">NVIDIA, requests this minute <span class="tag tag-estimate">Estimate</span></span><span class="value">22 of about 40</span></p><progress max="40" value="22" aria-label="NVIDIA requests this minute, an estimate: 22 of about 40"></progress><p class="meter-foot">From ACP's own count and the provider's rate-limit replies.</p></div>
+<div class="meter is-estimate"><p class="meter-top"><span class="name">Ollama, on this computer</span><span class="value">No limit</span></p><progress max="100" value="0" aria-label="Ollama has no request limit"></progress><p class="meter-foot">Limited by this computer's processor and memory.</p></div>
+</div>
+<span class="pill is-ok"><span class="dot"></span>Taking tasks</span>
+</article>
+</div>
+<p class="muted small section-tight">A solid bar is a number the agent's own tool reported. A dashed bar is an estimate. ACP shows a plan name only, never your email, organisation or keys. No cost in money is shown, because a plan is not billed by request.</p>
+
+<section class="section" aria-labelledby="u-route">
+<div class="section-head"><h2 id="u-route">How usage changes who gets a task</h2><p>Plan windows drive routing</p></div>
+<div class="table-wrap">
+<table class="table">
+<thead><tr><th scope="col">When an agent's window is</th><th scope="col">ACP does this</th><th scope="col">You see</th></tr></thead>
+<tbody>
+<tr><th scope="row">Under 90%</th><td>Gives it tasks as the orchestrator decides</td><td><span class="pill is-ok"><span class="dot"></span>Taking tasks</span></td></tr>
+<tr><th scope="row">90% or more</th><td>Lets it finish its working task; sends new tasks to other agents</td><td><span class="pill is-ready"><span class="dot"></span>Finishing only</span></td></tr>
+<tr><th scope="row">At the limit</th><td>Saves a checkpoint and hands the task to another agent, with <code>handoff.md</code></td><td><span class="pill is-stopped"><span class="dot"></span>Waiting for reset</span></td></tr>
+</tbody>
+</table>
+</div>
+<p class="muted small section-tight">The 90% line is a setting. <a href="settings.html#agents-models">Change it in Settings</a></p>
+</section>
+</div>
+
+<div class="tab-panel" id="panel-by-thread" role="tabpanel" aria-labelledby="tab-by-thread" hidden>
+<div class="spread"><p class="muted small">Share of each agent's current 5-hour window that a thread used. Free and local models are counted in requests.</p>
+<div class="seg" data-single aria-label="Period"><button type="button" aria-pressed="true">This window</button><button type="button" aria-pressed="false">7 days</button></div></div>
+<div class="table-wrap section-tight">
+<table class="table">
+<caption class="visually-hidden">Usage per thread and agent</caption>
+<thead><tr><th scope="col">Thread</th><th scope="col">Tasks</th><th scope="col" class="num">Claude Code</th><th scope="col" class="num">Codex</th><th scope="col" class="num">OpenCode <span class="tag tag-estimate">Estimate</span></th></tr></thead>
+<tbody>
+<tr><th scope="row"><a href="thread.html">Run each rule's check in review</a><p class="row-sub">2 working · 2 ready to review</p></th><td>4</td><td class="num">24%</td><td class="num">41%</td><td class="num">138 requests</td></tr>
+<tr><th scope="row"><a href="thread.html#state-stopped">Folder-level AGENTS.md blocks</a><p class="row-sub">Stopped</p></th><td>3</td><td class="num">19%</td><td class="num">38%</td><td class="num">0 requests</td></tr>
+<tr><th scope="row"><a href="thread.html#state-ready">Docker image health check on /healthz</a><p class="row-sub">Ready to review</p></th><td>2</td><td class="num">11%</td><td class="num">15%</td><td class="num">52 requests</td></tr>
+<tr><th scope="row"><a href="thread.html#state-long">Rename every mention of the dashboard port across the guides, the compose file, the container health check and the tests, and keep the old port working for one release</a><p class="row-sub">Done · 9 changes applied</p></th><td>9</td><td class="num">8%</td><td class="num">0%</td><td class="num">611 requests</td></tr>
+<tr><th scope="row">Small text: thread titles, commit messages<p class="row-sub">Written by the cheap model you chose</p></th><td class="muted">None</td><td class="num">0%</td><td class="num">0%</td><td class="num">37 requests</td></tr>
+</tbody>
+<tfoot><tr><th scope="row">All threads</th><td>18</td><td class="num">62%</td><td class="num">94%</td><td class="num">838 requests</td></tr></tfoot>
+</table>
+</div>
+<p class="muted small section-tight">An agent reports its window as one number, so the split between threads is ACP's own count of each thread's part and can be off by a few points.</p>
+</div>
+</section>
+
+<section id="state-limit" role="tabpanel" aria-labelledby="tab-limit" hidden>
+<div class="notice is-warn" role="status"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-alert"/></svg><div><p class="notice-title">Codex reached its 5-hour limit</p><p>Its task <a href="thread.html#state-handoff">Run check: commands in the review engine</a> was saved at checkpoint 3 and handed to Claude Code with <code>handoff.md</code>. Nothing was lost. Codex takes tasks again in 37 minutes.</p></div><div class="row-actions"><a class="btn" href="thread.html#state-handoff">See the hand-off</a></div></div>
+<div class="panel section-tight">
+<article class="agent-card" aria-labelledby="l-codex">
+<div><h2 class="agent-name" id="l-codex">Codex</h2><ul class="agent-facts"><li>ChatGPT Plus plan</li><li>Read 12 seconds ago</li></ul></div>
+<div class="agent-usage meters">
+<div class="meter is-high"><p class="meter-top"><span class="name">5-hour window</span><span class="value">100%</span></p><progress max="100" value="100" aria-label="Codex 5-hour window, 100 percent used"></progress><p class="meter-foot">Resets in 37 min</p></div>
+<div class="meter"><p class="meter-top"><span class="name">Weekly window</span><span class="value">51%</span></p><progress max="100" value="51" aria-label="Codex weekly window, 51 percent used"></progress><p class="meter-foot">Resets in 2 days</p></div>
+</div>
+<span class="pill is-stopped"><span class="dot"></span>Waiting for reset</span>
+</article>
+<article class="agent-card" aria-labelledby="l-claude">
+<div><h2 class="agent-name" id="l-claude">Claude Code</h2><ul class="agent-facts"><li>Claude Pro plan</li><li>Took over 1 task</li></ul></div>
+<div class="agent-usage meters">
+<div class="meter"><p class="meter-top"><span class="name">5-hour window</span><span class="value">66%</span></p><progress max="100" value="66" aria-label="Claude Code 5-hour window, 66 percent used"></progress><p class="meter-foot">Resets in 1 h 44 min</p></div>
+<div class="meter"><p class="meter-top"><span class="name">Weekly window</span><span class="value">32%</span></p><progress max="100" value="32" aria-label="Claude Code weekly window, 32 percent used"></progress><p class="meter-foot">Resets in 4 days</p></div>
+</div>
+<span class="pill is-ok"><span class="dot"></span>Taking tasks</span>
+</article>
+</div>
+<p class="muted small section-tight">If every agent is at its limit, working tasks stop at a checkpoint and their rows show Resume. Free and local models keep working when you have turned them on in <a href="agents.html">Agents</a>.</p>
+</section>
+
+<section id="state-partial" role="tabpanel" aria-labelledby="tab-partial" hidden>
+<div class="notice is-warn" role="status"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-alert"/></svg><div><p class="notice-title">Claude Code did not report its usage</p><p>Its tool answered, but without usage numbers. ACP shows the last reading and marks it as old instead of guessing. Tasks still run; routing treats this agent as if it were at 90%.</p></div><div class="row-actions"><button type="button" class="btn" data-goto-tab="tab-ready">Read again</button></div></div>
+<div class="panel section-tight">
+<article class="agent-card" aria-labelledby="p-claude">
+<div><h2 class="agent-name" id="p-claude">Claude Code</h2><ul class="agent-facts"><li>Claude Pro plan</li><li><span class="tag tag-warn">Last read 26 min ago</span></li></ul></div>
+<div class="agent-usage meters">
+<div class="meter is-estimate"><p class="meter-top"><span class="name">5-hour window, old reading</span><span class="value">58%</span></p><progress max="100" value="58" aria-label="Claude Code 5-hour window, old reading: 58 percent used"></progress><p class="meter-foot">May be higher now</p></div>
+<div class="meter is-estimate"><p class="meter-top"><span class="name">Weekly window, old reading</span><span class="value">30%</span></p><progress max="100" value="30" aria-label="Claude Code weekly window, old reading: 30 percent used"></progress><p class="meter-foot">May be higher now</p></div>
+</div>
+<span class="pill is-ready"><span class="dot"></span>Finishing only</span>
+</article>
+<article class="agent-card" aria-labelledby="p-codex">
+<div><h2 class="agent-name" id="p-codex">Codex</h2><ul class="agent-facts"><li>ChatGPT Plus plan</li><li>Read 8 seconds ago</li></ul></div>
+<div class="agent-usage meters">
+<div class="meter is-high"><p class="meter-top"><span class="name">5-hour window</span><span class="value">94%</span></p><progress max="100" value="94" aria-label="Codex 5-hour window, 94 percent used"></progress><p class="meter-foot">Resets in 37 min</p></div>
+<div class="meter"><p class="meter-top"><span class="name">Weekly window</span><span class="value">48%</span></p><progress max="100" value="48" aria-label="Codex weekly window, 48 percent used"></progress><p class="meter-foot">Resets in 2 days</p></div>
+</div>
+<span class="pill is-ready"><span class="dot"></span>Finishing only</span>
+</article>
+</div>
+</section>
+
+<section id="state-empty" role="tabpanel" aria-labelledby="tab-empty" hidden>
+<div class="empty">
+<h2>Nothing used yet</h2>
+<p>Usage appears here after the first request. Plan windows for Claude Code and Codex are read from their own tools; free and local models are counted by ACP and shown as estimates.</p>
+<a class="btn btn-primary" href="thread.html#state-empty">Start a thread</a>
+</div>
+</section>
+
+<section id="state-loading" role="tabpanel" aria-labelledby="tab-loading" hidden>
+<div aria-busy="true">
+<p class="visually-hidden" role="status">Reading usage from each agent</p>
+<div class="panel">
+<div class="sk-row"><div class="sk"></div><div class="skeleton"><div class="sk sk-w90"></div><div class="sk sk-w50"></div></div><div class="sk sk-pill"></div></div>
+<div class="sk-row"><div class="sk"></div><div class="skeleton"><div class="sk sk-w70"></div><div class="sk sk-w50"></div></div><div class="sk sk-pill"></div></div>
+<div class="sk-row"><div class="sk"></div><div class="skeleton"><div class="sk sk-w50"></div><div class="sk sk-w30"></div></div><div class="sk sk-pill"></div></div>
+</div>
+</div>
+</section>
+</main>
+<footer class="candidate-note"><span>Design candidate. This app is not built yet, and every name, number and message on this page is sample content.</span><a href="index.html">All pages and states</a></footer>
+</div>
+</div>
+</body>
+</html>
