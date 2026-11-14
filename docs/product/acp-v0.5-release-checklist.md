@@ -8,11 +8,11 @@ Run this checklist from the registered local ACP project before declaring v0.5 c
 - [ ] `npm run build` passes.
 - [ ] `npm test` passes.
 - [ ] `git diff --check` reports no whitespace errors.
-- [ ] `node dist/src/cli/main.js task:graph TASK-0002` matches `node dist/src/cli/main.js task:progress TASK-0002`.
+- [ ] `acp /task graph TASK-0002` matches `acp /task progress TASK-0002`.
 
 ## Local dashboard smoke check
 
-- [ ] Run `node dist/src/cli/main.js ui` and open `http://127.0.0.1:4317`.
+- [ ] Run `acp /ui` and open `http://127.0.0.1:4317`.
 - [ ] Select a completed task and verify graph nodes, dependencies, and statuses are readable.
 - [ ] Verify the task summary uses cards rather than raw JSON.
 - [ ] Verify artifacts, findings, learning, and upgrades are shown as task-scoped history sections.

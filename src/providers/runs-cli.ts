@@ -1,11 +1,11 @@
-// The `runs:*` commands: see and clear what agent runs leave behind.
+// The `/runs` commands: see and clear what agent runs leave behind.
 
 import { cleanRuns, holdsWork, listRuns, removeRun, type RunInfo } from './runs.js';
 
 export const RUNS_USAGE = `Run commands:
-  runs:list                       show every agent run still on this computer and what it holds
-  runs:clean                      remove the runs that changed nothing (runs that hold work are kept)
-  runs:remove <run> [--force]     remove one run; --force is needed when it holds work`;
+  acp /runs list                       show every agent run still on this computer and what it holds
+  acp /runs clean                      remove the runs that changed nothing (runs that hold work are kept)
+  acp /runs remove <run> [--force]     remove one run; --force is needed when it holds work`;
 
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
 

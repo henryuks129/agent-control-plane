@@ -22,7 +22,7 @@ npm run build
 npm test
 ```
 
-To run the dashboard: `node dist/src/cli/main.js ui`, then open
+To run the dashboard: `acp /ui`, then open
 <http://127.0.0.1:4317>. To run it in Docker, follow
 [docs/guides/docker.md](docs/guides/docker.md).
 

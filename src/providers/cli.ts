@@ -1,4 +1,4 @@
-// The `agents:*` commands. Like the memory commands, they return text and an
+// The `/agents` and `/run` commands. Like the memory commands, they return text and an
 // exit code so tests, the web app and the MCP server can all call them.
 
 import { listAgents, type CommandRunner } from './detect.js';
@@ -6,11 +6,11 @@ import { renderFindings } from '../design/check.js';
 import { runAgent } from './run.js';
 
 export const AGENTS_USAGE = `Agent commands:
-  agents:list                                             show the agents on this computer and whether each is signed in
-  agents:run <agent> [--edit] [--files a,b] "<request>"   run one request in its own worktree
-                                                          (without --edit the agent can read and answer but not change files)
-                                                          add --model <name> to use a specific model
-                                                          add --timeout <minutes> to give a run longer (15 for a question, 30 for an edit)`;
+  acp /agents list                                      show the agents on this computer and whether each is signed in
+  acp /run <agent> [--edit] [--files a,b] "<request>"   run one request in its own worktree
+                                                        (without --edit the agent can read and answer but not change files)
+                                                        add --model <name> to use a specific model
+                                                        add --timeout <minutes> to give a run longer (15 for a question, 30 for an edit)`;
 
 export async function runAgentsCommand(
   command: string,

@@ -19,7 +19,7 @@ the narrower one wins.
 ## Set it up
 
 ```bash
-node dist/src/cli/main.js memory:init
+acp /memory init
 ```
 
 This creates `.acp/knowledge.md` and `.acp/rules/`, and adds `.acp/local/` to
@@ -49,7 +49,7 @@ Hash passwords with the existing helper before saving.
 ## See what a task would receive
 
 ```bash
-node dist/src/cli/main.js memory:show --request "add a password reset" src/api/account/reset.ts
+acp /memory show --request "add a password reset" src/api/account/reset.ts
 ```
 
 This is the mistake guard: it picks the rules that match the files or the
@@ -63,7 +63,7 @@ Tasks run through ACP receive this automatically.
 ## Share it with agents outside ACP
 
 ```bash
-node dist/src/cli/main.js memory:sync
+acp /memory sync
 ```
 
 - Writes a summary into a marked block in `AGENTS.md`. Everything outside the
@@ -76,7 +76,7 @@ node dist/src/cli/main.js memory:sync
   of overwriting the edit. Move the edit into `.acp/`, then sync again.
 - If memory appears to contain a key, token or password, nothing is written.
 
-`memory:sync --check` changes nothing and fails when the files are out of
+`/memory sync --check` changes nothing and fails when the files are out of
 date. CI runs it on every pull request.
 
 ## Not built yet

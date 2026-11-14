@@ -14,12 +14,12 @@ export interface MemoryCommandResult {
 }
 
 export const MEMORY_USAGE = `Memory commands:
-  memory:init                               create .acp/ in this project
-  memory:show [--request "<text>"] <files>  show what a task on these files would receive
-  memory:sync [--check]                     write the summary into AGENTS.md and CLAUDE.md
-                                            (--check changes nothing and fails if they are out of date)
-  memory:proposals                          list the rules agents have proposed
-  memory:accept <name>                      make a proposed rule apply, by moving it into .acp/rules/`;
+  acp /memory init                               create .acp/ in this project
+  acp /memory show [--request "<text>"] <files>  show what a task on these files would receive
+  acp /memory sync [--check]                     write the summary into AGENTS.md and CLAUDE.md
+                                                 (--check changes nothing and fails if they are out of date)
+  acp /memory proposals                          list the rules agents have proposed
+  acp /memory accept <name>                      make a proposed rule apply, by moving it into .acp/rules/`;
 
 export function runMemoryCommand(command: string, args: string[], where: { root: string; dataDir: string }): MemoryCommandResult {
   if (command === 'memory:init') {
@@ -43,7 +43,7 @@ export function runMemoryCommand(command: string, args: string[], where: { root:
       files,
       request,
     }));
-    return { output: text || 'No memory applies to these files yet. Run memory:init to start.', exitCode: 0 };
+    return { output: text || 'No memory applies to these files yet. Run acp /memory init to start.', exitCode: 0 };
   }
 
   if (command === 'memory:sync') {
@@ -56,7 +56,7 @@ export function runMemoryCommand(command: string, args: string[], where: { root:
     // In check mode "would change" is a failure: the committed files do not
     // match `.acp/`, and CI should say so before the pull request merges.
     const outOfDate = check && (report.agents !== 'unchanged' || report.claude !== 'unchanged');
-    if (outOfDate) lines.push('Out of date. Run memory:sync and commit the result.');
+    if (outOfDate) lines.push('Out of date. Run acp /memory sync and commit the result.');
     return { output: lines.join('\n'), exitCode: report.problems.length > 0 || outOfDate ? 1 : 0 };
   }
 
@@ -74,7 +74,7 @@ export function runMemoryCommand(command: string, args: string[], where: { root:
     if (!args[0]) return { output: MEMORY_USAGE, exitCode: 1 };
     try {
       acceptProposal(where.root, args[0]);
-      return { output: `Accepted. The rule is now in .acp/rules/ and applies to matching files. Run memory:sync to update AGENTS.md.`, exitCode: 0 };
+      return { output: `Accepted. The rule is now in .acp/rules/ and applies to matching files. Run acp /memory sync to update AGENTS.md.`, exitCode: 0 };
     } catch (error) {
       return { output: error instanceof Error ? error.message : String(error), exitCode: 1 };
     }

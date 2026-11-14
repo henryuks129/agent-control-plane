@@ -8,17 +8,17 @@ ACP started the agent or you did in a terminal. The reasons are in ADR-0008
 ## Start it
 
 ```bash
-node dist/src/cli/main.js mcp
+acp /mcp
 ```
 
 It reads requests on standard input and answers on standard output, so you
 do not run it yourself: you tell your agent to. Run these from your project
-folder, with the full path to ACP's `main.js`:
+folder (they need the `acp` command, which `npm link` in ACP's folder sets up):
 
 | Agent | Command |
 |---|---|
-| Claude Code | `claude mcp add acp -- node /path/to/acp/dist/src/cli/main.js mcp` |
-| Codex | `codex mcp add acp -- node /path/to/acp/dist/src/cli/main.js mcp` |
+| Claude Code | `claude mcp add acp -- acp /mcp` |
+| Codex | `codex mcp add acp -- acp /mcp` |
 
 The server works on the folder the agent is started in.
 
@@ -38,8 +38,8 @@ The server works on the folder the agent is started in.
   accept a proposal:
 
   ```bash
-  node dist/src/cli/main.js memory:proposals
-  node dist/src/cli/main.js memory:accept <name>
+  acp /memory proposals
+  acp /memory accept <name>
   ```
 
 - Save anything that looks like a key, password or token. The write is

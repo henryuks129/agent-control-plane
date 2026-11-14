@@ -8,7 +8,7 @@ in ADR-0007 §4.
 ## See what is connected
 
 ```bash
-node dist/src/cli/main.js agents:list
+acp /agents list
 ```
 
 ```text
@@ -29,7 +29,7 @@ organisation or keys.
 ## Run a request
 
 ```bash
-node dist/src/cli/main.js agents:run codex "Explain how memory rules are matched"
+acp /run codex "Explain how memory rules are matched"
 ```
 
 | Option | What it does |
@@ -82,12 +82,12 @@ These limits are enforced by each tool, not by ACP.
 Every run keeps its worktree and branch so you can review it.
 
 ```bash
-node dist/src/cli/main.js runs:list
-node dist/src/cli/main.js runs:clean
-node dist/src/cli/main.js runs:remove <run> --force
+acp /runs list
+acp /runs clean
+acp /runs remove <run> --force
 ```
 
-`runs:clean` removes only runs that changed nothing. A run that holds work
+`/runs clean` removes only runs that changed nothing. A run that holds work
 is kept until you remove it by name with `--force`.
 
 ## Your request stays private

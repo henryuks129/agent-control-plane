@@ -20,7 +20,7 @@ schemas and APIs. No model is asked; the check is file names and words.
 To see what a request would get, without running an agent:
 
 ```bash
-node dist/src/cli/main.js skills:check --files web/main.css "Build a landing page"
+acp /skills check --files web/main.css "Build a landing page"
 ```
 
 ```text
@@ -31,7 +31,7 @@ Skills: impeccable, awwwards
 ## The skills
 
 ```bash
-node dist/src/cli/main.js skills:list
+acp /skills list
 ```
 
 | Skill | Attached | For |
@@ -52,7 +52,7 @@ commit. Sources and licences are in
 2. It lists those folders in Git's local ignore file, so they never appear
    in a commit or a pull request. Your project folder is not touched.
 3. It tells the agent to read and follow them before changing anything.
-4. `agents:run` prints which skills were attached.
+4. `/run` prints which skills were attached.
 
 If your project already has a skill with the same name, yours is kept and
 ACP's copy is not added.
@@ -99,7 +99,7 @@ Use the tokens in web/tokens.css. ...
 - Without `keywords`, the skill is attached to every design task. With
   them, only when the request mentions one.
 - A skill of yours with the same name as a shipped one replaces it.
-- `skills:list` shows yours as "this project".
+- `/skills list` shows yours as "this project".
 
 ## The result is checked
 
@@ -126,7 +126,7 @@ These are pattern matches, so each can be confirmed by reading the line.
 They do not judge taste. To check files yourself:
 
 ```bash
-node dist/src/cli/main.js design:check site/index.html
+acp /design check site/index.html
 ```
 
 ## Not built yet
