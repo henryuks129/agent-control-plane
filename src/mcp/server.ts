@@ -120,7 +120,7 @@ export const TOOLS: Tool[] = [
         keywords: strings(args.keywords),
         learnedFrom: typeof args.learned_from === 'string' ? args.learned_from : undefined,
       });
-      return `Saved as a proposal. It does not apply yet. Tell the user they can accept it with: memory:accept ${name}`;
+      return `Saved as a proposal. It does not apply yet. Tell the user they can accept it with: acp /memory accept ${name}`;
     },
   },
   {

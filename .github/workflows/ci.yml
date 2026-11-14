@@ -32,7 +32,7 @@ jobs:
       - run: npm run build
       - run: npm test
       # AGENTS.md and CLAUDE.md must match .acp/ (and must not be edited by hand).
-      - run: node dist/src/cli/main.js memory:sync --check
+      - run: node dist/src/cli/main.js /memory sync --check
 
   docker:
     name: Docker image starts and is healthy

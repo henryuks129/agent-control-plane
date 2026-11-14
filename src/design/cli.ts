@@ -1,4 +1,4 @@
-// The `skills:*` commands. They only read files, so like the memory commands
+// The `/skills` and `/design check` commands. They only read files, so like the memory commands
 // they return text and an exit code and need no database or model key.
 
 import { detectDesignTask } from './detect.js';
@@ -6,9 +6,9 @@ import { checkFiles, renderFindings } from './check.js';
 import { availableSkills, loadDesignSetting, selectSkills } from './skills.js';
 
 export const SKILLS_USAGE = `Design skill commands:
-  skills:list                                 show the design skills ACP ships, their source and licence
-  skills:check [--files a,b] "<request>"      say whether a request is design work and which skills it would get
-  design:check <files...>                     look for known design anti-patterns in these files
+  acp /skills list                                 show the design skills ACP ships, their source and licence
+  acp /skills check [--files a,b] "<request>"      say whether a request is design work and which skills it would get
+  acp /design check <files...>                     look for known design anti-patterns in these files
 A folder in .acp/skills/ with a SKILL.md is this project's own skill.`;
 
 export function runDesignCommand(command: string, args: string[], where: { root: string }): { output: string; exitCode: number } {

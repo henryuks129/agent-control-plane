@@ -1,4 +1,4 @@
-// Finds and removes what `agents:run` leaves behind.
+// Finds and removes what `/run` leaves behind.
 //
 // Every run keeps its worktree and branch so the user can review the work.
 // Left alone they pile up, so ACP can list them and remove the ones that
@@ -11,7 +11,7 @@ import { promisify } from 'node:util';
 
 const exec = promisify(execFile);
 
-// Only branches `agents:run` creates. Task worktrees and the user's own
+// Only branches `/run` creates. Task worktrees and the user's own
 // branches are not ACP runs and are never touched.
 const RUN_BRANCH = 'acp/run-';
 

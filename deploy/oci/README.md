@@ -14,7 +14,7 @@ identifiers, then validate the profile:
 set -a
 source /secure/path/to/acp-oci.env
 set +a
-node dist/src/cli/main.js deployment:oci:check
+acp /deployment oci check
 ```
 
 The validation output reports only missing field names and configuration errors.

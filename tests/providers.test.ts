@@ -175,7 +175,7 @@ test('agents:list shows each agent, its sign-in and what to do next', async () =
 test('agents:run without a request explains how to use it', async () => {
   const result = await runAgentsCommand('agents:run', ['codex'], here, { run: fakeTools({}) });
   assert.equal(result.exitCode, 1);
-  assert.match(result.output, /agents:run <agent> \[--edit\] \[--files a,b\] "<request>"/);
+  assert.match(result.output, /acp \/run <agent> \[--edit\] \[--files a,b\] "<request>"/);
 });
 
 test('agents:run reports the worktree, the branch and the changed files', async () => {

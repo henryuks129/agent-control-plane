@@ -83,7 +83,7 @@ test('memory_search finds matching lines and says where each is from', () => {
 test('a proposed rule is saved for the user to accept and is not a rule yet', () => {
   const ctx = project();
   const reply = text(call(ctx, 'memory_propose_rule', { name: 'Date Handling!', paths: ['src/dates/**'], body: 'Store dates in UTC.', learned_from: 'task 12' }));
-  assert.match(reply, /memory:accept date-handling/);
+  assert.match(reply, /acp \/memory accept date-handling/);
   const saved = fs.readFileSync(path.join(ctx.root, '.acp/local/proposals/date-handling.md'), 'utf8');
   assert.match(saved, /paths: \[src\/dates\/\*\*\]/);
   assert.match(saved, /learned-from: task 12/);
