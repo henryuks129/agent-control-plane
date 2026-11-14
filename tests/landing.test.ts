@@ -97,14 +97,14 @@ test('the animated product demo is labelled as an illustration of the planned ap
 test('the terminal shows the real commands and their real output, unchanged', () => {
   const terminal = plain(block('terminal-output'));
   for (const line of [
-    '$ node dist/src/cli/main.js agents:list',
+    '$ acp /agents list',
     'claude    Claude Code  2.1.190  ready  Claude Pro plan',
     'codex     Codex        0.160.0  ready  Signed in with ChatGPT',
     'opencode  OpenCode     2.2.5    ready  3 providers',
-    '$ node dist/src/cli/main.js skills:check "Build a landing page"',
+    '$ acp /skills check "Build a landing page"',
     'Design task: yes (request mentions "landing page")',
     'Skills: impeccable, awwwards',
-    '$ node dist/src/cli/main.js agents:run codex --edit "Build a landing page"',
+    '$ acp /run codex --edit "Build a landing page"',
     'Codex finished (exit 0).',
     'Branch:   acp/run-mwf3d693',
     '  site/index.html',

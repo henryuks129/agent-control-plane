@@ -483,16 +483,16 @@ h1 .l+.l>span{animation-delay:.12s}
   </div>
   <div class="term" data-terminal data-reveal>
     <div class="term-top"><span><strong>Terminal</strong> · three real commands</span><button class="button small" type="button" data-term-toggle hidden>Show all</button></div>
-<pre id="terminal-output" tabindex="0" aria-label="Terminal transcript"><span class="ln cmd-line" data-cmd="0"><span class="pr">$ </span><span class="tx">node dist/src/cli/main.js agents:list</span></span>
+<pre id="terminal-output" tabindex="0" aria-label="Terminal transcript"><span class="ln cmd-line" data-cmd="0"><span class="pr">$ </span><span class="tx">acp /agents list</span></span>
 <span class="ln out">claude    Claude Code  2.1.190  <span class="ok">ready</span>  Claude Pro plan</span>
 <span class="ln out">codex     Codex        0.160.0  <span class="ok">ready</span>  Signed in with ChatGPT</span>
 <span class="ln out">opencode  OpenCode     2.2.5    <span class="ok">ready</span>  3 providers</span>
 
-<span class="ln cmd-line" data-cmd="1"><span class="pr">$ </span><span class="tx">node dist/src/cli/main.js skills:check "Build a landing page"</span></span>
+<span class="ln cmd-line" data-cmd="1"><span class="pr">$ </span><span class="tx">acp /skills check "Build a landing page"</span></span>
 <span class="ln out">Design task: yes (request mentions "landing page")</span>
 <span class="ln out">Skills: impeccable, awwwards</span>
 
-<span class="ln cmd-line" data-cmd="2"><span class="pr">$ </span><span class="tx">node dist/src/cli/main.js agents:run codex --edit "Build a landing page"</span></span>
+<span class="ln cmd-line" data-cmd="2"><span class="pr">$ </span><span class="tx">acp /run codex --edit "Build a landing page"</span></span>
 <span class="ln out">Codex finished (exit 0).</span>
 <span class="ln out">Branch:   acp/run-mwf3d693</span>
 <span class="ln out">Changed files:</span>
