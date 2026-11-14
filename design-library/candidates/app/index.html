@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>All pages and states · Agent Control Plane design candidate</title>
+<meta name="description" content="A map of every page of the Agent Control Plane app prototype and every state each page can be in.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+</head>
+<body>
+<svg width="0" height="0" class="visually-hidden" aria-hidden="true"><defs><symbol id="i-review" viewBox="0 0 16 16"><path d="M3 2.5h10v11H3z"/><path d="m5.5 8 1.8 1.8 3.2-3.6"/></symbol><symbol id="i-agents" viewBox="0 0 16 16"><path d="M4 4h8v8H4z"/><path d="M6.5 6.5h3v3h-3zM6 1.5V4M10 1.5V4M6 12v2.5M10 12v2.5M1.5 6H4M1.5 10H4M12 6h2.5M12 10h2.5"/></symbol><symbol id="i-memory" viewBox="0 0 16 16"><path d="M8 2 2 5l6 3 6-3z"/><path d="m2 8 6 3 6-3M2 11l6 3 6-3"/></symbol><symbol id="i-design" viewBox="0 0 16 16"><path d="M2.5 2.5H7V7H2.5zM9 2.5h4.5V7H9zM2.5 9H7v4.5H2.5z"/><circle cx="11.25" cy="11.25" r="2.25"/></symbol><symbol id="i-settings" viewBox="0 0 16 16"><path d="M2 4.5h7M12 4.5h2M2 11.5h2M7 11.5h7"/><circle cx="10.5" cy="4.5" r="1.5"/><circle cx="5.5" cy="11.5" r="1.5"/></symbol><symbol id="i-git" viewBox="0 0 16 16"><circle cx="4" cy="3.5" r="1.5"/><circle cx="4" cy="12.5" r="1.5"/><circle cx="12" cy="5.5" r="1.5"/><path d="M4 5v6M12 7c0 2.5-3 3-6.5 3.3"/></symbol><symbol id="i-runs" viewBox="0 0 16 16"><path d="M2.5 4.5h4L8 6h5.5v6.5h-11z"/></symbol><symbol id="i-usage" viewBox="0 0 16 16"><path d="M3 13V8M8 13V3M13 13V6"/></symbol><symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></symbol><symbol id="i-down" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></symbol><symbol id="i-menu" viewBox="0 0 16 16"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/></symbol><symbol id="i-theme" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5v11M8 5l3.8-1M8 8h5.5M8 11l3.8 1"/></symbol><symbol id="i-flag" viewBox="0 0 16 16"><path d="M3.5 14V2.5M3.5 3h8L10 5.75l1.5 2.75h-8"/></symbol></defs></svg>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="app">
+<aside class="side" id="side" aria-label="Workspace">
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">A</span><span>ACP <small>Agent Control Plane</small></span></a>
+<a class="project-switch" href="onboarding.html#state-project"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-runs"/></svg><span class="name">agent-control-plane</span><span class="visually-hidden">Change project</span><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-down"/></svg></a>
+<nav aria-label="Threads">
+<p class="side-label">Threads</p>
+<ul class="side-group">
+<li><a class="side-link" href="thread.html#state-empty"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-plus"/></svg><span class="label-text">New thread</span></a></li>
+<li><a class="side-link" href="thread.html"><span class="state-dot is-working" aria-hidden="true"></span><span class="label-text">Run each rule's check in review</span><span class="visually-hidden">, 2 working, 2 ready to review</span></a></li>
+<li><a class="side-link" href="thread.html#state-stopped"><span class="state-dot" aria-hidden="true"></span><span class="label-text">Folder-level AGENTS.md blocks</span><span class="visually-hidden">, stopped</span></a></li>
+<li><a class="side-link" href="thread.html#state-ready"><span class="state-dot is-ready" aria-hidden="true"></span><span class="label-text">Docker image health check on /healthz</span><span class="visually-hidden">, ready to review</span></a></li>
+</ul>
+</nav>
+<div class="side-divider" role="presentation"></div>
+<nav aria-label="Workspace pages">
+<ul class="side-group">
+<li><a class="side-link" href="review.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-review"/></svg><span class="label-text">Review</span><span class="count">3<span class="visually-hidden"> changes waiting</span></span></a></li>
+<li><a class="side-link" href="agents.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-agents"/></svg><span class="label-text">Agents</span></a></li>
+<li><a class="side-link" href="memory.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-memory"/></svg><span class="label-text">Memory</span><span class="count">2<span class="visually-hidden"> proposed rules</span></span></a></li>
+<li><a class="side-link" href="design-library.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-design"/></svg><span class="label-text">Design library</span></a></li>
+<li><a class="side-link" href="settings.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-settings"/></svg><span class="label-text">Settings</span></a></li>
+</ul>
+</nav>
+<nav aria-label="Project">
+<p class="side-label">Project</p>
+<ul class="side-group">
+<li><a class="side-link" href="git.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-git"/></svg><span class="label-text">Git activity</span></a></li>
+<li><a class="side-link" href="runs.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-runs"/></svg><span class="label-text">Runs</span></a></li>
+<li><a class="side-link" href="usage.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-usage"/></svg><span class="label-text">Usage</span></a></li>
+</ul>
+</nav>
+<div class="side-foot">
+<a class="side-link" href="report.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-flag"/></svg><span class="label-text">Report a problem</span></a>
+<button class="side-link" type="button" data-theme-toggle><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-theme"/></svg><span class="label-text">Switch theme</span></button>
+</div>
+</aside>
+<button class="scrim" type="button" data-nav-close aria-label="Close menu" tabindex="-1"></button>
+<div class="main">
+<div class="topbar"><a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">A</span><span>ACP</span></a><button class="btn icon-btn" type="button" data-nav-toggle aria-expanded="false" aria-controls="side" aria-label="Menu"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-menu"/></svg></button></div>
+
+<main id="main" class="page">
+<header class="page-head">
+<div><h1>Every page and state</h1><p class="lede">Thirteen pages, one stylesheet, one small script. Each link opens a page in that state; the dashed bar at the top of a page moves between its states. Every page also has a narrow layout: make the window 390 wide, and switch theme from the sidebar.</p></div>
+</header>
+
+<section class="map-group" aria-labelledby="m-start">
+<h2 id="m-start" class="section-head">Start</h2>
+<div class="panel">
+<div class="map-page">
+<div><h3><a href="onboarding.html">First run</a></h3><p class="row-sub">Connect agents, pick a project, find or set up memory.</p></div>
+<ul class="map-states">
+<li><a href="onboarding.html#state-agents">1 · Agents</a><span>Ready, signed out with the command to run, planned</span></li>
+<li><a href="onboarding.html#state-checking">Checking</a><span>Loading: asking each tool for its state</span></li>
+<li><a href="onboarding.html#state-none">No agent found</a><span>Not installed, with the install commands and the free path</span></li>
+<li><a href="onboarding.html#state-project">2 · Project</a><span>Recent Git folders, a very long path, or type one</span></li>
+<li><a href="onboarding.html#state-notgit">Not a Git folder</a><span>Error: the folder is refused, with the reason and the fix</span></li>
+<li><a href="onboarding.html#state-memory">3 · Memory found</a><span>The project's knowledge, rules and sync state</span></li>
+<li><a href="onboarding.html#state-init">3 · No memory yet</a><span>What <code>acp /memory init</code> creates, or skip</span></li>
+<li><a href="onboarding.html#state-done">Ready</a><span>Summary, then the first thread</span></li>
+</ul>
+</div>
+</div>
+</section>
+
+<section class="map-group" aria-labelledby="m-work">
+<h2 id="m-work" class="section-head">Work</h2>
+<div class="panel">
+<div class="map-page">
+<div><h3><a href="thread.html">Thread</a></h3><p class="row-sub">The home. One kind of thread: a question gets an answer, a change request becomes tasks.</p></div>
+<ul class="map-states">
+<li><a href="thread.html#state-working">Tasks working</a><span>Four tasks in parallel, each with its agent, branch and checkpoints</span></li>
+<li><a href="thread.html#state-empty">Empty</a><span>A new thread, before the first request</span></li>
+<li><a href="thread.html#state-sent">Just sent</a><span>A request shows as working the moment it is sent</span></li>
+<li><a href="thread.html#state-opened">Task opened</a><span>Checkpoint timeline, <code>handoff.md</code>, Stop this task</span></li>
+<li><a href="thread.html#state-ready">Ready to review</a><span>Review is a button on each ready row</span></li>
+<li><a href="thread.html#state-stopped">Stopped</a><span>Resume on the stopped row</span></li>
+<li><a href="thread.html#state-handoff">Hand-off</a><span>One agent reaches its limit and another continues</span></li>
+<li><a href="thread.html#state-question">Question answered</a><span>An answer inline, with no tasks</span></li>
+<li><a href="thread.html#state-secret">Secret request</a><span>The private card: given, declined, removed</span></li>
+<li><a href="thread.html#state-loading">Loading</a><span>Reading the thread</span></li>
+<li><a href="thread.html#state-error">Sign-in refused</a><span>Error: an agent must be signed in again in its own tool</span></li>
+<li><a href="thread.html#state-long">Long content</a><span>Long titles, paths and many tasks</span></li>
+<li><a href="thread.html#request">Message box</a><span>Agent or orchestrators, permission mode, and the Commands menu for <code>/run</code>, <code>/memory</code>, <code>/runs clean</code></span></li>
+</ul>
+</div>
+<div class="map-page">
+<div><h3><a href="review.html">Review</a></h3><p class="row-sub">Nothing reaches the project until it is approved here, one change at a time.</p></div>
+<ul class="map-states">
+<li><a href="review.html#state-queue">Queue</a><span>Changes waiting, with size and check results</span></li>
+<li><a href="review.html#state-patch">One patch</a><span>Problem, Change, Scope, Verification; diff; evidence apart from opinion</span></li>
+<li><a href="review.html#state-design">Design-check findings</a><span>Findings as evidence, with file and line</span></li>
+<li><a href="review.html#state-failed">Failed check</a><span>Error: approve is held back, with the failing output</span></li>
+<li><a href="review.html#state-applied">Applied</a><span>What was applied and where</span></li>
+<li><a href="review.html#state-empty">Empty</a><span>Nothing waiting</span></li>
+<li><a href="review.html#state-loading">Loading</a><span>Running checks</span></li>
+</ul>
+</div>
+</div>
+</section>
+
+<section class="map-group" aria-labelledby="m-workspace">
+<h2 id="m-workspace" class="section-head">Workspace</h2>
+<div class="panel">
+<div class="map-page">
+<div><h3><a href="agents.html">Agents</a></h3><p class="row-sub">Status, version, plan windows, orchestrator stars, free and local models.</p></div>
+<ul class="map-states">
+<li><a href="agents.html#state-ready">All ready</a><span>Usage windows, estimates, stars, how each is limited</span></li>
+<li><a href="agents.html#state-attention">Needs sign-in</a><span>Signed out or refused, with the command to run</span></li>
+<li><a href="agents.html#state-none">None found</a><span>Empty: nothing installed</span></li>
+<li><a href="agents.html#state-loading">Checking</a><span>Loading</span></li>
+</ul>
+</div>
+<div class="map-page">
+<div><h3><a href="memory.html">Memory</a></h3><p class="row-sub">Four layers, and the narrower one wins. Agents propose; you accept.</p></div>
+<ul class="map-states">
+<li><a href="memory.html#panel-layers">Layers</a><span>You, project, folder rules, task; which wins</span></li>
+<li><a href="memory.html#panel-knowledge">Knowledge</a><span><code>.acp/knowledge.md</code> as agents read it</span></li>
+<li><a href="memory.html#panel-rules">Rules</a><span>Paths, check, learned from, shown and caught</span></li>
+<li><a href="memory.html#panel-proposed">Proposed</a><span>Accept or reject a rule an agent proposed</span></li>
+<li><a href="memory.html#panel-guard">What a file receives</a><span>The mistake guard preview for a path and request</span></li>
+<li><a href="memory.html#panel-import">Import</a><span>Proposals from other tools, with their source</span></li>
+<li><a href="memory.html#sync-ok">AGENTS.md in sync</a><span>The marked block matches memory</span></li>
+<li><a href="memory.html#sync-old">AGENTS.md out of date</a><span>The diff a sync would write</span></li>
+<li><a href="memory.html#sync-edit">Block edited by hand</a><span>Error: sync stops, and you choose what happens to the edit</span></li>
+<li><a href="memory.html#state-empty">No memory yet</a><span>Empty: set up with <code>acp /memory init</code></span></li>
+<li><a href="memory.html#state-loading">Loading</a><span>Reading the memory files</span></li>
+</ul>
+</div>
+<div class="map-page">
+<div><h3><a href="design-library.html">Design library and skills</a></h3><p class="row-sub">Shipped skills with source, pinned commit and licence; the project's own; the check rules.</p></div>
+<ul class="map-states">
+<li><a href="design-library.html#panel-skills">Skills</a><span>Shipped and project skills, on or off, per project</span></li>
+<li><a href="design-library.html#panel-rules">Check rules</a><span>The anti-pattern rules the design check enforces</span></li>
+<li><a href="design-library.html#panel-library">Library</a><span>Foundations, components and candidates</span></li>
+<li><a href="design-library.html#state-off">Turned off</a><span>No skill attached in this project</span></li>
+<li><a href="design-library.html#state-loading">Loading</a><span>Checking each skill against its pinned commit</span></li>
+</ul>
+</div>
+<div class="map-page">
+<div><h3><a href="settings.html">Settings</a></h3><p class="row-sub">Eleven sections on one page with a section nav.</p></div>
+<ul class="map-states">
+<li><a href="settings.html#general">General</a><span>Project, data folder, theme</span></li>
+<li><a href="settings.html#agents-models">Agents &amp; models</a><span>Orchestrators, the near-limit line, small-text model</span></li>
+<li><a href="settings.html#permissions">Permissions</a><span>Default mode and what each mode allows</span></li>
+<li><a href="settings.html#memory">Memory</a><span>Budgets, sync, import</span></li>
+<li><a href="settings.html#design-skills">Design skills</a><span>Per project, per skill, the design check</span></li>
+<li><a href="settings.html#connections">Connections</a><span>ACP's MCP server with the command to add it; other servers</span></li>
+<li><a href="settings.html#notifications">Notifications</a><span>What your computer tells you about</span></li>
+<li><a href="settings.html#shortcuts">Keyboard shortcuts</a><span>The full list</span></li>
+<li><a href="settings.html#privacy">Privacy &amp; data</a><span>What stays here, what each provider receives</span></li>
+<li><a href="settings.html#advanced">Advanced</a><span>Time limits, worktree folder, clean-up</span></li>
+<li><a href="settings.html#about">About</a><span>Version, licence, report a problem</span></li>
+<li><a href="settings.html#state-invalid">A value refused</a><span>Error: one setting not saved, with the reason</span></li>
+<li><a href="settings.html#state-loading">Loading</a><span>Reading settings</span></li>
+<li><a href="settings.html#state-error">Could not read</a><span>Error: a broken settings file; defaults in use</span></li>
+</ul>
+</div>
+</div>
+</section>
+
+<section class="map-group" aria-labelledby="m-project">
+<h2 id="m-project" class="section-head">Project</h2>
+<div class="panel">
+<div class="map-page">
+<div><h3><a href="git.html">Git activity</a></h3><p class="row-sub">Commits, pull requests, CI and issues from the project's host. Read-only by default.</p></div>
+<ul class="map-states">
+<li><a href="git.html#panel-commits">Commits</a><span>Linked to the task that made them</span></li>
+<li><a href="git.html#panel-pulls">Pull requests</a><span>Checks and linked tasks</span></li>
+<li><a href="git.html#panel-ci">CI</a><span>A failing run becomes a proposed task</span></li>
+<li><a href="git.html#panel-issues">Issues</a><span>Labels, a very long title, create a task</span></li>
+<li><a href="git.html#state-approve">Write needs approval</a><span>Exactly what would be sent, then a confirmation</span></li>
+<li><a href="git.html#state-nohost">Not signed in to host</a><span>Local commits only, and the command to run</span></li>
+<li><a href="git.html#state-empty">No remote</a><span>Empty</span></li>
+<li><a href="git.html#state-loading">Loading</a><span>Reading from the host</span></li>
+<li><a href="git.html#state-error">Host unreachable</a><span>Error: the last reading, marked as old</span></li>
+</ul>
+</div>
+<div class="map-page">
+<div><h3><a href="runs.html">Runs</a></h3><p class="row-sub">Every run and what it holds.</p></div>
+<ul class="map-states">
+<li><a href="runs.html#state-list">Runs</a><span>No changes, changed files or commits; remove with confirmation</span></li>
+<li><a href="runs.html#state-cleaned">After clean-up</a><span>Empty runs removed, the rest kept</span></li>
+<li><a href="runs.html#state-empty">Empty</a><span>No runs</span></li>
+<li><a href="runs.html#state-loading">Loading</a><span>Listing runs</span></li>
+<li><a href="runs.html#state-error">Could not list</a><span>Error: Git did not answer</span></li>
+</ul>
+</div>
+<div class="map-page">
+<div><h3><a href="usage.html">Usage</a></h3><p class="row-sub">Plan windows per agent; estimates labelled as estimates.</p></div>
+<ul class="map-states">
+<li><a href="usage.html#panel-by-agent">By agent</a><span>5-hour and weekly windows, and how usage changes routing</span></li>
+<li><a href="usage.html#panel-by-thread">By thread</a><span>Each thread's share, with a very long thread title</span></li>
+<li><a href="usage.html#state-limit">Limit reached</a><span>The task is handed to another agent</span></li>
+<li><a href="usage.html#state-partial">One agent silent</a><span>Error: an old reading, marked as old</span></li>
+<li><a href="usage.html#state-empty">Nothing used</a><span>Empty</span></li>
+<li><a href="usage.html#state-loading">Loading</a><span>Reading usage</span></li>
+</ul>
+</div>
+</div>
+</section>
+
+<section class="map-group" aria-labelledby="m-help">
+<h2 id="m-help" class="section-head">When something is wrong</h2>
+<div class="panel">
+<div class="map-page">
+<div><h3><a href="report.html">Report a problem</a></h3><p class="row-sub">No account needed. Logs only after you preview them.</p></div>
+<ul class="map-states">
+<li><a href="report.html#state-form">Form</a><span>What happened, how bad, where, optional logs</span></li>
+<li><a href="report.html#state-invalid">Missing details</a><span>Error: a field needs filling in</span></li>
+<li><a href="report.html#state-preview">Log preview</a><span>Exactly what would be attached, secrets removed</span></li>
+<li><a href="report.html#state-sending">Sending</a><span>Loading</span></li>
+<li><a href="report.html#state-sent">Sent</a><span>What was sent and what was not</span></li>
+<li><a href="report.html#state-failed">Could not send</a><span>Error: kept as a draft</span></li>
+</ul>
+</div>
+<div class="map-page">
+<div><h3><a href="error.html">Error and offline</a></h3><p class="row-sub">What replaces a page that cannot be shown.</p></div>
+<ul class="map-states">
+<li><a href="error.html#state-stopped">ACP stopped</a><span>The local server is not answering; start it again</span></li>
+<li><a href="error.html#state-reconnecting">Reconnecting</a><span>Loading: waiting for the server</span></li>
+<li><a href="error.html#state-offline">Offline</a><span>What still works and what waits for the network</span></li>
+<li><a href="error.html#state-missing">Not found</a><span>A thread that is not in this project</span></li>
+<li><a href="error.html#state-broke">Something broke</a><span>A fault in the app, with details and a report link</span></li>
+</ul>
+</div>
+</div>
+</section>
+</main>
+<footer class="candidate-note"><span>Design candidate. This app is not built yet, and every name, number and message on this page is sample content.</span><a href="index.html">All pages and states</a></footer>
+</div>
+</div>
+</body>
+</html>

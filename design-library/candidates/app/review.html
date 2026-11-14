@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review · Agent Control Plane design candidate</title>
+<meta name="description" content="The review queue and one patch: report, evidence apart from opinion, design-check findings, and the decision.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+</head>
+<body>
+<svg width="0" height="0" class="visually-hidden" aria-hidden="true"><defs><symbol id="i-review" viewBox="0 0 16 16"><path d="M3 2.5h10v11H3z"/><path d="m5.5 8 1.8 1.8 3.2-3.6"/></symbol><symbol id="i-agents" viewBox="0 0 16 16"><path d="M4 4h8v8H4z"/><path d="M6.5 6.5h3v3h-3zM6 1.5V4M10 1.5V4M6 12v2.5M10 12v2.5M1.5 6H4M1.5 10H4M12 6h2.5M12 10h2.5"/></symbol><symbol id="i-memory" viewBox="0 0 16 16"><path d="M8 2 2 5l6 3 6-3z"/><path d="m2 8 6 3 6-3M2 11l6 3 6-3"/></symbol><symbol id="i-design" viewBox="0 0 16 16"><path d="M2.5 2.5H7V7H2.5zM9 2.5h4.5V7H9zM2.5 9H7v4.5H2.5z"/><circle cx="11.25" cy="11.25" r="2.25"/></symbol><symbol id="i-settings" viewBox="0 0 16 16"><path d="M2 4.5h7M12 4.5h2M2 11.5h2M7 11.5h7"/><circle cx="10.5" cy="4.5" r="1.5"/><circle cx="5.5" cy="11.5" r="1.5"/></symbol><symbol id="i-git" viewBox="0 0 16 16"><circle cx="4" cy="3.5" r="1.5"/><circle cx="4" cy="12.5" r="1.5"/><circle cx="12" cy="5.5" r="1.5"/><path d="M4 5v6M12 7c0 2.5-3 3-6.5 3.3"/></symbol><symbol id="i-runs" viewBox="0 0 16 16"><path d="M2.5 4.5h4L8 6h5.5v6.5h-11z"/></symbol><symbol id="i-usage" viewBox="0 0 16 16"><path d="M3 13V8M8 13V3M13 13V6"/></symbol><symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></symbol><symbol id="i-down" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></symbol><symbol id="i-check" viewBox="0 0 16 16"><path d="m3.5 8.5 3 3 6-7"/></symbol><symbol id="i-x" viewBox="0 0 16 16"><path d="m4 4 8 8M12 4l-8 8"/></symbol><symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5 14 13H2z"/><path d="M8 6.5v3M8 11.2v.1"/></symbol><symbol id="i-info" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 7.2v3.6M8 5v.1"/></symbol><symbol id="i-menu" viewBox="0 0 16 16"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/></symbol><symbol id="i-theme" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5v11M8 5l3.8-1M8 8h5.5M8 11l3.8 1"/></symbol><symbol id="i-flag" viewBox="0 0 16 16"><path d="M3.5 14V2.5M3.5 3h8L10 5.75l1.5 2.75h-8"/></symbol><symbol id="i-dash" viewBox="0 0 16 16"><path d="M4 8h8"/></symbol></defs></svg>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="app">
+<aside class="side" id="side" aria-label="Workspace">
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">A</span><span>ACP <small>Agent Control Plane</small></span></a>
+<a class="project-switch" href="onboarding.html#state-project"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-runs"/></svg><span class="name">agent-control-plane</span><span class="visually-hidden">Change project</span><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-down"/></svg></a>
+<nav aria-label="Threads">
+<p class="side-label">Threads</p>
+<ul class="side-group">
+<li><a class="side-link" href="thread.html#state-empty"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-plus"/></svg><span class="label-text">New thread</span></a></li>
+<li><a class="side-link" href="thread.html"><span class="state-dot is-working" aria-hidden="true"></span><span class="label-text">Run each rule's check in review</span><span class="visually-hidden">, 2 working, 2 ready to review</span></a></li>
+<li><a class="side-link" href="thread.html#state-stopped"><span class="state-dot" aria-hidden="true"></span><span class="label-text">Folder-level AGENTS.md blocks</span><span class="visually-hidden">, stopped</span></a></li>
+<li><a class="side-link" href="thread.html#state-ready"><span class="state-dot is-ready" aria-hidden="true"></span><span class="label-text">Docker image health check on /healthz</span><span class="visually-hidden">, ready to review</span></a></li>
+</ul>
+</nav>
+<div class="side-divider" role="presentation"></div>
+<nav aria-label="Workspace pages">
+<ul class="side-group">
+<li><a class="side-link" href="review.html" aria-current="page"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-review"/></svg><span class="label-text">Review</span><span class="count">3<span class="visually-hidden"> changes waiting</span></span></a></li>
+<li><a class="side-link" href="agents.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-agents"/></svg><span class="label-text">Agents</span></a></li>
+<li><a class="side-link" href="memory.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-memory"/></svg><span class="label-text">Memory</span><span class="count">2<span class="visually-hidden"> proposed rules</span></span></a></li>
+<li><a class="side-link" href="design-library.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-design"/></svg><span class="label-text">Design library</span></a></li>
+<li><a class="side-link" href="settings.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-settings"/></svg><span class="label-text">Settings</span></a></li>
+</ul>
+</nav>
+<nav aria-label="Project">
+<p class="side-label">Project</p>
+<ul class="side-group">
+<li><a class="side-link" href="git.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-git"/></svg><span class="label-text">Git activity</span></a></li>
+<li><a class="side-link" href="runs.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-runs"/></svg><span class="label-text">Runs</span></a></li>
+<li><a class="side-link" href="usage.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-usage"/></svg><span class="label-text">Usage</span></a></li>
+</ul>
+</nav>
+<div class="side-foot">
+<a class="side-link" href="report.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-flag"/></svg><span class="label-text">Report a problem</span></a>
+<button class="side-link" type="button" data-theme-toggle><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-theme"/></svg><span class="label-text">Switch theme</span></button>
+</div>
+</aside>
+<button class="scrim" type="button" data-nav-close aria-label="Close menu" tabindex="-1"></button>
+<div class="main">
+<div class="topbar"><a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">A</span><span>ACP</span></a><button class="btn icon-btn" type="button" data-nav-toggle aria-expanded="false" aria-controls="side" aria-label="Menu"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-menu"/></svg></button></div>
+<div class="proto"><span class="proto-label" id="proto-label">Prototype state</span><div class="proto-tabs" role="tablist" aria-labelledby="proto-label" data-state-group="page"><button type="button" role="tab" id="tab-queue" data-state="queue" aria-controls="state-queue" aria-selected="true">Queue</button><button type="button" role="tab" id="tab-patch" data-state="patch" aria-controls="state-patch" aria-selected="false">One patch</button><button type="button" role="tab" id="tab-design" data-state="design" aria-controls="state-design" aria-selected="false">Design-check findings</button><button type="button" role="tab" id="tab-failed" data-state="failed" aria-controls="state-failed" aria-selected="false">Failed check</button><button type="button" role="tab" id="tab-applied" data-state="applied" aria-controls="state-applied" aria-selected="false">Applied</button><button type="button" role="tab" id="tab-empty" data-state="empty" aria-controls="state-empty" aria-selected="false">Empty</button><button type="button" role="tab" id="tab-loading" data-state="loading" aria-controls="state-loading" aria-selected="false">Loading</button></div></div>
+<main id="main" class="page">
+<header class="page-head">
+<div><h1>Review</h1><p class="lede">Nothing reaches <code>agent-control-plane</code> until you approve it here. Approve applies one change at a time and re-runs the checks on the result.</p></div>
+</header>
+
+<section id="state-queue" role="tabpanel" aria-labelledby="tab-queue">
+<section aria-labelledby="q-waiting">
+<div class="section-head"><h2 id="q-waiting">Waiting for you <span class="muted num">3</span></h2><p>Oldest first</p></div>
+<ul class="panel rows">
+<li class="row row-with-status"><span class="pill is-ready"><span class="dot"></span>Ready to review</span>
+<div><p class="row-title">Tests for rules with and without a check</p><p class="row-sub">OpenCode · llama3.1 (local) <span class="sep">·</span> <span class="mono">acp/run-t7n4x0pa</span> <span class="sep">·</span> 1 file, +86 −0, size S <span class="sep">·</span> 6 of 6 checks passed</p></div>
+<div class="row-actions"><button type="button" class="btn btn-primary" data-goto-tab="tab-patch">Review</button></div></li>
+<li class="row row-with-status"><span class="pill is-ready"><span class="dot"></span>Ready to review</span>
+<div><p class="row-title">Describe check: in the memory guide</p><p class="row-sub">OpenCode · Nemotron (free) <span class="sep">·</span> <span class="mono">acp/run-b5j9e3ru</span> <span class="sep">·</span> 1 file, +14 −3, size XS <span class="sep">·</span> 5 of 5 checks passed</p></div>
+<div class="row-actions"><button type="button" class="btn btn-primary" data-goto-tab="tab-patch">Review</button></div></li>
+<li class="row row-with-status"><span class="pill is-ready"><span class="dot"></span>Ready to review</span>
+<div><p class="row-title">Add a Report a problem page to the website</p><p class="row-sub">Claude Code <span class="sep">·</span> <span class="mono">acp/run-k4s2m9fe</span> <span class="sep">·</span> 2 files, +212 −4, size M <span class="sep">·</span> design task <span class="sep">·</span> <span class="tag tag-warn">2 design-check findings</span></p></div>
+<div class="row-actions"><button type="button" class="btn btn-primary" data-goto-tab="tab-design">Review</button></div></li>
+</ul>
+</section>
+<section class="section" aria-labelledby="q-blocked">
+<div class="section-head"><h2 id="q-blocked">Cannot be approved yet <span class="muted num">1</span></h2><p>A failed check blocks approval</p></div>
+<ul class="panel rows">
+<li class="row row-with-status"><span class="pill is-failed"><span class="dot"></span>Check failed</span>
+<div><p class="row-title">Show check results in the patch report</p><p class="row-sub">Claude Code <span class="sep">·</span> <span class="mono">acp/run-q2k8v1hc</span> <span class="sep">·</span> 3 files, +148 −22, size M <span class="sep">·</span> secret scan failed</p></div>
+<div class="row-actions"><button type="button" class="btn" data-goto-tab="tab-failed">Open</button></div></li>
+</ul>
+</section>
+<section class="section" aria-labelledby="q-done">
+<div class="section-head"><h2 id="q-done">Applied in this project</h2><p><a href="git.html">Git activity</a></p></div>
+<ul class="panel rows">
+<li class="row row-with-status"><span class="pill is-ok"><span class="dot"></span>Applied</span>
+<div><p class="row-title">Keep container paths when a local .env sets them</p><p class="row-sub">Codex <span class="sep">·</span> commit <span class="mono">8e99d6c</span> <span class="sep">·</span> became the rule <a href="memory.html#tab-rules"><code>docker-env</code></a></p></div>
+<div class="row-actions"><button type="button" class="btn btn-quiet" data-goto-tab="tab-applied">Open</button></div></li>
+</ul>
+</section>
+</section>
+
+<section id="state-patch" role="tabpanel" aria-labelledby="tab-patch" hidden>
+<div class="spread section-tight">
+<p class="small"><button type="button" class="btn btn-quiet" data-goto-tab="tab-queue">Queue</button><span class="sep">/</span><span class="muted">1 of 3 waiting</span></p>
+<span class="pill is-ready"><span class="dot"></span>Ready to review</span>
+</div>
+<div class="review-grid section-tight">
+<div class="stack-lg">
+<section aria-labelledby="p-title">
+<h2 id="p-title">Tests for rules with and without a check</h2>
+<p class="muted small">Written by the agent, in the shape every patch uses.</p>
+<dl class="report panel section-tight">
+<div><dt>Problem</dt><dd><p>Nothing tested what review does with a rule's <code>check:</code>. A rule with an empty <code>check:</code> was treated as having one, so it would have run an empty command.</p></dd></div>
+<div><dt>Change</dt><dd><p>Four tests: a rule with a check runs it and records the exit code; a rule without one is reported as advice; an empty <code>check:</code> counts as none; a failing check is reported with its output.</p></dd></div>
+<div><dt>Scope</dt><dd><ul class="files"><li><code>tests/memory.test.ts</code> <span class="muted">+86 −0</span></li></ul><p class="muted small">Left out on purpose: the review engine itself, which is task 1 of this thread.</p></dd></div>
+<div><dt>Verification</dt><dd><p>On the old code 2 of the 4 new tests fail; with task 1 applied all pass. Commands and results are listed under Evidence.</p></dd></div>
+</dl>
+</section>
+
+<section aria-labelledby="p-evidence">
+<div class="section-head"><h2 id="p-evidence">Evidence <span class="tag tag-evidence">Tool results</span></h2><p>Commands ACP ran. Each can be run again.</p></div>
+<div class="panel panel-pad">
+<ul class="checks">
+<li><svg class="i pass" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg><span class="what"><code>npm run typecheck</code></span><span class="result">passed · 4.1 s</span></li>
+<li><svg class="i pass" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg><span class="what"><code>npm run build</code></span><span class="result">passed · 6.8 s</span></li>
+<li><svg class="i pass" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg><span class="what"><code>npm test</code></span><span class="result">129 passed, 0 failed · 9.3 s</span></li>
+<li><svg class="i pass" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg><span class="what"><code>npm test</code> on the code before this change, with the new tests added</span><span class="result">2 failed, as expected</span><span class="detail">memory.test.ts:212 "an empty check counts as no check" · memory.test.ts:231 "a failing check is reported with its output"</span></li>
+<li><svg class="i pass" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg><span class="what">Patch scope guard</span><span class="result">1 file, inside scope</span></li>
+<li><svg class="i pass" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg><span class="what">Secret scan</span><span class="result">nothing found</span></li>
+<li><svg class="i pass" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg><span class="what">Rule check <a href="memory.html#tab-rules"><code>memory-module</code></a>: <code>npm test</code></span><span class="result">exit 0</span><span class="detail">This rule applies because the patch touches <code>tests/memory.test.ts</code>.</span></li>
+<li><svg class="i skip" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-dash"/></svg><span class="what">Design check</span><span class="result">skipped</span><span class="detail">Not a design task: no front-end files changed.</span></li>
+</ul>
+</div>
+</section>
+
+<section aria-labelledby="p-opinion">
+<div class="section-head"><h2 id="p-opinion">Reviewer comments <span class="tag tag-opinion">Opinion</span></h2><p>Written by models. They block nothing unless you accept one as a finding.</p></div>
+<div class="panel opinion">
+<div class="finding">
+<div class="finding-head"><span class="tag tag-opinion">Opinion</span><span class="finding-title">Two tests overlap</span><span class="loc">tests/memory.test.ts:212</span></div>
+<p>The empty-check test and the missing-check test assert the same result. One of them could go.</p>
+<p class="muted xs">Reviewer: Nemotron (free API), ACP's reviewer</p>
+<div class="cluster"><button type="button" class="btn">Accept as a finding</button><button type="button" class="btn btn-quiet">Dismiss</button></div>
+</div>
+<div class="finding">
+<div class="finding-head"><span class="tag tag-opinion">Opinion</span><span class="finding-title">No problems found</span></div>
+<p class="muted xs">Reviewer: Claude Code's own code review, asked because Claude Code is an orchestrator</p>
+</div>
+</div>
+</section>
+
+<section aria-labelledby="p-diff">
+<div class="section-head"><h2 id="p-diff">Diff</h2><p>1 file · +86 −0</p></div>
+<div class="diff">
+<div class="diff-file"><span>tests/memory.test.ts</span><span class="stat"><span class="plus">+86</span> <span class="minus">−0</span></span></div>
+<div class="diff-body"><div class="diff-lines">
+<div class="hunk"><span class="n"></span><span class="n"></span><span class="s"></span><span>@@ -204,6 +204,92 @@ test('rules share a 2 KB budget', () =&gt; {</span></div>
+<div><span class="n">204</span><span class="n">204</span><span class="s"> </span><span>});</span></div>
+<div><span class="n">205</span><span class="n">205</span><span class="s"> </span><span></span></div>
+<div class="add"><span class="n"></span><span class="n">206</span><span class="s">+</span><span>// ---- A rule's check in review ----</span></div>
+<div class="add"><span class="n"></span><span class="n">207</span><span class="s">+</span><span></span></div>
+<div class="add"><span class="n"></span><span class="n">208</span><span class="s">+</span><span>test('a rule with a check runs it and records the exit code', async () =&gt; {</span></div>
+<div class="add"><span class="n"></span><span class="n">209</span><span class="s">+</span><span>  const result = await runRuleChecks(root, [rule({ check: 'node -e "process.exit(0)"' })]);</span></div>
+<div class="add"><span class="n"></span><span class="n">210</span><span class="s">+</span><span>  assert.deepEqual(result.map(check =&gt; check.exitCode), [0]);</span></div>
+<div class="add"><span class="n"></span><span class="n">211</span><span class="s">+</span><span>});</span></div>
+<div class="add"><span class="n"></span><span class="n">212</span><span class="s">+</span><span>test('an empty check counts as no check', async () =&gt; {</span></div>
+<div class="add"><span class="n"></span><span class="n">213</span><span class="s">+</span><span>  const result = await runRuleChecks(root, [rule({ check: '   ' })]);</span></div>
+<div class="add"><span class="n"></span><span class="n">214</span><span class="s">+</span><span>  assert.deepEqual(result, [{ rule: 'sample', advice: true }]);</span></div>
+<div class="add"><span class="n"></span><span class="n">215</span><span class="s">+</span><span>});</span></div>
+<div class="hunk"><span class="n"></span><span class="n"></span><span class="s"></span><span>70 more added lines in this file</span></div>
+</div></div>
+</div>
+</section>
+</div>
+
+<aside class="review-aside" aria-label="Decision">
+<div class="panel">
+<div class="panel-pad stack">
+<h2>Decision</h2>
+<button type="button" class="btn btn-primary btn-lg" data-goto-tab="tab-applied">Approve and apply</button>
+<p class="muted small">Applies this one change to your checked-out branch, then re-runs the checks on the result. Nothing is pushed.</p>
+<div class="cluster">
+<button type="button" class="btn" data-toggle="p-changes" aria-expanded="false" aria-controls="p-changes">Request changes</button>
+<button type="button" class="btn btn-danger" data-toggle="p-reject" aria-expanded="false" aria-controls="p-reject">Reject</button>
+</div>
+<form class="stack-sm" id="p-changes" hidden>
+<div class="field"><label for="p-changes-text">What should change?</label><textarea class="textarea" id="p-changes-text"></textarea><p class="hint">Goes back to OpenCode · llama3.1 as feedback on this task. The run and its checkpoints are kept.</p></div>
+<div class="cluster"><button type="button" class="btn btn-primary" data-goto-tab="tab-queue">Send back</button></div>
+</form>
+<div class="stack-sm" id="p-reject" hidden>
+<p class="small">Reject this change? Nothing is applied. The run <code>acp/run-t7n4x0pa</code> and its work stay on this computer until you remove them in <a href="runs.html">Runs</a>.</p>
+<div class="cluster"><button type="button" class="btn btn-danger-solid" data-goto-tab="tab-queue">Reject change</button></div>
+</div>
+</div>
+<dl class="kv panel-foot">
+<dt>Agent</dt><dd>OpenCode · llama3.1 (local)</dd>
+<dt>Run</dt><dd><code>acp/run-t7n4x0pa</code></dd>
+<dt>Thread</dt><dd><a href="thread.html">Run each rule's check in review</a></dd>
+<dt>Size</dt><dd>S · 86 lines</dd>
+<dt>Applies to</dt><dd><code>feat/rule-checks</code></dd>
+</dl>
+</div>
+</aside>
+</div>
+</section>
+
+<section id="state-design" role="tabpanel" aria-labelledby="tab-design" hidden>
+<div class="spread section-tight">
+<p class="small"><button type="button" class="btn btn-quiet" data-goto-tab="tab-queue">Queue</button><span class="sep">/</span><span class="muted">3 of 3 waiting</span></p>
+<span class="pill is-ready"><span class="dot"></span>Ready to review</span>
+</div>
+<div class="review-grid section-tight">
+<div class="stack-lg">
+<section aria-labelledby="d-title">
+<h2 id="d-title">Add a Report a problem page to the website</h2>
+<p class="muted small">Design task: the request asks for a page and the patch changes <code>site/report.html</code>. Skill attached: <a href="design-library.html"><code>impeccable</code></a>.</p>
+<dl class="report panel section-tight">
+<div><dt>Problem</dt><dd><p>People without a GitHub account have no way to report a problem.</p></dd></div>
+<div><dt>Change</dt><dd><p>A form page with what happened, what was expected, steps, and how bad it is. It only builds the report; sending it is a later task.</p></dd></div>
+<div><dt>Scope</dt><dd><ul class="files"><li><code>site/report.html</code> <span class="muted">+198 −0</span></li><li><code>site/index.html</code> <span class="muted">+14 −4</span></li></ul></dd></div>
+<div><dt>Verification</dt><dd><p>Typecheck, build and tests pass. The design check found 2 pattern matches, listed below.</p></dd></div>
+</dl>
+</section>
+
+<section aria-labelledby="d-findings">
+<div class="section-head"><h2 id="d-findings">Design check <span class="tag tag-evidence">Tool results</span></h2><p>2 findings (pattern matches in the files, not opinions)</p></div>
+<div class="panel">
+<div class="finding">
+<div class="finding-head"><span class="tag tag-err">dead-link</span><span class="loc">site/report.html:42</span></div>
+<pre class="block">&lt;a class=&quot;button&quot; href=&quot;#&quot;&gt;Send report&lt;/a&gt;</pre>
+<p>Point the link somewhere, or make it a button that does something.</p>
+</div>
+<div class="finding">
+<div class="finding-head"><span class="tag tag-err">image-without-alt</span><span class="loc">site/report.html:97</span></div>
+<pre class="block">&lt;img src=&quot;assets/log-preview.png&quot; width=&quot;640&quot;&gt;</pre>
+<p>Add alt text, or an empty alt if the image is decoration.</p>
+</div>
+<p class="panel-foot">Run it yourself: <code>acp /design check site/report.html site/index.html</code> · <a href="design-library.html#tab-rules">All 8 rules</a></p>
+</div>
+</section>
+
+<section aria-labelledby="d-opinion">
+<div class="section-head"><h2 id="d-opinion">Reviewer comments <span class="tag tag-opinion">Opinion</span></h2><p>Taste is left to people and to reviewers marked as opinion.</p></div>
+<div class="panel opinion">
+<div class="finding">
+<div class="finding-head"><span class="tag tag-opinion">Opinion</span><span class="finding-title">The two-column form is cramped on a phone</span><span class="loc">site/report.html:58</span></div>
+<p>At 390 px the severity choices wrap under their label. A single column would read better.</p>
+<p class="muted xs">Reviewer: Claude Code's own code review</p>
+<div class="cluster"><button type="button" class="btn">Accept as a finding</button><button type="button" class="btn btn-quiet">Dismiss</button></div>
+</div>
+</div>
+</section>
+</div>
+
+<aside class="review-aside" aria-label="Decision">
+<div class="panel">
+<div class="panel-pad stack">
+<h2>Decision</h2>
+<button type="button" class="btn btn-primary btn-lg" data-goto-tab="tab-queue">Send back to fix 2 findings</button>
+<p class="muted small">Claude Code receives the two findings with file and line. The run and its checkpoints are kept.</p>
+<button type="button" class="btn btn-lg" disabled aria-describedby="d-why">Approve and apply</button>
+<p class="small" id="d-why"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-info"/></svg> Design-check findings block approval. They are pattern matches, so each can be confirmed by reading the line shown.</p>
+<div class="cluster"><button type="button" class="btn btn-danger" data-goto-tab="tab-queue">Reject</button></div>
+</div>
+<dl class="kv panel-foot">
+<dt>Agent</dt><dd>Claude Code</dd>
+<dt>Run</dt><dd><code>acp/run-k4s2m9fe</code></dd>
+<dt>Size</dt><dd>M · 216 lines</dd>
+</dl>
+</div>
+</aside>
+</div>
+</section>
+
+<section id="state-failed" role="tabpanel" aria-labelledby="tab-failed" hidden>
+<div class="spread section-tight">
+<p class="small"><button type="button" class="btn btn-quiet" data-goto-tab="tab-queue">Queue</button><span class="sep">/</span><span class="muted">Cannot be approved yet</span></p>
+<span class="pill is-failed"><span class="dot"></span>Check failed</span>
+</div>
+<div class="review-grid section-tight">
+<div class="stack-lg">
+<div class="notice is-err" role="alert"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-alert"/></svg><div><p class="notice-title">The secret scan failed, so this change cannot be approved</p><p>A line in the patch looks like an API key. The value is hidden here and was not written to the report, the checkpoints or the logs.</p></div></div>
+<section aria-labelledby="f-title">
+<h2 id="f-title">Show check results in the patch report</h2>
+<dl class="report panel section-tight">
+<div><dt>Problem</dt><dd><p>The patch report's Verification part lists commands but not the rule checks that ran.</p></dd></div>
+<div><dt>Change</dt><dd><p>Each rule check appears in Verification with its command, exit code and the rule it came from.</p></dd></div>
+<div><dt>Scope</dt><dd><ul class="files"><li><code>src/reviews/report.ts</code> <span class="muted">+96 −18</span></li><li><code>src/reviews/engine.ts</code> <span class="muted">+31 −4</span></li><li><code>tests/core.test.ts</code> <span class="muted">+21 −0</span></li></ul></dd></div>
+<div><dt>Verification</dt><dd><p>5 of 6 checks passed. The secret scan failed on a test fixture.</p></dd></div>
+</dl>
+</section>
+<section aria-labelledby="f-evidence">
+<div class="section-head"><h2 id="f-evidence">Evidence <span class="tag tag-evidence">Tool results</span></h2><p>5 passed · 1 failed</p></div>
+<div class="panel panel-pad">
+<ul class="checks">
+<li><svg class="i fail" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-x"/></svg><span class="what">Secret scan</span><span class="result">1 match</span><span class="detail"><span class="loc">tests/core.test.ts:412</span> a value that starts with <code>nvapi-</code> followed by 64 characters. Shown as <code>nvapi-••••••••</code>.</span></li>
+<li><svg class="i pass" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg><span class="what"><code>npm run typecheck</code></span><span class="result">passed · 4.3 s</span></li>
+<li><svg class="i pass" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg><span class="what"><code>npm run build</code></span><span class="result">passed · 6.9 s</span></li>
+<li><svg class="i pass" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg><span class="what"><code>npm test</code></span><span class="result">131 passed, 0 failed · 9.6 s</span></li>
+<li><svg class="i pass" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg><span class="what">Patch scope guard</span><span class="result">3 files, inside scope</span></li>
+<li><svg class="i pass" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg><span class="what">Rule check <code>memory-module</code>: <code>npm test</code></span><span class="result">exit 0</span></li>
+</ul>
+</div>
+</section>
+<div class="diff">
+<div class="diff-file"><span>tests/core.test.ts</span><span class="stat"><span class="plus">+21</span> <span class="minus">−0</span></span></div>
+<div class="diff-body"><div class="diff-lines">
+<div class="hunk"><span class="n"></span><span class="n"></span><span class="s"></span><span>@@ -409,3 +409,24 @@</span></div>
+<div class="add"><span class="n"></span><span class="n">410</span><span class="s">+</span><span>test('the report lists each rule check', () =&gt; {</span></div>
+<div class="add"><span class="n"></span><span class="n">411</span><span class="s">+</span><span>  const report = renderReport({ checks: [{ rule: 'docker-env', exitCode: 0 }],</span></div>
+<div class="add flag"><span class="n"></span><span class="n">412</span><span class="s">+</span><span>    env: { NVIDIA_API_KEY: 'nvapi-••••••••' } });   ← secret scan: line 412</span></div>
+<div class="add"><span class="n"></span><span class="n">413</span><span class="s">+</span><span>  assert.match(report, /docker-env\s+exit 0/);</span></div>
+</div></div>
+</div>
+</div>
+<aside class="review-aside" aria-label="Decision">
+<div class="panel">
+<div class="panel-pad stack">
+<h2>Decision</h2>
+<button type="button" class="btn btn-primary btn-lg" data-goto-tab="tab-queue">Send back to Claude Code</button>
+<p class="muted small">The failed check goes back with its file and line. When a fix follows, ACP drafts a rule for you to accept or reject in <a href="memory.html#tab-proposed">Memory</a>.</p>
+<button type="button" class="btn btn-lg" disabled aria-describedby="f-why">Approve and apply</button>
+<p class="small" id="f-why"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-info"/></svg> A failed check blocks approval. There is no way round it here, for any model.</p>
+<div class="cluster"><button type="button" class="btn btn-danger" data-goto-tab="tab-queue">Reject</button></div>
+</div>
+<dl class="kv panel-foot">
+<dt>Agent</dt><dd>Claude Code</dd>
+<dt>Run</dt><dd><code>acp/run-q2k8v1hc</code></dd>
+<dt>Size</dt><dd>M · 170 lines</dd>
+</dl>
+</div>
+</aside>
+</div>
+</section>
+
+<section id="state-applied" role="tabpanel" aria-labelledby="tab-applied" hidden>
+<div class="stack-lg page-narrow">
+<div class="notice is-ok" role="status"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg><div><p class="notice-title">Applied: Tests for rules with and without a check</p><p>One change was applied to <code>feat/rule-checks</code> as commit <code>9d2e41b</code>. The checks ran again on the result and all 6 passed. Nothing was pushed.</p></div></div>
+<div class="panel panel-pad">
+<h2>After applying</h2>
+<ul class="checks section-tight">
+<li><svg class="i pass" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg><span class="what"><code>npm run typecheck</code>, <code>npm run build</code>, <code>npm test</code> on the result</span><span class="result">passed</span></li>
+<li><svg class="i pass" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg><span class="what">Rule check <code>memory-module</code>: <code>npm test</code></span><span class="result">exit 0</span></li>
+<li><svg class="i skip" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-info"/></svg><span class="what">The run <code>acp/run-t7n4x0pa</code> no longer holds work that is not in your branch</span><span class="result"><a href="runs.html">Runs</a></span></li>
+</ul>
+</div>
+<div class="panel rows">
+<div class="row"><div><p class="row-title">Next: Describe check: in the memory guide</p><p class="row-sub">OpenCode · Nemotron (free) · 1 file, +14 −3 · 5 of 5 checks passed</p></div><div class="row-actions"><button type="button" class="btn btn-primary" data-goto-tab="tab-patch">Review next</button><button type="button" class="btn" data-goto-tab="tab-queue">Back to queue</button></div></div>
+</div>
+</div>
+</section>
+
+<section id="state-empty" role="tabpanel" aria-labelledby="tab-empty" hidden>
+<div class="empty">
+<h2>Nothing to review</h2>
+<p>When a task finishes, its change waits here with a report in four parts (Problem, Change, Scope, Verification), the results of the checks, and any reviewer comments marked as opinion.</p>
+<a class="btn btn-primary" href="thread.html#state-empty">Start a thread</a>
+</div>
+</section>
+
+<section id="state-loading" role="tabpanel" aria-labelledby="tab-loading" hidden>
+<div aria-busy="true">
+<p class="visually-hidden" role="status">Loading the review queue</p>
+<div class="panel">
+<div class="sk-row"><div class="sk sk-pill"></div><div class="skeleton"><div class="sk sk-w50"></div><div class="sk sk-w70"></div></div><div class="sk sk-btn"></div></div>
+<div class="sk-row"><div class="sk sk-pill"></div><div class="skeleton"><div class="sk sk-w30"></div><div class="sk sk-w70"></div></div><div class="sk sk-btn"></div></div>
+<div class="sk-row"><div class="sk sk-pill"></div><div class="skeleton"><div class="sk sk-w70"></div><div class="sk sk-w50"></div></div><div class="sk sk-btn"></div></div>
+</div>
+</div>
+</section>
+</main>
+<footer class="candidate-note"><span>Design candidate. This app is not built yet, and every name, number and message on this page is sample content.</span><a href="index.html">All pages and states</a></footer>
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memory · Agent Control Plane design candidate</title>
+<meta name="description" content="The four memory layers, project knowledge, folder rules, proposed rules, the mistake guard preview, imports and the AGENTS.md sync state.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+</head>
+<body>
+<svg width="0" height="0" class="visually-hidden" aria-hidden="true"><defs><symbol id="i-review" viewBox="0 0 16 16"><path d="M3 2.5h10v11H3z"/><path d="m5.5 8 1.8 1.8 3.2-3.6"/></symbol><symbol id="i-agents" viewBox="0 0 16 16"><path d="M4 4h8v8H4z"/><path d="M6.5 6.5h3v3h-3zM6 1.5V4M10 1.5V4M6 12v2.5M10 12v2.5M1.5 6H4M1.5 10H4M12 6h2.5M12 10h2.5"/></symbol><symbol id="i-memory" viewBox="0 0 16 16"><path d="M8 2 2 5l6 3 6-3z"/><path d="m2 8 6 3 6-3M2 11l6 3 6-3"/></symbol><symbol id="i-design" viewBox="0 0 16 16"><path d="M2.5 2.5H7V7H2.5zM9 2.5h4.5V7H9zM2.5 9H7v4.5H2.5z"/><circle cx="11.25" cy="11.25" r="2.25"/></symbol><symbol id="i-settings" viewBox="0 0 16 16"><path d="M2 4.5h7M12 4.5h2M2 11.5h2M7 11.5h7"/><circle cx="10.5" cy="4.5" r="1.5"/><circle cx="5.5" cy="11.5" r="1.5"/></symbol><symbol id="i-git" viewBox="0 0 16 16"><circle cx="4" cy="3.5" r="1.5"/><circle cx="4" cy="12.5" r="1.5"/><circle cx="12" cy="5.5" r="1.5"/><path d="M4 5v6M12 7c0 2.5-3 3-6.5 3.3"/></symbol><symbol id="i-runs" viewBox="0 0 16 16"><path d="M2.5 4.5h4L8 6h5.5v6.5h-11z"/></symbol><symbol id="i-usage" viewBox="0 0 16 16"><path d="M3 13V8M8 13V3M13 13V6"/></symbol><symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></symbol><symbol id="i-down" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></symbol><symbol id="i-check" viewBox="0 0 16 16"><path d="m3.5 8.5 3 3 6-7"/></symbol><symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5 14 13H2z"/><path d="M8 6.5v3M8 11.2v.1"/></symbol><symbol id="i-menu" viewBox="0 0 16 16"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/></symbol><symbol id="i-theme" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5v11M8 5l3.8-1M8 8h5.5M8 11l3.8 1"/></symbol><symbol id="i-flag" viewBox="0 0 16 16"><path d="M3.5 14V2.5M3.5 3h8L10 5.75l1.5 2.75h-8"/></symbol></defs></svg>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="app">
+<aside class="side" id="side" aria-label="Workspace">
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">A</span><span>ACP <small>Agent Control Plane</small></span></a>
+<a class="project-switch" href="onboarding.html#state-project"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-runs"/></svg><span class="name">agent-control-plane</span><span class="visually-hidden">Change project</span><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-down"/></svg></a>
+<nav aria-label="Threads">
+<p class="side-label">Threads</p>
+<ul class="side-group">
+<li><a class="side-link" href="thread.html#state-empty"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-plus"/></svg><span class="label-text">New thread</span></a></li>
+<li><a class="side-link" href="thread.html"><span class="state-dot is-working" aria-hidden="true"></span><span class="label-text">Run each rule's check in review</span><span class="visually-hidden">, 2 working, 2 ready to review</span></a></li>
+<li><a class="side-link" href="thread.html#state-stopped"><span class="state-dot" aria-hidden="true"></span><span class="label-text">Folder-level AGENTS.md blocks</span><span class="visually-hidden">, stopped</span></a></li>
+<li><a class="side-link" href="thread.html#state-ready"><span class="state-dot is-ready" aria-hidden="true"></span><span class="label-text">Docker image health check on /healthz</span><span class="visually-hidden">, ready to review</span></a></li>
+</ul>
+</nav>
+<div class="side-divider" role="presentation"></div>
+<nav aria-label="Workspace pages">
+<ul class="side-group">
+<li><a class="side-link" href="review.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-review"/></svg><span class="label-text">Review</span><span class="count">3<span class="visually-hidden"> changes waiting</span></span></a></li>
+<li><a class="side-link" href="agents.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-agents"/></svg><span class="label-text">Agents</span></a></li>
+<li><a class="side-link" href="memory.html" aria-current="page"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-memory"/></svg><span class="label-text">Memory</span><span class="count">2<span class="visually-hidden"> proposed rules</span></span></a></li>
+<li><a class="side-link" href="design-library.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-design"/></svg><span class="label-text">Design library</span></a></li>
+<li><a class="side-link" href="settings.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-settings"/></svg><span class="label-text">Settings</span></a></li>
+</ul>
+</nav>
+<nav aria-label="Project">
+<p class="side-label">Project</p>
+<ul class="side-group">
+<li><a class="side-link" href="git.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-git"/></svg><span class="label-text">Git activity</span></a></li>
+<li><a class="side-link" href="runs.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-runs"/></svg><span class="label-text">Runs</span></a></li>
+<li><a class="side-link" href="usage.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-usage"/></svg><span class="label-text">Usage</span></a></li>
+</ul>
+</nav>
+<div class="side-foot">
+<a class="side-link" href="report.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-flag"/></svg><span class="label-text">Report a problem</span></a>
+<button class="side-link" type="button" data-theme-toggle><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-theme"/></svg><span class="label-text">Switch theme</span></button>
+</div>
+</aside>
+<button class="scrim" type="button" data-nav-close aria-label="Close menu" tabindex="-1"></button>
+<div class="main">
+<div class="topbar"><a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">A</span><span>ACP</span></a><button class="btn icon-btn" type="button" data-nav-toggle aria-expanded="false" aria-controls="side" aria-label="Menu"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-menu"/></svg></button></div>
+<div class="proto"><span class="proto-label" id="proto-label">Prototype state</span><div class="proto-tabs" role="tablist" aria-labelledby="proto-label" data-state-group="page"><button type="button" role="tab" id="tab-ready" data-state="ready" aria-controls="state-ready" aria-selected="true">Memory set up</button><button type="button" role="tab" id="tab-empty" data-state="empty" aria-controls="state-empty" aria-selected="false">No memory yet</button><button type="button" role="tab" id="tab-loading" data-state="loading" aria-controls="state-loading" aria-selected="false">Loading</button></div></div>
+<main id="main" class="page">
+<header class="page-head">
+<div><h1>Memory</h1><p class="lede">One memory that every connected agent reads. It lives in this project as plain files, in four layers, and the narrower layer wins. Agents propose changes; only you accept them.</p></div>
+</header>
+
+<section id="state-ready" role="tabpanel" aria-labelledby="tab-ready">
+<div class="tabs" role="tablist" aria-label="Memory">
+<button type="button" role="tab" id="tab-layers" aria-controls="panel-layers" aria-selected="true">Layers</button>
+<button type="button" role="tab" id="tab-knowledge" aria-controls="panel-knowledge" aria-selected="false">Knowledge</button>
+<button type="button" role="tab" id="tab-rules" aria-controls="panel-rules" aria-selected="false">Rules<span class="count">2</span></button>
+<button type="button" role="tab" id="tab-proposed" aria-controls="panel-proposed" aria-selected="false">Proposed<span class="count">2</span></button>
+<button type="button" role="tab" id="tab-guard" aria-controls="panel-guard" aria-selected="false">What a file receives</button>
+<button type="button" role="tab" id="tab-import" aria-controls="panel-import" aria-selected="false">Import<span class="count">5</span></button>
+<button type="button" role="tab" id="tab-sync" aria-controls="panel-sync" aria-selected="false">AGENTS.md sync</button>
+</div>
+
+<div class="tab-panel" id="panel-layers" role="tabpanel" aria-labelledby="tab-layers">
+<div class="table-wrap">
+<table class="table">
+<caption class="visually-hidden">The four memory layers, from broadest to narrowest</caption>
+<thead><tr><th scope="col">Layer</th><th scope="col">Holds</th><th scope="col">Where</th><th scope="col">In Git</th><th scope="col">Now</th></tr></thead>
+<tbody>
+<tr><th scope="row">1 · You</th><td>Preferences for every project</td><td><code>&lt;ACP data folder&gt;/memory/user.md</code></td><td>No</td><td class="nowrap">6 lines</td></tr>
+<tr><th scope="row">2 · Project</th><td>Goals, rules, decisions</td><td><code>.acp/knowledge.md</code></td><td>Yes</td><td class="nowrap">1.2 KB</td></tr>
+<tr><th scope="row">3 · Folder rules</th><td>Rules for matching files, including past mistakes</td><td><code>.acp/rules/*.md</code></td><td>Yes</td><td class="nowrap">2 rules</td></tr>
+<tr><th scope="row">4 · Task</th><td>Checkpoints and <code>handoff.md</code></td><td><code>.acp/local/</code></td><td>No</td><td class="nowrap">4 tasks</td></tr>
+</tbody>
+</table>
+</div>
+<p class="muted small section-tight">An agent receives the layers from broadest to narrowest: your preferences, the project's knowledge, only the folder rules that match the files it works on, and its own task's latest checkpoint.</p>
+
+<section class="section" aria-labelledby="l-wins">
+<div class="section-head"><h2 id="l-wins">When layers disagree, the narrower one wins</h2><p>Task over folder rule over project over you</p></div>
+<div class="table-wrap">
+<table class="table">
+<thead><tr><th scope="col">Layer</th><th scope="col">Says</th><th scope="col">For a task on <code>compose.yaml</code></th></tr></thead>
+<tbody>
+<tr><th scope="row">You</th><td>Keep settings in <code>.env</code></td><td class="muted">Overridden</td></tr>
+<tr><th scope="row">Project</th><td>Settings are optional and go in a <code>.env</code> file you create</td><td class="muted">Overridden for these files</td></tr>
+<tr class="is-winner"><th scope="row">Folder rule <code>docker-env</code></th><td>Keep the container's paths, host and port under <code>environment:</code> in <code>compose.yaml</code></td><td><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg> Applies</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+</div>
+
+<div class="tab-panel" id="panel-knowledge" role="tabpanel" aria-labelledby="tab-knowledge" hidden>
+<div class="panel">
+<div class="panel-head"><div><h2><code>.acp/knowledge.md</code></h2><p>1.2 KB · in Git · every connected agent reads this</p></div><span class="tag">Project layer</span></div>
+<div class="panel-pad prose stack">
+<div><h3>Goals</h3><ul class="msg-text"><li>A free, open-source workspace where the coding agents a person already uses share one memory, work in parallel, and change nothing until that person approves it.</li><li>ACP's own value is the shared memory, the mistake guard, evidence-first review and built-in design skills.</li></ul></div>
+<div><h3>Rules</h3><ul class="msg-text"><li>Changes go branch → pull request → <code>dev</code> → pull request → <code>main</code>. Never push to <code>dev</code> or <code>main</code>.</li><li>Commit messages and pull request text carry no dates and no tool attribution.</li><li>Node built-ins first. Ask before adding a dependency.</li><li>Write the test first and watch it fail before writing the code.</li><li>Comment the reason for a decision, not what the code already says.</li></ul></div>
+<div><h3>Decisions</h3><ul class="msg-text"><li>Reasons for each decision are in <code>docs/decisions/</code>. ADR-0008 holds the current build order.</li><li>Memory is layered: user, project, path rules, task. The narrower layer wins.</li></ul></div>
+</div>
+<p class="panel-foot">This is a file in your repository: edit it like any other and review changes in a pull request. Agents cannot change it; they propose, and a proposal you accept is written here.</p>
+</div>
+</div>
+
+<div class="tab-panel" id="panel-rules" role="tabpanel" aria-labelledby="tab-rules" hidden>
+<div class="table-wrap">
+<table class="table">
+<thead><tr><th scope="col">Rule</th><th scope="col">Applies to</th><th scope="col">Check</th><th scope="col">Learned from</th><th scope="col" class="num">Shown</th><th scope="col" class="num">Caught</th></tr></thead>
+<tbody>
+<tr><th scope="row"><code>docker-env</code><p class="row-sub">Keep container paths, host and port under <code>environment:</code>, so a local <code>.env</code> never wins.</p></th><td><code>compose.yaml</code><br><code>Dockerfile</code><br><code>docs/guides/docker.md</code><p class="row-sub">Words: docker, container, compose</p></td><td><span class="tag tag-evidence">Runs in review</span><p class="row-sub"><code>docker compose up -d --build &amp;&amp; docker compose ps</code></p></td><td>Pull request 1<p class="row-sub">Shown to agents as a past mistake</p></td><td class="num">3</td><td class="num">1</td></tr>
+<tr><th scope="row"><code>memory-module</code><p class="row-sub">Memory code stays free of model calls and network access. A rule is kept whole or left out, never cut.</p></th><td><code>src/memory/**</code><br><code>tests/memory.test.ts</code><p class="row-sub">Words: memory, rule, guard</p></td><td><span class="tag tag-evidence">Runs in review</span><p class="row-sub"><code>npm test</code></p></td><td class="muted">Written by hand</td><td class="num">7</td><td class="num">0</td></tr>
+</tbody>
+</table>
+</div>
+<p class="muted small section-tight">A rule with a check produces evidence in review. A rule without one is advice to the agent, and is labelled <span class="tag">Advice only</span>. Rules that have not matched for a long time are proposed for removal. Each rule is one file in <code>.acp/rules/</code>.</p>
+</div>
+
+<div class="tab-panel" id="panel-proposed" role="tabpanel" aria-labelledby="tab-proposed" hidden>
+<p class="muted small">Nothing here applies until you accept it. Accepting moves the rule into <code>.acp/rules/</code>; the same as <code>acp /memory accept &lt;name&gt;</code>.</p>
+<div class="panel section-tight">
+<article class="finding" id="prop-1">
+<div class="finding-head"><h2 class="finding-title"><code>secret-fixtures</code></h2><span class="tag tag-evidence">Has a check</span><span class="tag">Folder rule</span></div>
+<p>Do not put values shaped like real keys in test fixtures. Use <code>test-key</code>.</p>
+<dl class="kv">
+<dt>Applies to</dt><dd><code>tests/**</code> · words: key, token, fixture</dd>
+<dt>Check</dt><dd><code>acp /review deterministic</code></dd>
+<dt>Source</dt><dd>Drafted by ACP: the secret scan failed on <a href="review.html#state-failed">Show check results in the patch report</a> at <span class="loc">tests/core.test.ts:412</span>, and a fix followed.</dd>
+</dl>
+<div class="cluster"><button type="button" class="btn btn-primary" data-hide="prop-1" data-show="prop-1-done">Accept</button><button type="button" class="btn">Edit</button><button type="button" class="btn btn-danger" data-hide="prop-1" data-show="prop-1-rejected">Reject</button></div>
+</article>
+<p class="finding" id="prop-1-done" hidden><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg> <span><code>secret-fixtures</code> is now in <code>.acp/rules/</code> and applies to matching files. <code>AGENTS.md</code> is out of date until you sync.</span> <button type="button" class="btn" data-goto-tab="tab-sync">Open sync</button></p>
+<p class="finding muted" id="prop-1-rejected" hidden><span><code>secret-fixtures</code> was rejected and removed from the proposals.</span></p>
+<article class="finding" id="prop-2">
+<div class="finding-head"><h2 class="finding-title"><code>review-command-time-limit</code></h2><span class="tag">Advice only</span><span class="tag">Folder rule</span></div>
+<p>Give every command run in review a time limit, and report a command that hangs as failed with the time it ran.</p>
+<dl class="kv">
+<dt>Applies to</dt><dd><code>src/reviews/**</code> · words: review, check, timeout</dd>
+<dt>Check</dt><dd class="muted">None. Without a check this rule is shown to agents but not enforced.</dd>
+<dt>Source</dt><dd>Proposed by Codex through ACP's server (<code>memory_propose_rule</code>) while working on <a href="thread.html#state-opened">Run check: commands in the review engine</a>.</dd>
+</dl>
+<div class="cluster"><button type="button" class="btn btn-primary" data-hide="prop-2" data-show="prop-2-done">Accept</button><button type="button" class="btn">Edit</button><button type="button" class="btn btn-danger" data-hide="prop-2" data-show="prop-2-rejected">Reject</button></div>
+</article>
+<p class="finding" id="prop-2-done" hidden><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg> <span><code>review-command-time-limit</code> is now in <code>.acp/rules/</code> as advice.</span></p>
+<p class="finding muted" id="prop-2-rejected" hidden><span><code>review-command-time-limit</code> was rejected and removed from the proposals.</span></p>
+</div>
+<p class="muted small section-tight">Proposals wait in <code>.acp/local/proposals/</code>, which Git ignores. Anything that looks like a key, password or token is refused before it is saved.</p>
+</div>
+
+<div class="tab-panel" id="panel-guard" role="tabpanel" aria-labelledby="tab-guard" hidden>
+<form class="panel panel-pad stack">
+<h2>What would a task on these files receive?</h2>
+<div class="field"><label for="g-files">Files</label><input class="input mono" id="g-files" value="compose.yaml"><p class="hint">One or more paths, separated by spaces.</p></div>
+<div class="field"><label for="g-request">Request (optional)</label><input class="input" id="g-request" value="Add a health check to the container"></div>
+<div class="cluster"><button type="submit" class="btn btn-primary">Show</button><span class="muted small">Matching uses paths and whole words only. No model is asked, so the answer is the same every time.</span></div>
+</form>
+<section class="section" aria-labelledby="g-out">
+<div class="section-head"><h2 id="g-out">The agent receives, in this order</h2><p>Folder rules share a 2 KB budget</p></div>
+<ol class="panel rows">
+<li class="row"><div><p class="row-title">Your preferences</p><p class="row-sub">6 lines from <code>memory/user.md</code></p></div><span class="tag">You</span></li>
+<li class="row"><div><p class="row-title">Project knowledge</p><p class="row-sub"><code>.acp/knowledge.md</code>, 1.2 KB</p></div><span class="tag">Project</span></li>
+<li class="row"><div><p class="row-title">Past mistakes here: <code>docker-env</code></p><p class="row-sub">Matched the path <code>compose.yaml</code> and the word "container". Shown whole, 0.5 KB.</p></div><span class="tag tag-evidence">Folder rule</span></li>
+</ol>
+<div class="meter section-tight"><p class="meter-top"><span class="name">Folder-rule budget</span><span class="value">0.5 of 2 KB</span></p><progress max="2" value="0.5" aria-label="Folder-rule budget: 0.5 of 2 kilobytes used"></progress></div>
+<h3 class="section-tight">Left out</h3>
+<ul class="panel rows section-tight">
+<li class="row"><div><p class="row-title muted"><code>memory-module</code></p><p class="row-sub">No path or word matched. It is named to the agent, which can open it if needed.</p></div></li>
+</ul>
+<div class="cmd section-tight"><code>acp /memory show --request "Add a health check to the container" compose.yaml</code><button type="button" data-copy>Copy</button></div>
+</section>
+</div>
+
+<div class="tab-panel" id="panel-import" role="tabpanel" aria-labelledby="tab-import" hidden>
+<p class="muted small">ACP read what your other tools remember and turned it into proposals. Nothing is imported until you accept it, and the original files are never changed.</p>
+<div class="table-wrap section-tight">
+<table class="table">
+<thead><tr><th scope="col">Proposal</th><th scope="col">Source</th><th scope="col">Layer</th><th scope="col"><span class="visually-hidden">Decision</span></th></tr></thead>
+<tbody>
+<tr><th scope="row">Run <code>npm run typecheck &amp;&amp; npm run build &amp;&amp; npm test</code> before saying work is done.</th><td>Claude Code<p class="row-sub"><code>CLAUDE.md</code>, line 14</p></td><td><label class="visually-hidden" for="i-1">Layer</label><select class="select select-sm" id="i-1"><option>Project</option><option>You</option><option>Folder rule</option></select></td><td class="actions"><button type="button" class="btn btn-primary">Accept</button> <button type="button" class="btn">Edit</button> <button type="button" class="btn btn-quiet">Reject</button></td></tr>
+<tr><th scope="row">Prefers short answers and plain words.</th><td>Codex<p class="row-sub"><code>~/.codex/memories/memory_summary.md</code>, user profile</p></td><td><label class="visually-hidden" for="i-2">Layer</label><select class="select select-sm" id="i-2"><option>You</option><option>Project</option><option>Folder rule</option></select></td><td class="actions"><button type="button" class="btn btn-primary">Accept</button> <button type="button" class="btn">Edit</button> <button type="button" class="btn btn-quiet">Reject</button></td></tr>
+<tr><th scope="row">In <code>src/cli</code>, commands return text and an exit code instead of printing.</th><td>Codex<p class="row-sub"><code>~/.codex/memories/MEMORY.md</code>, "Reusable knowledge"</p></td><td><label class="visually-hidden" for="i-3">Layer</label><select class="select select-sm" id="i-3"><option>Folder rule</option><option>Project</option><option>You</option></select><p class="row-sub"><code>src/cli/**</code></p></td><td class="actions"><button type="button" class="btn btn-primary">Accept</button> <button type="button" class="btn">Edit</button> <button type="button" class="btn btn-quiet">Reject</button></td></tr>
+<tr><th scope="row">The dashboard listens on port 4317.</th><td>Claude Code<p class="row-sub">Its memory folder for this project</p></td><td><label class="visually-hidden" for="i-4">Layer</label><select class="select select-sm" id="i-4"><option>Project</option><option>You</option><option>Folder rule</option></select><p class="row-sub"><span class="tag tag-warn">Already in knowledge</span></p></td><td class="actions"><button type="button" class="btn">Edit</button> <button type="button" class="btn btn-quiet">Reject</button></td></tr>
+<tr><th scope="row"><span class="muted">Hidden: this note contains what looks like a token.</span></th><td>OpenCode<p class="row-sub"><code>AGENTS.md</code> in <code>~/.config/opencode</code>, line 9</p></td><td><span class="tag tag-err">Refused by the secret scan</span></td><td class="actions"><button type="button" class="btn btn-quiet">Remove</button></td></tr>
+</tbody>
+</table>
+</div>
+<section class="section" aria-labelledby="i-paste">
+<div class="section-head"><h2 id="i-paste">From a chat app</h2><p>Chat apps have no way for ACP to read their memory.</p></div>
+<form class="panel panel-pad stack-sm">
+<div class="field"><label for="i-paste-text">Paste what the app exported</label><textarea class="textarea" id="i-paste-text"></textarea><p class="hint">It is scanned for secrets, then split into proposals like the ones above. Nothing is saved until you accept a proposal.</p></div>
+<div><button type="submit" class="btn">Turn into proposals</button></div>
+</form>
+</section>
+</div>
+
+<div class="tab-panel" id="panel-sync" role="tabpanel" aria-labelledby="tab-sync" hidden>
+<div class="proto"><span class="proto-label" id="sync-label">Prototype state</span><div class="proto-tabs" role="tablist" aria-labelledby="sync-label">
+<button type="button" role="tab" id="tab-sync-ok" aria-controls="sync-ok" aria-selected="true">In sync</button>
+<button type="button" role="tab" id="tab-sync-old" aria-controls="sync-old" aria-selected="false">Out of date</button>
+<button type="button" role="tab" id="tab-sync-edit" aria-controls="sync-edit" aria-selected="false">Block edited by hand</button>
+</div></div>
+
+<div class="stack section-tight" id="sync-ok" role="tabpanel" aria-labelledby="tab-sync-ok">
+<div class="notice is-ok"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg><div><p class="notice-title"><code>AGENTS.md</code> and <code>CLAUDE.md</code> match memory</p><p>Agents that ACP did not start read the same summary. Everything outside ACP's marked block is yours and is never changed.</p></div></div>
+<div class="panel">
+<div class="setting"><div><p class="setting-label"><code>AGENTS.md</code></p><p class="setting-desc">One marked block, between <code>&lt;!-- acp:begin --&gt;</code> and <code>&lt;!-- acp:end --&gt;</code>: the knowledge and one line per rule.</p></div><div class="meter"><p class="meter-top"><span class="name">Block size</span><span class="value">3.1 of 8 KB</span></p><progress max="8" value="3.1" aria-label="AGENTS.md block size: 3.1 of 8 kilobytes"></progress></div></div>
+<div class="setting"><div><p class="setting-label"><code>CLAUDE.md</code></p><p class="setting-desc">Contains the line <code>@AGENTS.md</code>, so Claude Code reads the same file. Nothing is copied.</p></div><span class="pill is-ok"><span class="dot"></span>In sync</span></div>
+<div class="setting"><div><p class="setting-label">Check on every pull request</p><p class="setting-desc"><code>acp /memory sync --check</code> changes nothing and fails when the files are out of date.</p></div><span class="pill is-ok"><span class="dot"></span>Passing</span></div>
+</div>
+</div>
+
+<div class="stack section-tight" id="sync-old" role="tabpanel" aria-labelledby="tab-sync-old" hidden>
+<div class="notice is-warn"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-alert"/></svg><div><p class="notice-title"><code>AGENTS.md</code> is out of date</p><p>Memory changed since the last sync: the rule <code>secret-fixtures</code> was accepted. Agents outside ACP still read the old summary, and the pull request check will fail until you sync and commit.</p></div><div class="row-actions"><button type="button" class="btn btn-primary" data-goto-tab="tab-sync-ok">Sync now</button></div></div>
+<div class="diff">
+<div class="diff-file"><span>AGENTS.md, inside ACP's block</span><span class="stat"><span class="plus">+1</span> <span class="minus">−0</span></span></div>
+<div class="diff-body"><div class="diff-lines">
+<div><span class="n">41</span><span class="n">41</span><span class="s"> </span><span>- `memory-module` applies to `src/memory/**`, `tests/memory.test.ts` (.acp/rules/memory-module.md)</span></div>
+<div class="add"><span class="n"></span><span class="n">42</span><span class="s">+</span><span>- `secret-fixtures` applies to `tests/**` (.acp/rules/secret-fixtures.md)</span></div>
+<div><span class="n">42</span><span class="n">43</span><span class="s"> </span><span>&lt;!-- acp:end --&gt;</span></div>
+</div></div>
+</div>
+<div class="cmd"><code>acp /memory sync</code><button type="button" data-copy>Copy</button></div>
+</div>
+
+<div class="stack section-tight" id="sync-edit" role="tabpanel" aria-labelledby="tab-sync-edit" hidden>
+<div class="notice is-err" role="alert"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-alert"/></svg><div><p class="notice-title">Sync stopped: someone edited inside ACP's block by hand</p><p>The block in <code>AGENTS.md</code> no longer matches what ACP wrote, so ACP will not overwrite it. The block is generated from <code>.acp/</code>; an edit there is the one that lasts. Decide what happens to the hand edit below.</p></div></div>
+<div class="diff">
+<div class="diff-file"><span>AGENTS.md, inside ACP's block: what ACP wrote, and what is there now</span><span class="stat"><span class="plus">+1</span> <span class="minus">−1</span></span></div>
+<div class="diff-body"><div class="diff-lines">
+<div><span class="n">33</span><span class="n">33</span><span class="s"> </span><span>- Node built-ins first. Ask before adding a dependency.</span></div>
+<div class="del"><span class="n">34</span><span class="n"></span><span class="s">−</span><span>- Write the test first and watch it fail before writing the code.</span></div>
+<div class="add"><span class="n"></span><span class="n">34</span><span class="s">+</span><span>- Write the test first and watch it fail. For docs-only changes, skip this.</span></div>
+<div><span class="n">35</span><span class="n">35</span><span class="s"> </span><span>- Comment the reason for a decision, not what the code already says.</span></div>
+</div></div>
+</div>
+<div class="panel rows">
+<div class="row"><div><p class="row-title">Keep the edit: propose it for <code>.acp/knowledge.md</code></p><p class="row-sub">The changed line becomes a proposal. If you accept it, ACP writes it to the knowledge file and regenerates the block.</p></div><div class="row-actions"><button type="button" class="btn btn-primary" data-goto-tab="tab-proposed">Make it a proposal</button></div></div>
+<div class="row"><div><p class="row-title">Drop the edit: regenerate the block from <code>.acp/</code></p><p class="row-sub">The hand-edited line is replaced by what memory says. Text outside the block is not touched.</p></div><div class="row-actions"><button type="button" class="btn btn-danger" data-open-dialog="drop-edit">Regenerate</button></div></div>
+</div>
+</div>
+</div>
+</section>
+
+<section id="state-empty" role="tabpanel" aria-labelledby="tab-empty" hidden>
+<div class="empty">
+<h2>This project has no memory yet</h2>
+<p>Setting it up creates <code>.acp/knowledge.md</code> and <code>.acp/rules/</code>, and adds <code>.acp/local/</code> to <code>.gitignore</code>. It never overwrites a file you already have. You commit the result like any other change.</p>
+<div class="cluster"><button type="button" class="btn btn-primary" data-goto-tab="tab-ready">Set up memory</button><span class="muted small">or run it yourself:</span></div>
+<div class="cmd"><code>acp /memory init</code><button type="button" data-copy>Copy</button></div>
+<p class="small">Found <code>AGENTS.md</code> and <code>CLAUDE.md</code> in this project. After setup their contents are offered as import proposals; the files themselves are left as they are.</p>
+</div>
+</section>
+
+<section id="state-loading" role="tabpanel" aria-labelledby="tab-loading" hidden>
+<div aria-busy="true">
+<p class="visually-hidden" role="status">Reading the memory files</p>
+<div class="skeleton"><div class="sk sk-w50"></div></div>
+<div class="panel section">
+<div class="sk-row"><div class="sk"></div><div class="skeleton"><div class="sk sk-w70"></div><div class="sk sk-w30"></div></div><div class="sk"></div></div>
+<div class="sk-row"><div class="sk"></div><div class="skeleton"><div class="sk sk-w50"></div><div class="sk sk-w30"></div></div><div class="sk"></div></div>
+<div class="sk-row"><div class="sk"></div><div class="skeleton"><div class="sk sk-w90"></div><div class="sk sk-w50"></div></div><div class="sk"></div></div>
+<div class="sk-row"><div class="sk"></div><div class="skeleton"><div class="sk sk-w70"></div><div class="sk sk-w30"></div></div><div class="sk"></div></div>
+</div>
+</div>
+</section>
+
+<dialog class="dialog" id="drop-edit" aria-labelledby="drop-edit-title">
+<div class="dialog-body">
+<h2 id="drop-edit-title">Replace the hand-edited line?</h2>
+<p>ACP will write its block again from <code>.acp/</code>. This line in <code>AGENTS.md</code> will be lost unless it is saved somewhere else:</p>
+<p class="loss mono">- Write the test first and watch it fail. For docs-only changes, skip this.</p>
+<p>Your own text outside the block is not changed. Git still has the file's history.</p>
+</div>
+<div class="dialog-foot"><button type="button" class="btn" data-close-dialog autofocus>Cancel</button><button type="button" class="btn btn-danger-solid" data-close-dialog data-goto-tab="tab-sync-ok">Replace the line</button></div>
+</dialog>
+</main>
+<footer class="candidate-note"><span>Design candidate. This app is not built yet, and every name, number and message on this page is sample content.</span><a href="index.html">All pages and states</a></footer>
+</div>
+</div>
+</body>
+</html>

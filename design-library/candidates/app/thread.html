@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thread · Agent Control Plane design candidate</title>
+<meta name="description" content="The thread: requests, parallel tasks, checkpoints, hand-offs, questions and the secret request card.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+</head>
+<body>
+<svg width="0" height="0" class="visually-hidden" aria-hidden="true"><defs><symbol id="i-review" viewBox="0 0 16 16"><path d="M3 2.5h10v11H3z"/><path d="m5.5 8 1.8 1.8 3.2-3.6"/></symbol><symbol id="i-agents" viewBox="0 0 16 16"><path d="M4 4h8v8H4z"/><path d="M6.5 6.5h3v3h-3zM6 1.5V4M10 1.5V4M6 12v2.5M10 12v2.5M1.5 6H4M1.5 10H4M12 6h2.5M12 10h2.5"/></symbol><symbol id="i-memory" viewBox="0 0 16 16"><path d="M8 2 2 5l6 3 6-3z"/><path d="m2 8 6 3 6-3M2 11l6 3 6-3"/></symbol><symbol id="i-design" viewBox="0 0 16 16"><path d="M2.5 2.5H7V7H2.5zM9 2.5h4.5V7H9zM2.5 9H7v4.5H2.5z"/><circle cx="11.25" cy="11.25" r="2.25"/></symbol><symbol id="i-settings" viewBox="0 0 16 16"><path d="M2 4.5h7M12 4.5h2M2 11.5h2M7 11.5h7"/><circle cx="10.5" cy="4.5" r="1.5"/><circle cx="5.5" cy="11.5" r="1.5"/></symbol><symbol id="i-git" viewBox="0 0 16 16"><circle cx="4" cy="3.5" r="1.5"/><circle cx="4" cy="12.5" r="1.5"/><circle cx="12" cy="5.5" r="1.5"/><path d="M4 5v6M12 7c0 2.5-3 3-6.5 3.3"/></symbol><symbol id="i-runs" viewBox="0 0 16 16"><path d="M2.5 4.5h4L8 6h5.5v6.5h-11z"/></symbol><symbol id="i-usage" viewBox="0 0 16 16"><path d="M3 13V8M8 13V3M13 13V6"/></symbol><symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></symbol><symbol id="i-chev" viewBox="0 0 16 16"><path d="m6 4 4 4-4 4"/></symbol><symbol id="i-down" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></symbol><symbol id="i-check" viewBox="0 0 16 16"><path d="m3.5 8.5 3 3 6-7"/></symbol><symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5 14 13H2z"/><path d="M8 6.5v3M8 11.2v.1"/></symbol><symbol id="i-info" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M8 7.2v3.6M8 5v.1"/></symbol><symbol id="i-star" viewBox="0 0 16 16"><path d="m8 2 1.8 3.8 4.2.5-3.1 2.9.8 4.1L8 11.3l-3.7 2 .8-4.1L2 6.3l4.2-.5z"/></symbol><symbol id="i-lock" viewBox="0 0 16 16"><path d="M4 7.5h8v6H4z"/><path d="M5.5 7.5V5a2.5 2.5 0 0 1 5 0v2.5"/></symbol><symbol id="i-stop" viewBox="0 0 16 16"><path d="M4.5 4.5h7v7h-7z"/></symbol><symbol id="i-send" viewBox="0 0 16 16"><path d="M8 13V3M4 7l4-4 4 4"/></symbol><symbol id="i-menu" viewBox="0 0 16 16"><path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"/></symbol><symbol id="i-theme" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5"/><path d="M8 2.5v11M8 5l3.8-1M8 8h5.5M8 11l3.8 1"/></symbol><symbol id="i-file" viewBox="0 0 16 16"><path d="M4 2.5h5l3 3v8H4z"/><path d="M9 2.5v3h3"/></symbol><symbol id="i-flag" viewBox="0 0 16 16"><path d="M3.5 14V2.5M3.5 3h8L10 5.75l1.5 2.75h-8"/></symbol><symbol id="i-swap" viewBox="0 0 16 16"><path d="M2.5 5.5h10M10 3l2.5 2.5L10 8M13.5 10.5h-10M6 8l-2.5 2.5L6 13"/></symbol><symbol id="i-branch" viewBox="0 0 16 16"><circle cx="4.5" cy="3.5" r="1.5"/><circle cx="4.5" cy="12.5" r="1.5"/><circle cx="11.5" cy="8" r="1.5"/><path d="M4.5 5v6M4.5 8H10"/></symbol></defs></svg>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="app">
+<aside class="side" id="side" aria-label="Workspace">
+<a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">A</span><span>ACP <small>Agent Control Plane</small></span></a>
+<a class="project-switch" href="onboarding.html#state-project"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-runs"/></svg><span class="name">agent-control-plane</span><span class="visually-hidden">Change project</span><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-down"/></svg></a>
+<nav aria-label="Threads">
+<p class="side-label">Threads</p>
+<ul class="side-group">
+<li><a class="side-link" href="thread.html#state-empty"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-plus"/></svg><span class="label-text">New thread</span></a></li>
+<li><a class="side-link" href="thread.html" aria-current="page"><span class="state-dot is-working" aria-hidden="true"></span><span class="label-text">Run each rule's check in review</span><span class="visually-hidden">, 2 working, 2 ready to review</span></a></li>
+<li><a class="side-link" href="thread.html#state-stopped"><span class="state-dot" aria-hidden="true"></span><span class="label-text">Folder-level AGENTS.md blocks</span><span class="visually-hidden">, stopped</span></a></li>
+<li><a class="side-link" href="thread.html#state-ready"><span class="state-dot is-ready" aria-hidden="true"></span><span class="label-text">Docker image health check on /healthz</span><span class="visually-hidden">, ready to review</span></a></li>
+</ul>
+</nav>
+<div class="side-divider" role="presentation"></div>
+<nav aria-label="Workspace pages">
+<ul class="side-group">
+<li><a class="side-link" href="review.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-review"/></svg><span class="label-text">Review</span><span class="count">3<span class="visually-hidden"> changes waiting</span></span></a></li>
+<li><a class="side-link" href="agents.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-agents"/></svg><span class="label-text">Agents</span></a></li>
+<li><a class="side-link" href="memory.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-memory"/></svg><span class="label-text">Memory</span><span class="count">2<span class="visually-hidden"> proposed rules</span></span></a></li>
+<li><a class="side-link" href="design-library.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-design"/></svg><span class="label-text">Design library</span></a></li>
+<li><a class="side-link" href="settings.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-settings"/></svg><span class="label-text">Settings</span></a></li>
+</ul>
+</nav>
+<nav aria-label="Project">
+<p class="side-label">Project</p>
+<ul class="side-group">
+<li><a class="side-link" href="git.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-git"/></svg><span class="label-text">Git activity</span></a></li>
+<li><a class="side-link" href="runs.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-runs"/></svg><span class="label-text">Runs</span></a></li>
+<li><a class="side-link" href="usage.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-usage"/></svg><span class="label-text">Usage</span></a></li>
+</ul>
+</nav>
+<div class="side-foot">
+<a class="side-link" href="report.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-flag"/></svg><span class="label-text">Report a problem</span></a>
+<button class="side-link" type="button" data-theme-toggle><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-theme"/></svg><span class="label-text">Switch theme</span></button>
+</div>
+</aside>
+<button class="scrim" type="button" data-nav-close aria-label="Close menu" tabindex="-1"></button>
+<div class="main">
+<div class="topbar"><a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">A</span><span>ACP</span></a><button class="btn icon-btn" type="button" data-nav-toggle aria-expanded="false" aria-controls="side" aria-label="Menu"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-menu"/></svg></button></div>
+
+<main id="main" class="thread">
+<div class="proto"><span class="proto-label" id="proto-label">Prototype state</span><div class="proto-tabs" role="tablist" aria-labelledby="proto-label" data-state-group="page"><button type="button" role="tab" id="tab-working" data-state="working" aria-controls="state-working" aria-selected="true">Tasks working</button><button type="button" role="tab" id="tab-empty" data-state="empty" aria-controls="state-empty" aria-selected="false">Empty</button><button type="button" role="tab" id="tab-sent" data-state="sent" aria-controls="state-sent" aria-selected="false">Just sent</button><button type="button" role="tab" id="tab-opened" data-state="opened" aria-controls="state-opened" aria-selected="false">Task opened</button><button type="button" role="tab" id="tab-ready" data-state="ready" aria-controls="state-ready" aria-selected="false">Ready to review</button><button type="button" role="tab" id="tab-stopped" data-state="stopped" aria-controls="state-stopped" aria-selected="false">Stopped</button><button type="button" role="tab" id="tab-handoff" data-state="handoff" aria-controls="state-handoff" aria-selected="false">Hand-off</button><button type="button" role="tab" id="tab-question" data-state="question" aria-controls="state-question" aria-selected="false">Question answered</button><button type="button" role="tab" id="tab-secret" data-state="secret" aria-controls="state-secret" aria-selected="false">Secret request</button><button type="button" role="tab" id="tab-loading" data-state="loading" aria-controls="state-loading" aria-selected="false">Loading</button><button type="button" role="tab" id="tab-error" data-state="error" aria-controls="state-error" aria-selected="false">Sign-in refused</button><button type="button" role="tab" id="tab-long" data-state="long" aria-controls="state-long" aria-selected="false">Long content</button></div></div>
+<header class="thread-head">
+<div class="thread-head-inner">
+<h1><span data-group="page" data-when="empty" hidden>New thread</span><span data-group="page" data-when="working sent opened ready stopped handoff question secret loading error">Run each rule's check in review</span><span data-group="page" data-when="long" hidden>Run each rule's check command during review, show the result as evidence in the patch report, and draft a rule when one fails</span></h1>
+<p class="status-line" aria-live="polite">
+<span data-group="page" data-when="working opened question secret">2 working · 2 ready to review</span>
+<span data-group="page" data-when="empty" hidden>No requests yet · agent-control-plane</span>
+<span data-group="page" data-when="sent" hidden>1 working</span>
+<span data-group="page" data-when="ready" hidden>4 ready to review</span>
+<span data-group="page" data-when="stopped" hidden>2 stopped · 2 ready to review</span>
+<span data-group="page" data-when="handoff" hidden>2 working · 2 ready to review · 1 handed off</span>
+<span data-group="page" data-when="loading" hidden>Opening thread</span>
+<span data-group="page" data-when="error" hidden>1 needs you · 1 working · 2 ready to review</span>
+<span data-group="page" data-when="long" hidden>3 working · 2 ready to review · 1 stopped · 1 applied</span>
+</p>
+</div>
+</header>
+
+<div class="thread-body">
+<div class="thread-body-inner">
+
+<section id="state-working" role="tabpanel" aria-labelledby="tab-working">
+<div class="stack-lg">
+<div class="msg msg-user">
+<p class="msg-who"><span class="who">You</span><span>12 min ago</span></p>
+<div class="msg-text"><p>Run each rule's <code>check:</code> command during review and show the result as evidence in the patch report. A rule without a check stays advice. Add tests and update the memory guide.</p></div>
+</div>
+<div class="msg">
+<p class="msg-who"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-star"/></svg><span class="who">Claude Code</span><span>orchestrator · planned 4 tasks</span></p>
+<div class="msg-text"><p>Split into four tasks that do not touch the same files, so they run at the same time. Each one works in its own worktree. Nothing reaches <code>agent-control-plane</code> until you approve it in Review.</p></div>
+</div>
+<div class="tasks">
+<p class="tasks-head"><span>4 tasks · supervised</span><span>Limit: 4 at once</span></p>
+<ul>
+<li class="task"><div class="task-row"><span class="pill is-working"><span class="dot"></span>Working</span>
+<button type="button" class="task-open" aria-expanded="false" data-toggle="w-t1" aria-controls="w-t1"><span class="task-title">Run check: commands in the review engine</span><svg class="i chev" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-chev"/></svg><span class="task-meta"><span class="agent">Codex</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-mwf3d693</span><span class="track" aria-hidden="true"><i></i><i></i><i></i><i class="next"></i></span><span>3 checkpoints</span></span></button>
+<span class="task-action"></span></div>
+<div class="task-detail" id="w-t1" hidden>
+<ol class="timeline">
+<li><div class="tl-main"><p class="tl-title">Read <code>src/memory/rules.ts</code> and <code>src/reviews/engine.ts</code></p></div><span class="tl-when">11 min ago</span></li>
+<li><div class="tl-main"><p class="tl-title">Added <code>runRuleChecks()</code>; typecheck passes</p></div><span class="tl-when">6 min ago</span></li>
+<li class="is-now"><div class="tl-main"><p class="tl-title">Saving each command's exit code and output as evidence</p></div><span class="tl-when">now</span></li>
+</ol>
+<div class="task-detail-foot"><a class="btn" href="thread.html#state-opened">Open full task</a></div>
+</div></li>
+<li class="task"><div class="task-row"><span class="pill is-working"><span class="dot"></span>Working</span>
+<button type="button" class="task-open" aria-expanded="false" data-toggle="w-t2" aria-controls="w-t2"><span class="task-title">Show check results in the patch report</span><svg class="i chev" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-chev"/></svg><span class="task-meta"><span class="agent">Claude Code</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-q2k8v1hc</span><span class="track" aria-hidden="true"><i></i><i></i><i class="next"></i></span><span>2 checkpoints</span></span></button>
+<span class="task-action"></span></div>
+<div class="task-detail" id="w-t2" hidden>
+<ol class="timeline">
+<li><div class="tl-main"><p class="tl-title">Read the report shape in <code>docs/protocols/review.md</code></p></div><span class="tl-when">10 min ago</span></li>
+<li class="is-now"><div class="tl-main"><p class="tl-title">Adding rule checks to the Verification part</p></div><span class="tl-when">now</span></li>
+</ol>
+<div class="task-detail-foot"><button type="button" class="btn btn-danger" data-goto-tab="tab-stopped"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-stop"/></svg>Stop this task</button><span class="muted small">Its checkpoints are kept.</span></div>
+</div></li>
+<li class="task"><div class="task-row"><span class="pill is-ready"><span class="dot"></span>Ready to review</span>
+<button type="button" class="task-open" aria-expanded="false" data-toggle="w-t3" aria-controls="w-t3"><span class="task-title">Tests for rules with and without a check</span><svg class="i chev" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-chev"/></svg><span class="task-meta"><span class="agent">OpenCode · llama3.1 (local)</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-t7n4x0pa</span><span>1 changed file · checks passed</span></span></button>
+<span class="task-action"><a class="btn btn-primary" href="review.html#state-patch">Review</a></span></div>
+<div class="task-detail" id="w-t3" hidden>
+<ol class="timeline">
+<li><div class="tl-main"><p class="tl-title">Wrote 4 tests in <code>tests/memory.test.ts</code>; 2 fail on the old code</p></div><span class="tl-when">8 min ago</span></li>
+<li><div class="tl-main"><p class="tl-title">Finished: typecheck, build and tests pass</p></div><span class="tl-when">5 min ago</span></li>
+</ol>
+</div></li>
+<li class="task"><div class="task-row"><span class="pill is-ready"><span class="dot"></span>Ready to review</span>
+<button type="button" class="task-open" aria-expanded="false" data-toggle="w-t4" aria-controls="w-t4"><span class="task-title">Describe check: in the memory guide</span><svg class="i chev" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-chev"/></svg><span class="task-meta"><span class="agent">OpenCode · Nemotron (free)</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-b5j9e3ru</span><span>1 changed file · checks passed</span></span></button>
+<span class="task-action"><a class="btn btn-primary" href="review.html#state-queue">Review</a></span></div>
+<div class="task-detail" id="w-t4" hidden>
+<ol class="timeline">
+<li><div class="tl-main"><p class="tl-title">Finished: updated <code>docs/guides/memory.md</code></p></div><span class="tl-when">7 min ago</span></li>
+</ol>
+</div></li>
+</ul>
+</div>
+</div>
+</section>
+
+<section id="state-empty" role="tabpanel" aria-labelledby="tab-empty" hidden>
+<div class="empty">
+<h2>Ask a question or ask for a change</h2>
+<p>A question gets an answer here. A change becomes tasks: each one runs in its own Git worktree, and nothing reaches <code>agent-control-plane</code> until you approve it in Review.</p>
+<ul class="stack-sm small">
+<li><button type="button" class="btn" data-goto-tab="tab-question">Does a rule without a check block a merge?</button></li>
+<li><button type="button" class="btn" data-goto-tab="tab-sent">Run each rule's check: command during review</button></li>
+</ul>
+<p class="small">This project's memory is ready: <a href="memory.html">knowledge and 2 folder rules</a>. 2 of 3 agents are signed in. <a href="agents.html">See agents</a>.</p>
+</div>
+</section>
+
+<section id="state-sent" role="tabpanel" aria-labelledby="tab-sent" hidden>
+<div class="stack-lg">
+<div class="msg msg-user">
+<p class="msg-who"><span class="who">You</span><span>just now</span></p>
+<div class="msg-text"><p>Run each rule's <code>check:</code> command during review and show the result as evidence in the patch report. A rule without a check stays advice. Add tests and update the memory guide.</p></div>
+</div>
+<div class="tasks">
+<p class="tasks-head"><span>Supervised</span><span>Orchestrators: Claude Code, Codex</span></p>
+<ul>
+<li class="task"><div class="task-row"><span class="pill is-working"><span class="dot"></span>Working</span>
+<div><p class="row-title">Planning the work</p><p class="row-sub">Claude Code and Codex are reading the project's memory and splitting your request into tasks. Tasks appear here as they start.</p></div>
+<span class="task-action"></span></div></li>
+</ul>
+</div>
+<p class="muted small">Received: your preferences, <code>.acp/knowledge.md</code>, and the rules for <code>src/memory/**</code> (<code>memory-module</code>). <a href="memory.html#tab-guard">See what an agent receives</a></p>
+</div>
+</section>
+
+<section id="state-opened" role="tabpanel" aria-labelledby="tab-opened" hidden>
+<div class="stack-lg">
+<div class="msg msg-user">
+<p class="msg-who"><span class="who">You</span><span>12 min ago</span></p>
+<div class="msg-text"><p>Run each rule's <code>check:</code> command during review and show the result as evidence in the patch report. A rule without a check stays advice. Add tests and update the memory guide.</p></div>
+</div>
+<div class="tasks">
+<p class="tasks-head"><span>4 tasks · supervised</span><span>Limit: 4 at once</span></p>
+<ul>
+<li class="task"><div class="task-row"><span class="pill is-working"><span class="dot"></span>Working</span>
+<button type="button" class="task-open" aria-expanded="true" data-toggle="o-t1" aria-controls="o-t1"><span class="task-title">Run check: commands in the review engine</span><svg class="i chev" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-chev"/></svg><span class="task-meta"><span class="agent">Codex</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-mwf3d693</span><span class="track" aria-hidden="true"><i></i><i></i><i></i><i class="next"></i></span><span>3 checkpoints</span></span></button>
+<span class="task-action"></span></div>
+<div class="task-detail" id="o-t1">
+<dl class="kv">
+<dt>Scope</dt><dd><code>src/reviews/engine.ts</code>, <code>src/memory/rules.ts</code></dd>
+<dt>Worktree</dt><dd><code>worktrees/run-mwf3d693</code> on branch <code>acp/run-mwf3d693</code></dd>
+<dt>Memory received</dt><dd>Project knowledge and 1 folder rule, <a href="memory.html#tab-rules"><code>memory-module</code></a>, shown as a past mistake here</dd>
+<dt>Limits</dt><dd>30 minutes · Codex <code>workspace-write</code> sandbox, confined to the worktree</dd>
+</dl>
+<div>
+<h3 class="small muted">Checkpoints</h3>
+<ol class="timeline section-tight">
+<li><div class="tl-main"><p class="tl-title">Read <code>src/memory/rules.ts</code> and <code>src/reviews/engine.ts</code></p><p class="tl-sub">Next: add a function that runs each matching rule's command</p></div><span class="tl-when">11 min ago</span></li>
+<li><div class="tl-main"><p class="tl-title">Added <code>runRuleChecks()</code>; typecheck passes</p><p class="tl-sub">2 files changed · commit <code>3c1f9ae</code> in the worktree</p></div><span class="tl-when">6 min ago</span></li>
+<li class="is-now"><div class="tl-main"><p class="tl-title">Saving each command's exit code and output as evidence</p><p class="tl-sub">Running <code>npm test</code></p></div><span class="tl-when">now</span></li>
+<li class="is-next"><div class="tl-main"><p class="tl-title muted">Next: time limit for a check that hangs</p></div></li>
+</ol>
+</div>
+<div class="task-detail-foot">
+<button type="button" class="btn" data-toggle="o-t1-handoff" aria-expanded="false" aria-controls="o-t1-handoff"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-file"/></svg>handoff.md</button>
+<a class="btn" href="runs.html">Open run</a>
+<button type="button" class="btn btn-danger end" data-goto-tab="tab-stopped"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-stop"/></svg>Stop this task</button>
+</div>
+<pre class="block" id="o-t1-handoff" hidden># handoff.md · v2
+from Codex · 640 tokens · built from checkpoints, the task ledger and Git
+goal      Run each rule's check: command in review
+scope     src/reviews/engine.ts, src/memory/rules.ts
+done      runRuleChecks() added (commit 3c1f9ae); typecheck passes
+doing     save exit code and output as evidence
+next      time limit for a check that hangs
+don't     add dependencies; make model calls in src/memory
+decisions ADR-0004, ADR-0008 §9l</pre>
+</div></li>
+<li class="task"><div class="task-row"><span class="pill is-working"><span class="dot"></span>Working</span>
+<button type="button" class="task-open" aria-expanded="false" data-toggle="o-t2" aria-controls="o-t2"><span class="task-title">Show check results in the patch report</span><svg class="i chev" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-chev"/></svg><span class="task-meta"><span class="agent">Claude Code</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-q2k8v1hc</span><span>2 checkpoints</span></span></button>
+<span class="task-action"></span></div>
+<div class="task-detail" id="o-t2" hidden><p class="muted small">Latest checkpoint: adding rule checks to the Verification part.</p></div></li>
+<li class="task"><div class="task-row"><span class="pill is-ready"><span class="dot"></span>Ready to review</span>
+<button type="button" class="task-open" aria-expanded="false" data-toggle="o-t3" aria-controls="o-t3"><span class="task-title">Tests for rules with and without a check</span><svg class="i chev" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-chev"/></svg><span class="task-meta"><span class="agent">OpenCode · llama3.1 (local)</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-t7n4x0pa</span><span>1 changed file · checks passed</span></span></button>
+<span class="task-action"><a class="btn btn-primary" href="review.html#state-patch">Review</a></span></div>
+<div class="task-detail" id="o-t3" hidden><p class="muted small">Finished 5 min ago: typecheck, build and tests pass.</p></div></li>
+<li class="task"><div class="task-row"><span class="pill is-ready"><span class="dot"></span>Ready to review</span>
+<button type="button" class="task-open" aria-expanded="false" data-toggle="o-t4" aria-controls="o-t4"><span class="task-title">Describe check: in the memory guide</span><svg class="i chev" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-chev"/></svg><span class="task-meta"><span class="agent">OpenCode · Nemotron (free)</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-b5j9e3ru</span><span>1 changed file · checks passed</span></span></button>
+<span class="task-action"><a class="btn btn-primary" href="review.html#state-queue">Review</a></span></div>
+<div class="task-detail" id="o-t4" hidden><p class="muted small">Finished 7 min ago: updated <code>docs/guides/memory.md</code>.</p></div></li>
+</ul>
+</div>
+</div>
+</section>
+
+<section id="state-ready" role="tabpanel" aria-labelledby="tab-ready" hidden>
+<div class="stack-lg">
+<div class="msg msg-user">
+<p class="msg-who"><span class="who">You</span><span>31 min ago</span></p>
+<div class="msg-text"><p>Run each rule's <code>check:</code> command during review and show the result as evidence in the patch report. A rule without a check stays advice. Add tests and update the memory guide.</p></div>
+</div>
+<div class="tasks">
+<p class="tasks-head"><span>4 tasks · all finished</span><span>Approve applies one change at a time</span></p>
+<ul>
+<li class="task"><div class="task-row"><span class="pill is-ready"><span class="dot"></span>Ready to review</span>
+<div><p class="row-title">Run check: commands in the review engine</p><p class="task-meta"><span class="agent">Codex</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-mwf3d693</span><span>2 changed files · checks passed</span></p></div>
+<span class="task-action"><a class="btn btn-primary" href="review.html#state-patch">Review</a></span></div></li>
+<li class="task"><div class="task-row"><span class="pill is-failed"><span class="dot"></span>Check failed</span>
+<div><p class="row-title">Show check results in the patch report</p><p class="task-meta"><span class="agent">Claude Code</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-q2k8v1hc</span><span>3 changed files · 1 of 6 checks failed</span></p></div>
+<span class="task-action"><a class="btn" href="review.html#state-failed">Review</a></span></div></li>
+<li class="task"><div class="task-row"><span class="pill is-ready"><span class="dot"></span>Ready to review</span>
+<div><p class="row-title">Tests for rules with and without a check</p><p class="task-meta"><span class="agent">OpenCode · llama3.1 (local)</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-t7n4x0pa</span><span>1 changed file · checks passed</span></p></div>
+<span class="task-action"><a class="btn btn-primary" href="review.html#state-patch">Review</a></span></div></li>
+<li class="task"><div class="task-row"><span class="pill is-ready"><span class="dot"></span>Ready to review</span>
+<div><p class="row-title">Describe check: in the memory guide</p><p class="task-meta"><span class="agent">OpenCode · Nemotron (free)</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-b5j9e3ru</span><span>1 changed file · checks passed</span></p></div>
+<span class="task-action"><a class="btn btn-primary" href="review.html#state-queue">Review</a></span></div></li>
+</ul>
+</div>
+<div class="msg">
+<p class="msg-who"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-star"/></svg><span class="who">Claude Code</span><span>orchestrator</span></p>
+<div class="msg-text"><p>All four tasks are finished. Three passed every check. One failed the secret scan, so read its report before deciding. Review them in any order; each approval applies one change and re-runs the checks on the result.</p></div>
+</div>
+</div>
+</section>
+
+<section id="state-stopped" role="tabpanel" aria-labelledby="tab-stopped" hidden>
+<div class="stack-lg">
+<div class="msg msg-user">
+<p class="msg-who"><span class="who">You</span><span>18 min ago</span></p>
+<div class="msg-text"><p>Run each rule's <code>check:</code> command during review and show the result as evidence in the patch report. A rule without a check stays advice. Add tests and update the memory guide.</p></div>
+</div>
+<p class="event">You stopped 2 working tasks · their checkpoints are kept</p>
+<div class="tasks">
+<p class="tasks-head"><span>4 tasks · supervised</span><span>Nothing is running</span></p>
+<ul>
+<li class="task"><div class="task-row"><span class="pill is-stopped"><span class="dot"></span>Stopped</span>
+<button type="button" class="task-open" aria-expanded="true" data-toggle="s-t1" aria-controls="s-t1"><span class="task-title">Run check: commands in the review engine</span><svg class="i chev" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-chev"/></svg><span class="task-meta"><span class="agent">Codex</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-mwf3d693</span><span>Stopped by you at checkpoint 3</span></span></button>
+<span class="task-action"><button type="button" class="btn btn-primary" data-goto-tab="tab-working">Resume</button></span></div>
+<div class="task-detail" id="s-t1">
+<ol class="timeline">
+<li><div class="tl-main"><p class="tl-title">Read <code>src/memory/rules.ts</code> and <code>src/reviews/engine.ts</code></p></div><span class="tl-when">17 min ago</span></li>
+<li><div class="tl-main"><p class="tl-title">Added <code>runRuleChecks()</code>; typecheck passes</p></div><span class="tl-when">12 min ago</span></li>
+<li><div class="tl-main"><p class="tl-title">Saving each command's exit code and output as evidence</p><p class="tl-sub">1 changed file, not committed, is kept in the worktree</p></div><span class="tl-when">6 min ago</span></li>
+<li class="is-stop"><div class="tl-main"><p class="tl-title">Stopped by you</p><p class="tl-sub">Resume continues from checkpoint 3 with the same agent, or pick another. The next agent reads <code>handoff.md</code>, not the whole chat.</p></div><span class="tl-when">4 min ago</span></li>
+</ol>
+<div class="task-detail-foot">
+<label class="visually-hidden" for="resume-with">Resume with</label>
+<select id="resume-with" class="select select-sm"><option>Resume with Codex</option><option>Resume with Claude Code</option><option>Resume with OpenCode · llama3.1 (local)</option></select>
+<button type="button" class="btn" data-toggle="s-t1-handoff" aria-expanded="false" aria-controls="s-t1-handoff"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-file"/></svg>handoff.md</button>
+</div>
+<pre class="block" id="s-t1-handoff" hidden># handoff.md · v3
+from Codex (stopped by the user) · 655 tokens
+goal      Run each rule's check: command in review
+scope     src/reviews/engine.ts, src/memory/rules.ts
+done      runRuleChecks() added (commit 3c1f9ae); typecheck passes
+doing     save exit code and output as evidence (1 file not committed)
+next      time limit for a check that hangs
+don't     add dependencies; make model calls in src/memory</pre>
+</div></li>
+<li class="task"><div class="task-row"><span class="pill is-stopped"><span class="dot"></span>Stopped</span>
+<button type="button" class="task-open" aria-expanded="false" data-toggle="s-t2" aria-controls="s-t2"><span class="task-title">Show check results in the patch report</span><svg class="i chev" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-chev"/></svg><span class="task-meta"><span class="agent">Claude Code</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-q2k8v1hc</span><span>Stopped by you at checkpoint 2</span></span></button>
+<span class="task-action"><button type="button" class="btn btn-primary" data-goto-tab="tab-working">Resume</button></span></div>
+<div class="task-detail" id="s-t2" hidden><p class="muted small">Latest checkpoint: adding rule checks to the Verification part. No changes yet.</p></div></li>
+<li class="task"><div class="task-row"><span class="pill is-ready"><span class="dot"></span>Ready to review</span>
+<div><p class="row-title">Tests for rules with and without a check</p><p class="task-meta"><span class="agent">OpenCode · llama3.1 (local)</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-t7n4x0pa</span><span>1 changed file · checks passed</span></p></div>
+<span class="task-action"><a class="btn btn-primary" href="review.html#state-patch">Review</a></span></div></li>
+<li class="task"><div class="task-row"><span class="pill is-ready"><span class="dot"></span>Ready to review</span>
+<div><p class="row-title">Describe check: in the memory guide</p><p class="task-meta"><span class="agent">OpenCode · Nemotron (free)</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-b5j9e3ru</span><span>1 changed file · checks passed</span></p></div>
+<span class="task-action"><a class="btn btn-primary" href="review.html#state-queue">Review</a></span></div></li>
+</ul>
+</div>
+</div>
+</section>
+
+<section id="state-handoff" role="tabpanel" aria-labelledby="tab-handoff" hidden>
+<div class="stack-lg">
+<div class="msg msg-user">
+<p class="msg-who"><span class="who">You</span><span>24 min ago</span></p>
+<div class="msg-text"><p>Run each rule's <code>check:</code> command during review and show the result as evidence in the patch report. A rule without a check stays advice. Add tests and update the memory guide.</p></div>
+</div>
+<p class="event"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-swap"/></svg>Codex reached 94% of its 5-hour window · task handed to Claude Code</p>
+<div class="tasks">
+<p class="tasks-head"><span>4 tasks · supervised</span><span>Limit: 4 at once</span></p>
+<ul>
+<li class="task"><div class="task-row"><span class="pill is-working"><span class="dot"></span>Working</span>
+<button type="button" class="task-open" aria-expanded="true" data-toggle="h-t1" aria-controls="h-t1"><span class="task-title">Run check: commands in the review engine</span><svg class="i chev" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-chev"/></svg><span class="task-meta"><span class="agent">Claude Code</span><span>from Codex</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-mwf3d693</span><span>4 checkpoints · 1 hand-off</span></span></button>
+<span class="task-action"></span></div>
+<div class="task-detail" id="h-t1">
+<ol class="timeline">
+<li><div class="tl-main"><p class="tl-title">Read <code>src/memory/rules.ts</code> and <code>src/reviews/engine.ts</code></p><p class="tl-sub">Codex</p></div><span class="tl-when">23 min ago</span></li>
+<li><div class="tl-main"><p class="tl-title">Added <code>runRuleChecks()</code>; typecheck passes</p><p class="tl-sub">Codex · commit <code>3c1f9ae</code></p></div><span class="tl-when">18 min ago</span></li>
+<li><div class="tl-main"><p class="tl-title">Saving each command's exit code and output as evidence</p><p class="tl-sub">Codex · <code>tests/memory.test.ts:212</code> failing</p></div><span class="tl-when">9 min ago</span></li>
+<li class="is-handoff"><div class="tl-main"><p class="tl-title">Handed off: Codex to Claude Code</p><p class="tl-sub">Why: Codex's 5-hour window is at 94%, so the orchestrator moved the task before the plan ran out. Claude Code received <code>handoff.md</code> v3 (820 tokens), the task's scope and the matching memory. It did not receive Codex's chat.</p><p class="tl-sub">Readback: Claude Code restated the goal, scope and next step, and they matched <code>handoff.md</code>. Hand-off 1 of 2 allowed.</p></div><span class="tl-when">7 min ago</span></li>
+<li class="is-now"><div class="tl-main"><p class="tl-title">Fixing the failing test: an empty <code>check:</code> must count as no check</p><p class="tl-sub">Claude Code · same worktree and branch</p></div><span class="tl-when">now</span></li>
+</ol>
+<div class="task-detail-foot">
+<button type="button" class="btn" data-toggle="h-t1-handoff" aria-expanded="true" aria-controls="h-t1-handoff"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-file"/></svg>handoff.md</button>
+<a class="btn" href="usage.html">Codex usage</a>
+<button type="button" class="btn btn-danger end" data-goto-tab="tab-stopped"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-stop"/></svg>Stop this task</button>
+</div>
+<pre class="block" id="h-t1-handoff"># handoff.md · v3
+from Codex → to Claude Code · 820 tokens
+goal      Run each rule's check: command in review
+scope     src/reviews/engine.ts, src/memory/rules.ts
+done      runRuleChecks() added (commit 3c1f9ae); typecheck passes
+failing   tests/memory.test.ts:212
+next      treat an empty check: as no check
+don't     add dependencies; make model calls in src/memory
+decisions ADR-0004, ADR-0008 §9l</pre>
+</div></li>
+<li class="task"><div class="task-row"><span class="pill is-working"><span class="dot"></span>Working</span>
+<button type="button" class="task-open" aria-expanded="false" data-toggle="h-t2" aria-controls="h-t2"><span class="task-title">Show check results in the patch report</span><svg class="i chev" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-chev"/></svg><span class="task-meta"><span class="agent">Claude Code</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-q2k8v1hc</span><span>3 checkpoints</span></span></button>
+<span class="task-action"></span></div>
+<div class="task-detail" id="h-t2" hidden><p class="muted small">Latest checkpoint: report shows each rule check with its exit code.</p></div></li>
+<li class="task"><div class="task-row"><span class="pill is-ready"><span class="dot"></span>Ready to review</span>
+<div><p class="row-title">Tests for rules with and without a check</p><p class="task-meta"><span class="agent">OpenCode · llama3.1 (local)</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-t7n4x0pa</span><span>1 changed file · checks passed</span></p></div>
+<span class="task-action"><a class="btn btn-primary" href="review.html#state-patch">Review</a></span></div></li>
+<li class="task"><div class="task-row"><span class="pill is-ready"><span class="dot"></span>Ready to review</span>
+<div><p class="row-title">Describe check: in the memory guide</p><p class="task-meta"><span class="agent">OpenCode · Nemotron (free)</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-b5j9e3ru</span><span>1 changed file · checks passed</span></p></div>
+<span class="task-action"><a class="btn btn-primary" href="review.html#state-queue">Review</a></span></div></li>
+</ul>
+</div>
+</div>
+</section>
+
+<section id="state-question" role="tabpanel" aria-labelledby="tab-question" hidden>
+<div class="stack-lg">
+<p class="event">4 tasks from your earlier request are still running or waiting above</p>
+<div class="msg msg-user">
+<p class="msg-who"><span class="who">You</span><span>2 min ago</span></p>
+<div class="msg-text"><p>Does a rule without a check block a merge?</p></div>
+</div>
+<div class="msg">
+<p class="msg-who"><span class="who">Claude Code</span><span>answer · no tasks created · no files changed</span></p>
+<div class="msg-text">
+<p>No. A rule without a <code>check:</code> is advice to the agent: ACP shows it before the task starts, and nothing enforces it afterwards. Only a rule with a <code>check:</code> command produces a result in review, and that result is evidence.</p>
+<p>In this project:</p>
+<ul>
+<li><code>.acp/rules/docker-env.md</code> has a check: <code>docker compose up -d --build &amp;&amp; docker compose ps</code></li>
+<li><code>.acp/rules/memory-module.md</code> has a check: <code>npm test</code></li>
+</ul>
+<p class="msg-note">Read: <code>docs/guides/memory.md</code>, <code>.acp/rules/</code> · ask mode: Claude Code's <code>plan</code> permission mode, so it could not change files</p>
+</div>
+<div class="cluster"><button type="button" class="btn" data-goto-tab="tab-sent">Make this a change request</button><a class="btn btn-quiet" href="memory.html#tab-rules">Open rules</a></div>
+</div>
+</div>
+</section>
+
+<section id="state-secret" role="tabpanel" aria-labelledby="tab-secret" hidden>
+<div class="stack-lg">
+<div class="tasks">
+<p class="tasks-head"><span>4 tasks · supervised</span><span>1 waiting for you</span></p>
+<ul>
+<li class="task"><div class="task-row"><span class="pill is-ready"><span class="dot"></span>Needs you</span>
+<div><p class="row-title">Run check: commands in the review engine</p><p class="task-meta"><span class="agent">Codex</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-mwf3d693</span><span>Paused at checkpoint 3 until you answer below</span></p></div>
+<span class="task-action"></span></div></li>
+</ul>
+</div>
+<div class="secret-card" id="secret-ask">
+<div class="secret-head"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-lock"/></svg><h2>Codex asks for a credential</h2><span class="tag end">Private</span></div>
+<form class="secret-body">
+<dl class="kv">
+<dt>Name</dt><dd><code>NVIDIA_API_KEY</code></dd>
+<dt>Used for</dt><dd>Running <code>acp /model smoke</code> in this task's worktree, to confirm a rule check that calls a model still passes</dd>
+<dt>Goes to</dt><dd>This task's commands only, as an environment value. Removed when the task ends.</dd>
+</dl>
+<div class="field">
+<label for="secret-value">Value</label>
+<div class="secret-row">
+<input class="input mono" id="secret-value" type="password" autocomplete="off" spellcheck="false" aria-describedby="secret-promise">
+<button type="button" class="btn btn-primary" data-hide="secret-ask" data-show="secret-given">Give to this task</button>
+<button type="button" class="btn" data-hide="secret-ask" data-show="secret-declined">Decline</button>
+</div>
+<p class="hint" id="secret-promise">What you type here never enters the chat, memory, checkpoints, <code>handoff.md</code> or logs, and no agent can read it back. ACP keeps it encrypted on this computer.</p>
+</div>
+</form>
+</div>
+<div class="notice is-ok" id="secret-given" hidden><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-check"/></svg><div><p class="notice-title">Given to this task. The value is hidden.</p><p>Codex continues from checkpoint 3. The thread shows only that a credential named <code>NVIDIA_API_KEY</code> was provided.</p></div><div class="row-actions"><button type="button" class="btn" data-hide="secret-given" data-show="secret-ask">Remove it</button></div></div>
+<div class="notice" id="secret-declined" hidden><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-info"/></svg><div><p class="notice-title">Declined. Nothing was stored.</p><p>Codex was told the credential is not available and continues without <code>acp /model smoke</code>. Its report will say that check was skipped.</p></div><div class="row-actions"><button type="button" class="btn" data-hide="secret-declined" data-show="secret-ask">Answer again</button></div></div>
+<p class="muted small">This card is for a credential a task needs. ACP never asks for the password or token of an agent itself: you sign in to each one in its maker's own tool. <a href="agents.html">See agents</a></p>
+</div>
+</section>
+
+<section id="state-loading" role="tabpanel" aria-labelledby="tab-loading" hidden>
+<div class="stack-lg" aria-busy="true">
+<p class="visually-hidden" role="status">Opening the thread and its tasks</p>
+<div class="skeleton"><div class="sk sk-w70"></div><div class="sk sk-w50"></div></div>
+<div class="tasks">
+<div class="sk-row"><div class="sk sk-pill"></div><div class="skeleton"><div class="sk sk-w70"></div><div class="sk sk-w30"></div></div><div class="sk sk-btn"></div></div>
+<div class="sk-row"><div class="sk sk-pill"></div><div class="skeleton"><div class="sk sk-w50"></div><div class="sk sk-w30"></div></div><div class="sk sk-btn"></div></div>
+<div class="sk-row"><div class="sk sk-pill"></div><div class="skeleton"><div class="sk sk-w90"></div><div class="sk sk-w30"></div></div><div class="sk sk-btn"></div></div>
+</div>
+</div>
+</section>
+
+<section id="state-error" role="tabpanel" aria-labelledby="tab-error" hidden>
+<div class="stack-lg">
+<div class="notice is-err" role="alert"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-alert"/></svg><div><p class="notice-title">Codex's sign-in was refused</p><p>Codex reported it was signed in, but its service rejected the saved sign-in. One task is paused at its last checkpoint; nothing was lost. Sign in again in Codex's own tool, then check again. ACP never asks for your password or token.</p><div class="cmd section-tight"><code>codex login</code><button type="button" data-copy>Copy</button></div></div><div class="row-actions"><button type="button" class="btn" data-goto-tab="tab-working">Check again</button></div></div>
+<div class="tasks">
+<p class="tasks-head"><span>4 tasks · supervised</span><span>1 waiting for you</span></p>
+<ul>
+<li class="task"><div class="task-row"><span class="pill is-failed"><span class="dot"></span>Needs sign-in</span>
+<button type="button" class="task-open" aria-expanded="true" data-toggle="e-t1" aria-controls="e-t1"><span class="task-title">Run check: commands in the review engine</span><svg class="i chev" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-chev"/></svg><span class="task-meta"><span class="agent">Codex</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-mwf3d693</span><span>Paused at checkpoint 2</span></span></button>
+<span class="task-action"><button type="button" class="btn" data-goto-tab="tab-handoff">Hand to Claude Code</button></span></div>
+<div class="task-detail" id="e-t1">
+<ol class="timeline">
+<li><div class="tl-main"><p class="tl-title">Read <code>src/memory/rules.ts</code> and <code>src/reviews/engine.ts</code></p></div><span class="tl-when">9 min ago</span></li>
+<li><div class="tl-main"><p class="tl-title">Added <code>runRuleChecks()</code>; typecheck passes</p></div><span class="tl-when">4 min ago</span></li>
+<li class="is-fail"><div class="tl-main"><p class="tl-title">Codex stopped: sign-in was refused</p><p class="tl-sub">The work so far is kept in the worktree. Handing off gives another agent <code>handoff.md</code>, not Codex's chat.</p></div><span class="tl-when">1 min ago</span></li>
+</ol>
+</div></li>
+<li class="task"><div class="task-row"><span class="pill is-working"><span class="dot"></span>Working</span>
+<div><p class="row-title">Show check results in the patch report</p><p class="task-meta"><span class="agent">Claude Code</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-q2k8v1hc</span><span>2 checkpoints</span></p></div>
+<span class="task-action"></span></div></li>
+<li class="task"><div class="task-row"><span class="pill is-ready"><span class="dot"></span>Ready to review</span>
+<div><p class="row-title">Tests for rules with and without a check</p><p class="task-meta"><span class="agent">OpenCode · llama3.1 (local)</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-t7n4x0pa</span><span>1 changed file · checks passed</span></p></div>
+<span class="task-action"><a class="btn btn-primary" href="review.html#state-patch">Review</a></span></div></li>
+<li class="task"><div class="task-row"><span class="pill is-ready"><span class="dot"></span>Ready to review</span>
+<div><p class="row-title">Describe check: in the memory guide</p><p class="task-meta"><span class="agent">OpenCode · Nemotron (free)</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-b5j9e3ru</span><span>1 changed file · checks passed</span></p></div>
+<span class="task-action"><a class="btn btn-primary" href="review.html#state-queue">Review</a></span></div></li>
+</ul>
+</div>
+<p class="muted small">If ACP itself cannot be reached, the thread shows <a href="error.html">the server-stopped state</a> instead.</p>
+</div>
+</section>
+
+<section id="state-long" role="tabpanel" aria-labelledby="tab-long" hidden>
+<div class="stack-lg">
+<div class="msg msg-user">
+<p class="msg-who"><span class="who">You</span><span>1 h 42 min ago</span></p>
+<div class="msg-text"><p>Run each rule's <code>check:</code> command during review and show the result as evidence in the patch report. A rule without a check stays advice. When a check fails and a fix follows, draft a rule and put it in the proposals list. Count how often each rule is shown and how often its check catches something. Add tests, update <code>docs/guides/memory.md</code> and <code>docs/decisions/ADR-0008-repository-ci-previews-and-distribution.md</code>, and keep <code>src/memory</code> free of model calls and network access.</p><p>Paths that must not change: <code>design-library/skills/impeccable/reference/craft-floor.md</code>, <code>design-library/skills/huashu-design/references/animation-best-practices.md</code>.</p></div>
+</div>
+<div class="tasks">
+<p class="tasks-head"><span>7 tasks · auto-accept edits</span><span>Limit: 4 at once · 1 waiting for a free slot</span></p>
+<ul>
+<li class="task"><div class="task-row"><span class="pill is-ok"><span class="dot"></span>Applied</span>
+<div><p class="row-title">Tests for rules with and without a check</p><p class="task-meta"><span class="agent">OpenCode · llama3.1 (local)</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-t7n4x0pa</span><span>Applied as <code>9d2e41b</code></span></p></div>
+<span class="task-action"><a class="btn btn-quiet" href="review.html#state-applied">Open</a></span></div></li>
+<li class="task"><div class="task-row"><span class="pill is-working"><span class="dot"></span>Working</span>
+<div><p class="row-title">Run check: commands in the review engine, with a time limit for a command that hangs and a clear message when the command is not installed on this computer</p><p class="task-meta"><span class="agent">Claude Code</span><span>from Codex</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-mwf3d693</span><span>6 checkpoints · 1 hand-off</span></p></div>
+<span class="task-action"></span></div></li>
+<li class="task"><div class="task-row"><span class="pill is-working"><span class="dot"></span>Working</span>
+<div><p class="row-title">Show check results in the patch report</p><p class="task-meta"><span class="agent">Claude Code</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-q2k8v1hc</span><span>4 checkpoints</span></p></div>
+<span class="task-action"></span></div></li>
+<li class="task"><div class="task-row"><span class="pill is-working"><span class="dot"></span>Working</span>
+<div><p class="row-title">Count how often each rule is shown and how often its check catches something</p><p class="task-meta"><span class="agent">OpenCode · Nemotron (free)</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-h3c6w8ym-count-rule-matches-and-check-catches</span><span>2 checkpoints</span></p></div>
+<span class="task-action"></span></div></li>
+<li class="task"><div class="task-row"><span class="pill"><span class="dot"></span>Waiting</span>
+<div><p class="row-title">Draft a rule when a check fails and a fix follows</p><p class="task-meta"><span class="agent">Not assigned yet</span><span>Starts when a slot is free; depends on the review engine task</span></p></div>
+<span class="task-action"></span></div></li>
+<li class="task"><div class="task-row"><span class="pill is-stopped"><span class="dot"></span>Stopped</span>
+<div><p class="row-title">Update ADR-0008 action item 16</p><p class="task-meta"><span class="agent">Codex</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-z1r5d7kq</span><span>Stopped: the same test failed with the same error twice</span></p></div>
+<span class="task-action"><button type="button" class="btn btn-primary" data-goto-tab="tab-working">Resume</button></span></div></li>
+<li class="task"><div class="task-row"><span class="pill is-ready"><span class="dot"></span>Ready to review</span>
+<div><p class="row-title">Describe check: in the memory guide</p><p class="task-meta"><span class="agent">OpenCode · Nemotron (free)</span><span class="chip"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-branch"/></svg>acp/run-b5j9e3ru</span><span>1 changed file · checks passed</span></p></div>
+<span class="task-action"><a class="btn btn-primary" href="review.html#state-queue">Review</a></span></div></li>
+</ul>
+</div>
+</div>
+</section>
+
+</div>
+</div>
+
+<form class="composer">
+<div class="composer-inner">
+<div class="panel panel-pad stack-sm slash-menu" id="slash-menu" hidden>
+<p class="spread"><span class="label">Commands</span><span class="muted xs">Type <kbd>/</kbd> at the start of a message. The same commands work in a terminal with <code>acp</code> in front.</span></p>
+<dl class="kv">
+<dt><code>/run codex Build a page</code></dt><dd>Give one request to one agent, in its own worktree</dd>
+<dt><code>/agents</code></dt><dd>Which agents are installed and signed in</dd>
+<dt><code>/memory</code></dt><dd>What a task on these files would receive</dd>
+<dt><code>/memory proposals</code></dt><dd>Rules waiting for your decision</dd>
+<dt><code>/runs clean</code></dt><dd>Remove runs that hold no changes</dd>
+<dt><code>/skills list</code></dt><dd>Design skills attached in this project</dd>
+<dt><code>/design check site/index.html</code></dt><dd>Run the design check on files</dd>
+</dl>
+</div>
+<div class="composer-box">
+<label class="visually-hidden" for="request">Your request</label>
+<textarea id="request" rows="2" placeholder="Ask a question or describe a change"></textarea>
+<div class="composer-bar">
+<label class="visually-hidden" for="who">Who handles this request</label>
+<select id="who" class="select select-sm">
+<optgroup label="Orchestrators (starred)"><option>Orchestrators: Claude Code, Codex</option></optgroup>
+<optgroup label="One agent, no delegation"><option>Claude Code</option><option>Codex</option><option>OpenCode · llama3.1 (local)</option><option>OpenCode · Nemotron (free)</option></optgroup>
+</select>
+<label class="visually-hidden" for="mode">Permission mode for this thread</label>
+<select id="mode" class="select select-sm"><option>Supervised</option><option>Auto-accept edits</option><option>Full access</option></select>
+<button type="button" class="btn btn-quiet" data-toggle="slash-menu" aria-expanded="false" aria-controls="slash-menu"><span class="mono" aria-hidden="true">/</span>Commands</button>
+<span class="cluster end">
+<button type="button" class="btn icon-btn btn-danger" data-group="page" data-when="working sent opened handoff question long" data-goto-tab="tab-stopped" aria-label="Stop all working tasks" title="Stop all working tasks"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-stop"/></svg></button>
+<button type="submit" class="btn btn-primary" data-goto-tab="tab-sent"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-send"/></svg>Send</button>
+</span>
+</div>
+</div>
+<p class="composer-hint">Supervised: agents edit only their own worktree, and nothing reaches the project until you approve it. <a href="settings.html#permissions">What each mode allows</a> · <kbd>@</kbd> pins a task to one agent · <kbd>/</kbd> runs a command</p>
+</div>
+</form>
+</main>
+<footer class="candidate-note"><span>Design candidate. This app is not built yet, and every name, number and message on this page is sample content.</span><a href="index.html">All pages and states</a></footer>
+</div>
+</div>
+</body>
+</html>

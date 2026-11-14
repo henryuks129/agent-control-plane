@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Error and offline · Agent Control Plane design candidate</title>
+<meta name="description" content="What the app shows when ACP's own server has stopped, the computer is offline, a page is missing or something broke.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap">
+<link rel="stylesheet" href="app.css">
+<script src="app.js"></script>
+</head>
+<body>
+<svg width="0" height="0" class="visually-hidden" aria-hidden="true"><defs><symbol id="i-alert" viewBox="0 0 16 16"><path d="M8 2.5 14 13H2z"/><path d="M8 6.5v3M8 11.2v.1"/></symbol><symbol id="i-flag" viewBox="0 0 16 16"><path d="M3.5 14V2.5M3.5 3h8L10 5.75l1.5 2.75h-8"/></symbol></defs></svg>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="solo">
+<header class="solo-top"><a class="brand" href="index.html"><span class="brand-mark" aria-hidden="true">A</span><span>ACP <small>Agent Control Plane</small></span></a><a class="btn btn-quiet" href="index.html">All pages and states</a></header>
+<div class="proto"><span class="proto-label" id="proto-label">Prototype state</span><div class="proto-tabs" role="tablist" aria-labelledby="proto-label" data-state-group="page"><button type="button" role="tab" id="tab-stopped" data-state="stopped" aria-controls="state-stopped" aria-selected="true">ACP stopped</button><button type="button" role="tab" id="tab-reconnecting" data-state="reconnecting" aria-controls="state-reconnecting" aria-selected="false">Reconnecting</button><button type="button" role="tab" id="tab-offline" data-state="offline" aria-controls="state-offline" aria-selected="false">Offline</button><button type="button" role="tab" id="tab-missing" data-state="missing" aria-controls="state-missing" aria-selected="false">Not found</button><button type="button" role="tab" id="tab-broke" data-state="broke" aria-controls="state-broke" aria-selected="false">Something broke</button></div></div>
+<main id="main" class="solo-main">
+<h1>When something is wrong</h1>
+<p class="lede muted">Each of these replaces the page that could not be shown. It says what happened, what is safe, and what to do next.</p>
+
+<section id="state-stopped" role="tabpanel" aria-labelledby="tab-stopped">
+<div class="empty section">
+<span class="pill is-failed"><span class="dot"></span>Not running</span>
+<h2>ACP has stopped on this computer</h2>
+<p>The app is only a window onto ACP, which runs on your computer and owns the agents, worktrees and memory. That part is not answering at <code>127.0.0.1:4317</code>.</p>
+<p>Your work is safe: every task saved a checkpoint as it went, and each run's worktree is still on disk. Working tasks stopped where they were and will show Resume.</p>
+<div class="cluster"><button type="button" class="btn btn-primary" data-goto-tab="tab-reconnecting">Start ACP again</button><span class="muted small">or in a terminal:</span></div>
+<div class="cmd"><code>acp /ui</code><button type="button" data-copy>Copy</button></div>
+</div>
+<dl class="panel panel-pad kv section-tight">
+<dt>Last answer</dt><dd>2 minutes ago</dd>
+<dt>Likely cause</dt><dd>The computer slept, or the terminal that started ACP was closed</dd>
+<dt>Port in use?</dt><dd>If something else took port 4317, ACP says so when it starts. Change the port in <a href="settings.html#advanced">Settings</a>.</dd>
+</dl>
+</section>
+
+<section id="state-reconnecting" role="tabpanel" aria-labelledby="tab-reconnecting" hidden>
+<div class="empty section" aria-busy="true">
+<span class="pill is-working"><span class="dot"></span>Starting</span>
+<h2>Starting ACP</h2>
+<p role="status">Waiting for an answer at <code>127.0.0.1:4317</code>. Then ACP reads each task's latest checkpoint and shows the thread as it was.</p>
+<div class="skeleton"><div class="sk sk-w70"></div><div class="sk sk-w50"></div></div>
+<button type="button" class="btn" data-goto-tab="tab-stopped">Cancel</button>
+</div>
+</section>
+
+<section id="state-offline" role="tabpanel" aria-labelledby="tab-offline" hidden>
+<div class="notice is-warn section" role="status"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-alert"/></svg><div><p class="notice-title">This computer is offline</p><p>ACP itself needs no network, so the app keeps working. What needs the network is listed below and starts again by itself when the connection is back.</p></div><div class="row-actions"><button type="button" class="btn">Check again</button></div></div>
+<h2 class="section">Still works</h2>
+<ul class="panel rows section-tight">
+<li class="row"><div><p class="row-title">Review, approve and apply changes</p><p class="row-sub">Diffs, checks and Git are all on this computer</p></div><span class="pill is-ok"><span class="dot"></span>Works</span></li>
+<li class="row"><div><p class="row-title">Memory, runs and settings</p><p class="row-sub">Plain files on this computer</p></div><span class="pill is-ok"><span class="dot"></span>Works</span></li>
+<li class="row"><div><p class="row-title">OpenCode with a local model</p><p class="row-sub"><span class="mono">llama3.1</span> through Ollama. New tasks go here while you are offline, if you turned it on</p></div><span class="pill is-ok"><span class="dot"></span>Works</span></li>
+</ul>
+<h2 class="section">Waiting for the network</h2>
+<ul class="panel rows section-tight">
+<li class="row"><div><p class="row-title">Claude Code, Codex and hosted models</p><p class="row-sub">2 working tasks stopped at their last checkpoint. Their rows show Resume; nothing was lost.</p></div><span class="pill is-stopped"><span class="dot"></span>Waiting</span></li>
+<li class="row"><div><p class="row-title">Plan usage</p><p class="row-sub">Shows the last reading, marked as old</p></div><span class="pill is-stopped"><span class="dot"></span>Waiting</span></li>
+<li class="row"><div><p class="row-title">Pull requests, CI and issues</p><p class="row-sub">Commits still show, from local Git</p></div><span class="pill is-stopped"><span class="dot"></span>Waiting</span></li>
+<li class="row"><div><p class="row-title">Report a problem</p><p class="row-sub">Kept as a draft until you are online</p></div><span class="pill is-stopped"><span class="dot"></span>Waiting</span></li>
+</ul>
+<p class="section-tight"><a class="btn btn-primary" href="thread.html#state-stopped">Back to the thread</a></p>
+</section>
+
+<section id="state-missing" role="tabpanel" aria-labelledby="tab-missing" hidden>
+<div class="empty section">
+<h2>This thread is not in this project</h2>
+<p>The address points at a thread that does not exist in <code>agent-control-plane</code>. It may belong to another project, or it was removed.</p>
+<p class="small"><code class="mono">/thread/0193-folder-level-agents-md-blocks-and-a-very-long-address-that-was-pasted-from-another-computer</code></p>
+<div class="cluster"><a class="btn btn-primary" href="thread.html">Open the latest thread</a><a class="btn" href="onboarding.html#state-project">Change project</a><a class="btn btn-quiet" href="index.html">All pages</a></div>
+</div>
+</section>
+
+<section id="state-broke" role="tabpanel" aria-labelledby="tab-broke" hidden>
+<div class="notice is-err section" role="alert"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-alert"/></svg><div><p class="notice-title">This page could not be shown</p><p>Something in the app broke while drawing Review. This is a fault in ACP, not in your project. Your tasks keep running, and nothing was applied or removed.</p></div><div class="row-actions"><a class="btn" href="review.html">Reload Review</a></div></div>
+<div class="panel section-tight">
+<div class="panel-head"><div><h2>Details</h2><p>For a maintainer. Nothing here has been sent anywhere.</p></div><button type="button" class="btn btn-quiet" data-toggle="broke-detail" aria-expanded="false" aria-controls="broke-detail">Show</button></div>
+<div class="panel-pad" id="broke-detail" hidden>
+<div class="block">TypeError: cannot read properties of undefined (reading 'report')
+    at renderPatch (dist/src/cli/ui.js:412:27)
+    at renderQueue (dist/src/cli/ui.js:377:12)
+ACP 0.3.1 · Review · change run-t7n4x0pa</div>
+</div>
+<p class="panel-foot cluster"><a class="btn" href="report.html"><svg class="i" viewBox="0 0 16 16" aria-hidden="true"><use href="#i-flag"/></svg>Report this problem</a><span>You see the report, and any logs, before anything is sent.</span></p>
+</div>
+</section>
+</main>
+<footer class="candidate-note"><span>Design candidate. This app is not built yet, and every name, number and message on this page is sample content.</span><a href="index.html">All pages and states</a></footer>
+</div>
+</body>
+</html>
