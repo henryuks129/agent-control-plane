@@ -1,11 +1,11 @@
-// The `/runs` commands: see and clear what agent runs leave behind.
+// The `runs`, `clean` and `remove` commands: see and clear what agent runs leave behind.
 
 import { cleanRuns, holdsWork, listRuns, removeRun, type RunInfo } from './runs.js';
 
 export const RUNS_USAGE = `Run commands:
-  acp /runs list                       show every agent run still on this computer and what it holds
-  acp /runs clean                      remove the runs that changed nothing (runs that hold work are kept)
-  acp /runs remove <run> [--force]     remove one run; --force is needed when it holds work`;
+  acp runs                        show every agent run still on this computer and what it holds
+  acp clean                       remove the runs that changed nothing (runs that hold work are kept)
+  acp remove <run> [--force]      remove one run; --force is needed when it holds work`;
 
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
 
@@ -17,6 +17,19 @@ function describe(run: RunInfo): string {
 }
 
 export async function runRunsCommand(command: string, args: string[], where: { root: string }): Promise<{ output: string; exitCode: number }> {
+  try {
+    return await runs(command, args, where);
+  } catch (error) {
+    // Runs are Git worktrees, so outside a repository there is nothing to list.
+    // Say that plainly instead of printing Git's error and a stack trace.
+    if (error instanceof Error && /not a git repository/i.test(error.message)) {
+      return { output: 'This folder is not a Git repository, so it has no runs. Run this from your project folder.', exitCode: 1 };
+    }
+    throw error;
+  }
+}
+
+async function runs(command: string, args: string[], where: { root: string }): Promise<{ output: string; exitCode: number }> {
   if (command === 'runs:list') {
     const runs = await listRuns(where.root);
     if (runs.length === 0) return { output: 'No runs.', exitCode: 0 };

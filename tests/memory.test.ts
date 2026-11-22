@@ -318,7 +318,7 @@ test('memory:sync fails and explains when memory holds a secret', () => {
 test('an unknown memory command lists the real ones', () => {
   const result = runMemoryCommand('memory:nope', [], { root: tempProject(), dataDir: tempProject() });
   assert.equal(result.exitCode, 1);
-  assert.match(result.output, /acp \/memory init[\s\S]*acp \/memory show[\s\S]*acp \/memory sync/);
+  assert.match(result.output, /acp init[\s\S]*acp memory[\s\S]*acp sync/);
 });
 
 // ---- Tasks receive memory ----

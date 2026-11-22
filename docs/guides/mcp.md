@@ -8,7 +8,7 @@ ACP started the agent or you did in a terminal. The reasons are in ADR-0008
 ## Start it
 
 ```bash
-acp /mcp
+acp mcp
 ```
 
 It reads requests on standard input and answers on standard output, so you
@@ -17,8 +17,8 @@ folder (they need the `acp` command, which `npm link` in ACP's folder sets up):
 
 | Agent | Command |
 |---|---|
-| Claude Code | `claude mcp add acp -- acp /mcp` |
-| Codex | `codex mcp add acp -- acp /mcp` |
+| Claude Code | `claude mcp add acp -- acp mcp` |
+| Codex | `codex mcp add acp -- acp mcp` |
 
 The server works on the folder the agent is started in.
 
@@ -38,8 +38,8 @@ The server works on the folder the agent is started in.
   accept a proposal:
 
   ```bash
-  acp /memory proposals
-  acp /memory accept <name>
+  acp proposals
+  acp accept <name>
   ```
 
 - Save anything that looks like a key, password or token. The write is

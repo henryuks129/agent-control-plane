@@ -8,7 +8,7 @@ in ADR-0007 §4.
 ## See what is connected
 
 ```bash
-acp /agents list
+acp agents
 ```
 
 ```text
@@ -29,7 +29,7 @@ organisation or keys.
 ## Run a request
 
 ```bash
-acp /run codex "Explain how memory rules are matched"
+acp run codex "Explain how memory rules are matched"
 ```
 
 | Option | What it does |
@@ -82,12 +82,12 @@ These limits are enforced by each tool, not by ACP.
 Every run keeps its worktree and branch so you can review it.
 
 ```bash
-acp /runs list
-acp /runs clean
-acp /runs remove <run> --force
+acp runs
+acp clean
+acp remove <run> --force
 ```
 
-`/runs clean` removes only runs that changed nothing. A run that holds work
+`acp clean` removes only runs that changed nothing. A run that holds work
 is kept until you remove it by name with `--force`.
 
 ## Your request stays private

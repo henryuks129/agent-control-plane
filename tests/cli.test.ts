@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { resolveCommand, shown } from '../src/cli/command.js';
+import { WORDS, resolveCommand, shown, slashMenu } from '../src/cli/command.js';
 
 // These tests start the real command, the way a user or an agent's MCP
 // client does. They need the built file, so they are skipped when the tests
@@ -16,18 +16,20 @@ const acp = (args: string[], options: { input?: string; cwd?: string } = {}) =>
   spawnSync(process.execPath, [main, ...args], { encoding: 'utf8', input: options.input, cwd: options.cwd ?? os.tmpdir() });
 
 test('commands that do not use the database print no warning about it', { skip: !built }, () => {
-  for (const command of [['/skills', 'list'], ['/memory', 'show', 'a.ts'], ['/runs', 'help']]) {
+  for (const command of [['skills'], ['memory', 'a.ts'], ['runs']]) {
     const result = acp(command);
     assert.equal(result.stderr, '', command.join(' '));
+    assert.doesNotMatch(result.stdout, /\bat .+:\d+:\d+\)/, `${command.join(' ')} printed a stack trace`);
   }
 });
 
-test('help lists the new commands', { skip: !built }, () => {
+test('help lists the everyday commands as acp and one word', { skip: !built }, () => {
   const { stdout } = acp(['help']);
-  for (const command of ['/mcp', '/runs list', '/runs clean', '/runs remove', '/design check', '/memory proposals', '/memory accept', '/run <agent>']) {
-    assert.ok(stdout.includes(`\n  acp ${command}`), command);
+  for (const word of ['run', 'agents', 'runs', 'clean', 'memory', 'sync', 'accept', 'skills', 'check', 'start', 'mcp']) {
+    assert.match(stdout, new RegExp(`^  acp ${word}\\b`, 'm'), word);
   }
-  assert.doesNotMatch(stdout, /^\s+(acp )?[a-z]+:[a-z]/m, 'no command is shown with a colon');
+  assert.doesNotMatch(stdout, /acp \//, 'no command is shown as acp /word');
+  assert.doesNotMatch(stdout, /^\s+acp [a-z]+:[a-z]/m, 'no command is shown with a colon');
 });
 
 test('the mcp command speaks the protocol on standard output and nothing else', { skip: !built }, () => {
@@ -47,57 +49,70 @@ test('the mcp command speaks the protocol on standard output and nothing else', 
   assert.match(replies[1].result.content[0].text, /Use pnpm/);
 });
 
-// How a typed command becomes the name the rest of ACP uses. Every command
-// starts with a slash; the group and the action are separate words.
-test('a command is a slash, a group and an action', () => {
-  assert.deepEqual(resolveCommand(['/agents', 'list']), { command: 'agents:list', args: [] });
-  assert.deepEqual(resolveCommand(['/memory', 'show', '--request', 'reset', 'a.ts']), { command: 'memory:show', args: ['--request', 'reset', 'a.ts'] });
-  assert.deepEqual(resolveCommand(['/runs', 'remove', 'run-1', '--force']), { command: 'runs:remove', args: ['run-1', '--force'] });
-  assert.deepEqual(resolveCommand(['/design', 'check', 'a.html']), { command: 'design:check', args: ['a.html'] });
+// How a typed command becomes the name the rest of ACP uses. Everyday
+// commands are one word: `acp memory` in a terminal, `/memory` in the app.
+test('everyday commands are one word after acp', () => {
+  assert.deepEqual(resolveCommand(['agents']), { command: 'agents:list', args: [] });
+  assert.deepEqual(resolveCommand(['run', 'codex', '--edit', 'Build a page']), { command: 'agents:run', args: ['codex', '--edit', 'Build a page'] });
+  assert.deepEqual(resolveCommand(['runs']), { command: 'runs:list', args: [] });
+  assert.deepEqual(resolveCommand(['clean']), { command: 'runs:clean', args: [] });
+  assert.deepEqual(resolveCommand(['remove', 'run-1', '--force']), { command: 'runs:remove', args: ['run-1', '--force'] });
+  assert.deepEqual(resolveCommand(['memory', '--request', 'reset', 'a.ts']), { command: 'memory:show', args: ['--request', 'reset', 'a.ts'] });
+  assert.deepEqual(resolveCommand(['init']), { command: 'memory:init', args: [] });
+  assert.deepEqual(resolveCommand(['sync', '--check']), { command: 'memory:sync', args: ['--check'] });
+  assert.deepEqual(resolveCommand(['proposals']), { command: 'memory:proposals', args: [] });
+  assert.deepEqual(resolveCommand(['accept', 'dates']), { command: 'memory:accept', args: ['dates'] });
+  assert.deepEqual(resolveCommand(['check', 'a.html']), { command: 'design:check', args: ['a.html'] });
+  assert.deepEqual(resolveCommand(['start']), { command: 'ui', args: [] });
+  assert.deepEqual(resolveCommand(['mcp']), { command: 'mcp', args: [] });
 });
 
-test('commands with one word or three words resolve too', () => {
-  assert.deepEqual(resolveCommand(['/mcp']), { command: 'mcp', args: [] });
-  assert.deepEqual(resolveCommand(['/doctor']), { command: 'doctor', args: [] });
-  assert.deepEqual(resolveCommand(['/project', 'settings', 'P-1']), { command: 'project:settings', args: ['P-1'] });
-  assert.deepEqual(resolveCommand(['/project', 'settings', 'set', 'P-1', 's.json']), { command: 'project:settings:set', args: ['P-1', 's.json'] });
-  assert.deepEqual(resolveCommand(['/deployment', 'oci', 'check']), { command: 'deployment:oci:check', args: [] });
+test('skills lists the skills, and with a request says which that request would get', () => {
+  assert.deepEqual(resolveCommand(['skills']), { command: 'skills:list', args: [] });
+  assert.deepEqual(resolveCommand(['skills', 'Build a landing page']), { command: 'skills:check', args: ['Build a landing page'] });
 });
 
-test('/run is the short way to run an agent', () => {
-  assert.deepEqual(resolveCommand(['/run', 'codex', '--edit', 'Build a page']), { command: 'agents:run', args: ['codex', '--edit', 'Build a page'] });
-  assert.deepEqual(resolveCommand(['/agents', 'run', 'codex', 'Why?']), { command: 'agents:run', args: ['codex', 'Why?'] });
+test('every everyday command is a single word', () => {
+  for (const entry of WORDS) assert.match(entry.word, /^[a-z]+$/, entry.word);
+  assert.equal(new Set(WORDS.map(entry => entry.word)).size, WORDS.length, 'no word is used twice');
 });
 
-test('a group on its own lists, and a wrong action asks that group for its help', () => {
-  assert.deepEqual(resolveCommand(['/runs']), { command: 'runs:list', args: [] });
-  assert.deepEqual(resolveCommand(['/agents']), { command: 'agents:list', args: [] });
-  assert.deepEqual(resolveCommand(['/memory']), { command: 'memory:help', args: [] });
-  assert.deepEqual(resolveCommand(['/memory', 'nope', 'x']), { command: 'memory:nope', args: ['x'] });
+test('the app lists the same words after a slash, each with one line', () => {
+  const menu = slashMenu();
+  assert.ok(menu.some(item => item.label === '/run'));
+  assert.ok(menu.some(item => item.label === '/memory'));
+  for (const item of menu) {
+    assert.match(item.label, /^\/[a-z]+$/);
+    assert.ok(item.about.length > 0 && item.about.length <= 60, item.label);
+  }
 });
 
-test('no command, /help and --help all ask for help; an unknown word is passed on to be refused', () => {
-  for (const argv of [[], ['/help'], ['help'], ['--help'], ['-h']]) assert.equal(resolveCommand(argv).command, 'help', argv.join(' '));
-  assert.equal(resolveCommand(['/nonsense']).command, 'nonsense');
+test('the older engine keeps its two-word commands', () => {
+  assert.deepEqual(resolveCommand(['task', 'show', 'T-1']), { command: 'task:show', args: ['T-1'] });
+  assert.deepEqual(resolveCommand(['project', 'settings', 'set', 'P-1', 's.json']), { command: 'project:settings:set', args: ['P-1', 's.json'] });
+  assert.deepEqual(resolveCommand(['deployment', 'oci', 'check']), { command: 'deployment:oci:check', args: [] });
+  assert.equal(resolveCommand(['task']).command, 'help');
 });
 
-// Shells differ: Git Bash on Windows rewrites a leading slash into a folder
-// path before ACP sees it, and scripts written for the colon form exist.
-test('the slash may be left out, a rewritten slash is undone, and the colon form still works', () => {
-  assert.deepEqual(resolveCommand(['agents', 'list']), { command: 'agents:list', args: [] });
-  assert.deepEqual(resolveCommand(['C:/Program Files/Git/agents', 'list']), { command: 'agents:list', args: [] });
-  assert.deepEqual(resolveCommand(['C:\\Program Files\\Git\\run', 'codex', 'Why?']), { command: 'agents:run', args: ['codex', 'Why?'] });
+test('no command, help and --help all ask for help; an unknown word is passed on to be refused', () => {
+  for (const argv of [[], ['help'], ['--help'], ['-h']]) assert.equal(resolveCommand(argv).command, 'help', argv.join(' '));
+  assert.equal(resolveCommand(['nonsense']).command, 'nonsense');
+});
+
+test('a slash copied from the app and the old internal names still work', () => {
+  assert.deepEqual(resolveCommand(['/memory', 'a.ts']), { command: 'memory:show', args: ['a.ts'] });
   assert.deepEqual(resolveCommand(['memory:sync', '--check']), { command: 'memory:sync', args: ['--check'] });
 });
 
-test('a request that looks like a path is never mistaken for a command', () => {
-  assert.deepEqual(resolveCommand(['/run', 'codex', '/memory', 'show']), { command: 'agents:run', args: ['codex', '/memory', 'show'] });
+test('a request that looks like a command is passed to the agent untouched', () => {
+  assert.deepEqual(resolveCommand(['run', 'codex', '/memory', 'clean']), { command: 'agents:run', args: ['codex', '/memory', 'clean'] });
 });
 
 test('messages show commands the way they are typed', () => {
-  assert.equal(shown('memory:accept'), 'acp /memory accept');
-  assert.equal(shown('agents:run'), 'acp /run');
-  assert.equal(shown('mcp'), 'acp /mcp');
+  assert.equal(shown('memory:accept'), 'acp accept');
+  assert.equal(shown('agents:run'), 'acp run');
+  assert.equal(shown('memory:sync'), 'acp sync');
+  assert.equal(shown('task:show'), 'acp task show');
 });
 
 test('acp is installed as a command of its own', { skip: !built }, () => {
